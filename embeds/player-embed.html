@@ -1,0 +1,194 @@
+<!-- Danyel OZ: Player card (embed 1 of 2)
+     Paste into Google Sites: Insert > Embed > Embed code.
+     Reusable: change SONG below to show the latest release or any song from your Song Database. -->
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; }
+  #ozp { font-family: 'Open Sans', Arial, sans-serif; color: #fff; background: #2a1650; border-radius: 16px;
+    padding: 20px; width: 100%; box-sizing: border-box; }
+  #ozp * { box-sizing: border-box; }
+  .ozp-label { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #c9b6ff; margin: 0 0 4px; }
+  .ozp-title { font-size: 26px; font-weight: 700; margin: 0 0 4px; line-height: 1.2; }
+  .ozp-date { font-size: 14px; color: #ddd; margin: 0 0 14px; }
+  .ozp-new { background: #ff5a5f; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px;
+    border-radius: 999px; margin-left: 8px; vertical-align: middle; }
+  #ozp iframe { display: block; width: 100%; height: 450px; border: 0; border-radius: 12px; background: transparent; }
+  #ozp iframe.ozp-bc { margin: 0 auto; background: #fff; }
+  .ozp-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .ozp-links a { flex: 1 1 120px; text-align: center; text-decoration: none; color: #2a1650; background: #fff;
+    font-weight: 700; font-size: 14px; padding: 10px 12px; border-radius: 999px; }
+  .ozp-links a:hover { background: #c9b6ff; }
+  .ozp-msg { font-size: 14px; color: #ddd; }
+  @media (max-width: 480px) {
+    #ozp { padding: 14px; border-radius: 12px; }
+    .ozp-title { font-size: 22px; }
+    .ozp-links a { flex-basis: 45%; padding: 8px 10px; font-size: 13px; }
+  }
+</style>
+
+<div id="ozp">
+  <p class="ozp-label" id="ozp-label"></p>
+  <p class="ozp-title" id="ozp-title">Loading…</p>
+  <p class="ozp-date" id="ozp-date"></p>
+  <div id="ozp-player"></div>
+  <div class="ozp-links" id="ozp-links"></div>
+</div>
+
+<script>
+(function () {
+  /* ================= Settings ================= */
+  var SONG       = 'latest';          // 'latest', or a song title / Apple Music ID from your sheet, e.g. 'Carmen'
+  var LABEL      = 'auto';            // 'auto' = "Latest release" or "Featured song". Or any text, or '' to hide
+  var NEW_DAYS   = 14;                // show the NEW badge for this many days (0 = never)
+  var SHOW_LINKS = true;              // platform buttons under the player
+  var PLAYER     = 'bandcamp';        // 'bandcamp' = Bandcamp player (Apple Music if the song has no Bandcamp code)
+                                      // 'apple'    = always Apple Music
+  /* ============================================ */
+
+  var ARTIST_ID  = '1706653995';      // Danyel OZ on Apple Music
+  var STOREFRONT = 'us';
+  var SHEET_ID   = '1WD98RYgWPURqwtczPYEblCOOPFutAIO1jf42oSfbzPw';
+  var SHEET_CSV  = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&gid=0';
+  var ARTIST_LINKS = {
+    spotify_link:    { name: 'Spotify',       url: 'https://open.spotify.com/artist/2rXzK2nhFFclSWxkpJ9XYn', ok: /^https:\/\/(open\.spotify\.com|spotify\.link)\//i },
+    appl_music_link: { name: 'Apple Music',   url: 'https://music.apple.com/us/artist/danyel-oz/1706653995',  ok: /^https:\/\/(music|geo\.music|itunes)\.apple\.com\//i },
+    yt_video_link:   { name: 'YouTube Music', url: 'https://music.youtube.com/channel/UCmvCshUQAXm1aoWRAnOSTaA', ok: /^https:\/\/(www\.|m\.|music\.)?(youtube\.com|youtu\.be)\//i },
+    amazon_link:     { name: 'Amazon Music',  url: 'https://music.amazon.com/artists/B0CHPJX6SM',              ok: /^https:\/\/(music\.)?amazon\.[a-z.]+\/|^https:\/\/amzn\.to\//i }
+  };
+
+  function $(id) { return document.getElementById(id); }
+  function norm(s) { return String(s || '').toLowerCase().replace(/ - (single|ep)$/, '').replace(/[’']/g, "'").replace(/\s+/g, ' ').trim(); }
+  function fmtDate(d) { return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }); }
+  function parseCSV(t) {
+    var rows = [], row = [], cur = '', q = false;
+    for (var i = 0; i < t.length; i++) {
+      var c = t[i];
+      if (q) { if (c === '"' && t[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+      else if (c === '"') q = true; else if (c === ',') { row.push(cur); cur = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+      else cur += c;
+    }
+    if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+    var head = (rows.shift() || []).map(function (h) { return h.trim().toLowerCase(); });
+    return rows.filter(function (r) { return r.join('').trim(); }).map(function (r) {
+      var o = {}; head.forEach(function (h, k) { o[h] = (r[k] || '').trim(); }); return o;
+    });
+  }
+  function appleIdFrom(row) {
+    if (/^\d{6,}$/.test(row.song_id || '')) return row.song_id;
+    var m = String(row.appl_music_link || '').match(/\/(\d{6,})(?:[?#]|$)/);
+    return m ? m[1] : '';
+  }
+
+  /* Picks the song: Apple's newest release, or the one named in SONG. */
+  function pick(apple, rows) {
+    if (String(SONG).toLowerCase() === 'latest') {
+      var rel = (apple.results || []).filter(function (x) { return x.wrapperType === 'collection'; })
+        .sort(function (a, b) { return new Date(b.releaseDate) - new Date(a.releaseDate); })[0];
+      if (!rel) return null;
+      var name = rel.collectionName.replace(/ - (Single|EP)$/, '');
+      var row = rows.filter(function (r) { return String(r.song_id) === String(rel.collectionId); })[0] ||
+                rows.filter(function (r) { return norm(r.song_title) === norm(name); })[0] || {};
+      return { id: String(rel.collectionId), title: row.song_title || name, date: new Date(rel.releaseDate),
+               appleUrl: rel.collectionViewUrl, row: row };
+    }
+    var want = norm(SONG);
+    var r2 = rows.filter(function (r) { return String(r.song_id) === String(SONG).trim(); })[0] ||
+             rows.filter(function (r) { return norm(r.song_title) === want; })[0];
+    if (!r2) return null;
+    var d = r2.release_date ? new Date(r2.release_date + 'T00:00:00') : null;
+    return { id: appleIdFrom(r2), title: r2.song_title, date: d && !isNaN(d) ? d : null, appleUrl: r2.appl_music_link, row: r2 };
+  }
+
+  var appleReq = fetch('https://itunes.apple.com/lookup?id=' + ARTIST_ID + '&entity=album&sort=recent&limit=50&country=' + STOREFRONT)
+    .then(function (r) { return r.json(); }).catch(function () { return {}; });
+  var sheetReq = fetch(SHEET_CSV).then(function (r) { return r.text(); }).then(parseCSV).catch(function () { return []; });
+
+  Promise.all([appleReq, sheetReq]).then(function (res) {
+    var s = pick(res[0], res[1]);
+    if (!s) throw new Error('Song not found');
+    var latest = String(SONG).toLowerCase() === 'latest';
+
+    var label = LABEL === 'auto' ? (latest ? 'Latest release' : 'Featured song') : LABEL;
+    $('ozp-label').textContent = label; if (!label) $('ozp-label').style.display = 'none';
+    $('ozp-title').textContent = s.title;
+    var age = s.date ? (Date.now() - s.date.getTime()) / 86400000 : null;
+    if (age != null && NEW_DAYS > 0 && age >= 0 && age <= NEW_DAYS) {
+      var b = document.createElement('span'); b.className = 'ozp-new'; b.textContent = 'NEW'; $('ozp-title').appendChild(b);
+    }
+    $('ozp-date').textContent = !s.date ? '' : (age < 0 ? 'Out ' : 'Released ') + fmtDate(s.date);
+
+    var bc = PLAYER === 'bandcamp' ? bandcamp(s.row.bandcamp_embed) : null;
+    if (bc) {
+      var g = document.createElement('iframe');
+      g.src = bc.src;                       // only a checked bandcamp.com player address is ever used
+      g.title = 'Listen to ' + s.title + ' on Bandcamp';
+      g.setAttribute('seamless', '');
+      g.className = 'ozp-bc';
+      g.dataset.kind = bc.kind;
+      g.dataset.h = bc.height || '';
+      $('ozp-player').appendChild(g);
+    } else if (s.id) {
+      var f = document.createElement('iframe');
+      f.allow = 'autoplay *; encrypted-media *; clipboard-write';
+      f.sandbox = 'allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation-by-user-activation';
+      f.src = 'https://embed.music.apple.com/' + STOREFRONT + '/album/' + encodeURIComponent(s.id);
+      f.title = 'Listen to ' + s.title;
+      $('ozp-player').appendChild(f);
+    } else {
+      $('ozp-player').innerHTML = '<p class="ozp-msg">Listen on your favorite platform below.</p>';
+    }
+
+    if (SHOW_LINKS) {
+      Object.keys(ARTIST_LINKS).forEach(function (k) {
+        var cfg = ARTIST_LINKS[k], own = String(s.row[k] || '').trim();
+        var url = own && cfg.ok.test(own) ? own : (k === 'appl_music_link' && s.appleUrl ? s.appleUrl : cfg.url);
+        var a = document.createElement('a');
+        a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = cfg.name;
+        $('ozp-links').appendChild(a);
+      });
+    }
+    fitPlayer();   // after the buttons exist, so everything fits the box
+  }).catch(function () {
+    $('ozp-title').textContent = 'Listen to Danyel OZ';
+    $('ozp-player').innerHTML = '<p class="ozp-msg">Find all my music on the platforms below.</p>';
+    if (SHOW_LINKS) Object.keys(ARTIST_LINKS).forEach(function (k) {
+      var a = document.createElement('a'); a.href = ARTIST_LINKS[k].url; a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = ARTIST_LINKS[k].name; $('ozp-links').appendChild(a);
+    });
+  });
+
+  /* Reads Bandcamp's embed code and keeps only its player address (never runs the pasted HTML). */
+  function bandcamp(code) {
+    var m = String(code || '').match(/src\s*=\s*["'](https:\/\/bandcamp\.com\/EmbeddedPlayer\/[\w=\/.-]+)["']/i);
+    if (!m) return null;
+    var src = m[1];
+    var size = (src.match(/\/size=(\w+)/) || [])[1] || 'large';
+    var art = (src.match(/\/artwork=(\w+)/) || [])[1] || '';
+    var px = (String(code).match(/height\s*:\s*(\d+)px/i) || [])[1];
+    // 'square' = artwork-only player (minimal=true), 'art' = big cover with controls under it,
+    // 'strip' = fixed-height bar (small / slim / small artwork)
+    var kind = /\/minimal=true/.test(src) ? 'square'
+             : size === 'large' && art !== 'small' && art !== 'none' ? 'art' : 'strip';
+    return { src: src, kind: kind, height: px ? Number(px) : (kind === 'strip' ? (size === 'small' ? 42 : 120) : 0) };
+  }
+
+  /* Sizes the player to the embed box, so it still fits when Google Sites shrinks the box on phones. */
+  function fitPlayer() {
+    var f = $('ozp-player').querySelector('iframe'); if (!f) return;
+    var other = $('ozp').offsetHeight - f.offsetHeight;
+    var room = window.innerHeight - other - 4;
+    if (f.className !== 'ozp-bc') {                                   // Apple Music
+      f.style.height = Math.max(175, Math.min(450, room)) + 'px';
+      return;
+    }
+    if (f.dataset.kind === 'strip') { f.style.height = f.dataset.h + 'px'; return; }
+    // Big player: square cover + about 120px of controls under it. Square player: just the cover.
+    var extra = f.dataset.kind === 'square' ? 0 : 120;
+    var width = $('ozp-player').clientWidth;
+    var side = Math.max(160, Math.min(width, room - extra));
+    f.style.width = side + 'px';
+    f.style.height = (side + extra) + 'px';
+  }
+  window.addEventListener('resize', fitPlayer);
+})();
+</script>

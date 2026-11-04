@@ -1,0 +1,122 @@
+<!-- Danyel OZ: Upcoming Release, song details (embed 2 of 2)
+     Paste into Google Sites: Insert > Embed > Embed code.
+     Shows the same upcoming song as the Upcoming player card, from your Song Database. -->
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; }
+  #ozd { padding: 0 4px; color: #333; font-family: 'Open Sans', Arial, sans-serif; }
+  .ozd-title { font-family: 'Oswald', 'Arial Narrow', sans-serif; font-size: 40px; line-height: 1.15; font-weight: 500;
+    text-transform: uppercase; color: #1a1ad6; margin: 0 0 34px; }
+  .ozd-lead { font-size: 15px; line-height: 1.75; margin: 0 0 16px; color: #333; }
+  .ozd-story p { font-size: 15px; line-height: 1.75; margin: 0 0 14px; color: #333; }
+  .ozd-more { background: none; border: 0; padding: 0; margin: 0 0 40px; font: 400 15px 'Open Sans', Arial, sans-serif;
+    color: #1a1ad6; cursor: pointer; }
+  .ozd-more:hover { text-decoration: underline; }
+  .ozd-meta { font-family: 'Oswald', 'Arial Narrow', sans-serif; font-size: 15px; color: #1a1ad6; margin: 0 0 14px; }
+  .ozd-muted { font-size: 15px; color: #555; }
+  @media (max-width: 480px) {
+    .ozd-title { font-size: 28px; margin-bottom: 18px; }
+    .ozd-lead, .ozd-story p, .ozd-more { font-size: 14px; }
+    .ozd-more { margin-bottom: 24px; }
+    .ozd-meta { font-size: 14px; margin-bottom: 10px; }
+  }
+</style>
+
+<div id="ozd"><p class="ozd-muted">Loading…</p></div>
+
+<script>
+(function () {
+  /* ================= Settings ================= */
+  var SONG         = 'next';          // 'next' = nearest upcoming release (same as the player card), or a song title
+  var TITLE_PREFIX = '';              // text before the title
+  var DATE_LABEL   = 'To Be Released';
+  var READ_MORE    = 'Read more…';
+  var READ_LESS    = 'Show less';
+  var SHOW = { title: true, lead: true, story: true, date: true, type: true, genre: true, label: false, isrc: true, upc: true };
+  var NOTHING_TEXT = 'New music is on the way. Stay tuned.';
+  /* ============================================ */
+
+  var TIME_ZONE = 'Asia/Singapore';
+  var SHEET_ID  = '1WD98RYgWPURqwtczPYEblCOOPFutAIO1jf42oSfbzPw';
+  var SHEET_CSV = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&gid=0';
+
+  var root = document.getElementById('ozd');
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function norm(s) { return String(s || '').toLowerCase().replace(/ - (single|ep)$/, '').replace(/[’']/g, "'").replace(/\s+/g, ' ').trim(); }
+  function parseCSV(t) {
+    var rows = [], row = [], cur = '', q = false;
+    for (var i = 0; i < t.length; i++) {
+      var c = t[i];
+      if (q) { if (c === '"' && t[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+      else if (c === '"') q = true; else if (c === ',') { row.push(cur); cur = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+      else cur += c;
+    }
+    if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+    var head = (rows.shift() || []).map(function (h) { return h.trim().toLowerCase(); });
+    return rows.filter(function (r) { return r.join('').trim(); }).map(function (r) {
+      var o = {}; head.forEach(function (h, k) { o[h] = (r[k] || '').trim(); }); return o;
+    });
+  }
+  function todaySG() { return new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE }).format(new Date()); }
+  function isoDate(v) { var m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[0] : ''; }
+  function shortDate(iso) {
+    var p = iso.split('-').map(Number);
+    return new Date(Date.UTC(p[0], p[1] - 1, p[2])).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+  }
+  function pick(rows) {
+    if (String(SONG).toLowerCase() !== 'next') {
+      var want = norm(SONG);
+      return rows.filter(function (r) { return String(r.song_id) === String(SONG).trim(); })[0] ||
+             rows.filter(function (r) { return norm(r.song_title) === want; })[0] || null;
+    }
+    var today = todaySG();
+    return rows.filter(function (r) { var d = isoDate(r.release_date); return d && d > today && r.song_title; })
+      .sort(function (a, b) { return isoDate(a.release_date).localeCompare(isoDate(b.release_date)); })[0] || null;
+  }
+  function paraEl(cls, text) {
+    var p = el('p', cls);
+    text.split('\n').forEach(function (line, k) { if (k) p.appendChild(document.createElement('br')); p.appendChild(document.createTextNode(line)); });
+    return p;
+  }
+  function meta(label, value) { if (value) root.appendChild(el('p', 'ozd-meta', label + ': ' + value)); }
+
+  function render(s) {
+    root.innerHTML = '';
+    if (SHOW.title) root.appendChild(el('h2', 'ozd-title', TITLE_PREFIX + s.song_title));
+
+    var paras = String(s.song_description || '').split(/\n\s*\n/).map(function (p) { return p.trim(); }).filter(Boolean);
+    if (SHOW.lead) root.appendChild(paraEl('ozd-lead', paras[0] || 'The story behind this song is coming soon.'));
+    if (SHOW.story && paras.length > 1) {
+      var story = el('div', 'ozd-story'); story.hidden = true;
+      paras.slice(1).forEach(function (p) { story.appendChild(paraEl(null, p)); });
+      var btn = el('button', 'ozd-more', READ_MORE); btn.type = 'button';
+      btn.setAttribute('aria-expanded', 'false');
+      btn.addEventListener('click', function () {
+        story.hidden = !story.hidden;
+        btn.textContent = story.hidden ? READ_MORE : READ_LESS;
+        btn.setAttribute('aria-expanded', String(!story.hidden));
+      });
+      root.appendChild(story);
+      root.appendChild(btn);
+    } else if (SHOW.lead) {
+      root.lastChild.style.marginBottom = '40px';
+    }
+
+    var iso = isoDate(s.release_date);
+    if (SHOW.date && iso) meta(DATE_LABEL, shortDate(iso));
+    if (SHOW.type) meta('Release Type', s.release_type);
+    if (SHOW.genre) meta('Genre', s.song_genre);
+    if (SHOW.label) meta('Label', s.record_label);
+    if (SHOW.isrc) meta('ISRC', s.song_isrc);
+    if (SHOW.upc) meta('UPC', s.song_upc);
+  }
+
+  fetch(SHEET_CSV).then(function (r) { return r.text(); }).then(parseCSV).catch(function () { return []; })
+    .then(function (rows) {
+      var s = pick(rows);
+      if (!s) { root.innerHTML = ''; root.appendChild(el('p', 'ozd-muted', NOTHING_TEXT)); return; }
+      render(s);
+    });
+})();
+</script>

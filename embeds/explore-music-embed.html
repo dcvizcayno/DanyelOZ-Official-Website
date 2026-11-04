@@ -1,0 +1,222 @@
+<!-- Danyel OZ: Explore the Music, clickable panels
+     Paste into Google Sites: Insert > Embed > Embed code.
+     Desktop: four tall panels; hover one and it opens up to show its text. Click to visit that page.
+     Phones: swipe through the panels; the text is always shown. -->
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500&family=Great+Vibes&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; height: 100%; }
+  #ozx { position: relative; height: 100%; min-height: 300px; font-family: 'Oswald', 'Arial Narrow', sans-serif; }
+  #ozx * { box-sizing: border-box; }
+
+  .ozx-row { display: flex; gap: 8px; height: 100%; }
+  .ozx-card { position: relative; flex: 1 1 0; min-width: 0; height: 100%; overflow: hidden; border-radius: 6px;
+    background: #140405; color: #fff; text-decoration: none; cursor: pointer; outline: none;
+    transition: flex-grow .55s cubic-bezier(.2,.8,.2,1); }
+  .ozx-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    transition: transform .8s cubic-bezier(.2,.8,.2,1), filter .5s; filter: saturate(.9) brightness(.82); }
+
+  /* Cinematic red-black grade, lighter when opened */
+  .ozx-card::before { content: ''; position: absolute; inset: 0; z-index: 1; transition: opacity .5s;
+    background: linear-gradient(180deg, rgba(20,0,2,.35) 0%, rgba(120,8,18,.38) 45%, rgba(10,0,1,.92) 100%); }
+  .ozx-card::after { content: ''; position: absolute; inset: 0; z-index: 1; background: #b0101f; mix-blend-mode: multiply;
+    opacity: .55; transition: opacity .5s; }
+
+  .ozx-num { position: absolute; top: 18px; left: 18px; z-index: 3; font-size: 13px; letter-spacing: 3px; opacity: .85; }
+  .ozx-num::after { content: ''; display: inline-block; width: 26px; height: 1px; background: currentColor; margin-left: 10px; vertical-align: middle; opacity: .7; }
+
+  /* Closed panel: name runs up the side */
+  .ozx-side { position: absolute; left: 50%; bottom: 26px; z-index: 3; transform: translateX(-50%) rotate(180deg);
+    writing-mode: vertical-rl; font-family: 'Anton', Impact, sans-serif; font-size: 30px; letter-spacing: 3px;
+    text-transform: uppercase; white-space: nowrap; transition: opacity .3s; text-shadow: 0 2px 16px rgba(0,0,0,.6); }
+
+  /* Opened panel text */
+  .ozx-body { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; padding: 26px 26px 24px;
+    opacity: 0; transform: translateY(16px); transition: opacity .35s, transform .45s; pointer-events: none; }
+  .ozx-script { font-family: 'Great Vibes', cursive; font-size: 34px; line-height: 1; color: #ffd2d6; margin: 0 0 2px; }
+  .ozx-title { font-family: 'Anton', Impact, sans-serif; font-size: 52px; line-height: .95; letter-spacing: 1px;
+    text-transform: uppercase; margin: 0 0 10px; text-shadow: 0 3px 20px rgba(0,0,0,.5); }
+  .ozx-sub { display: inline-block; background: #e3122a; color: #fff; font-size: 12px; font-weight: 500; letter-spacing: 2.5px;
+    text-transform: uppercase; padding: 5px 10px; margin: 0 0 12px; }
+  .ozx-text { font-size: 15px; line-height: 1.5; color: rgba(255,255,255,.88); margin: 0 0 16px; max-width: 34ch; }
+  .ozx-go { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; letter-spacing: 3px;
+    text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,.6); padding-bottom: 4px; }
+  .ozx-go span { transition: transform .3s; }
+
+  /* Opened state: hovered, keyboard-focused, or the default one */
+  .ozx-row:not(:hover) .ozx-card.default, .ozx-card:hover, .ozx-card:focus-visible { flex-grow: 3.2; }
+  .ozx-row:not(:hover) .ozx-card.default img, .ozx-card:hover img, .ozx-card:focus-visible img { transform: scale(1.05); filter: saturate(1) brightness(.95); }
+  .ozx-row:not(:hover) .ozx-card.default::after, .ozx-card:hover::after, .ozx-card:focus-visible::after { opacity: .18; }
+  .ozx-row:not(:hover) .ozx-card.default .ozx-side, .ozx-card:hover .ozx-side, .ozx-card:focus-visible .ozx-side { opacity: 0; }
+  .ozx-row:not(:hover) .ozx-card.default .ozx-body, .ozx-card:hover .ozx-body, .ozx-card:focus-visible .ozx-body { opacity: 1; transform: none; transition-delay: .12s; }
+  .ozx-card:hover .ozx-go span { transform: translateX(6px); }
+  .ozx-card:focus-visible { box-shadow: inset 0 0 0 3px #ff4d61; }
+
+  .ozx-card.still { cursor: default; }
+  .ozx-dots { display: none; }
+
+  /* Medium widths: smaller type */
+  @media (max-width: 900px) {
+    .ozx-title { font-size: 40px; } .ozx-script { font-size: 28px; } .ozx-side { font-size: 24px; }
+    .ozx-text { font-size: 14px; }
+  }
+
+  /* Phones and touch screens: swipeable carousel, text always visible */
+  @media (max-width: 620px), (hover: none) {
+    .ozx-row { gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; height: calc(100% - 22px); }
+    .ozx-row::-webkit-scrollbar { display: none; }
+    .ozx-card, .ozx-card:hover { flex: 0 0 82%; scroll-snap-align: center; }
+    .ozx-card img { transform: none !important; filter: saturate(1) brightness(.92) !important; }
+    .ozx-card::after { opacity: .2 !important; }
+    .ozx-side { display: none; }
+    .ozx-body { opacity: 1 !important; transform: none !important; padding: 18px; }
+    .ozx-title { font-size: 34px; } .ozx-script { font-size: 26px; } .ozx-text { font-size: 13px; margin-bottom: 12px; }
+    .ozx-dots { display: flex; justify-content: center; gap: 8px; height: 22px; align-items: flex-end; }
+    .ozx-dot { width: 8px; height: 8px; border-radius: 50%; border: 0; padding: 0; background: #d9b9bd; cursor: pointer; }
+    .ozx-dot.on { background: #b0101f; }
+  }
+  @media (prefers-reduced-motion: reduce) { .ozx-card, .ozx-card img, .ozx-body { transition: none !important; } }
+</style>
+
+<div id="ozx">
+  <div class="ozx-row" id="ozx-row"></div>
+  <div class="ozx-dots" id="ozx-dots"></div>
+</div>
+
+<script>
+(function () {
+  /* ================= Settings =================
+     The panels come from the "explore" tab of your Song Database (edit them in the data entry app).
+     The list below is only a backup, used if the sheet can't be reached. */
+  var OPEN_FIRST = true;   // on desktop, show the first panel opened until the mouse moves over the row
+  var CLICKABLE  = false;  // false = panels are just visuals (use Google Sites buttons below them to navigate,
+                           //         so pages open in the same tab). true = clicking a panel opens a new tab.
+  var SHEET_ID   = '1WD98RYgWPURqwtczPYEblCOOPFutAIO1jf42oSfbzPw';
+  var TAB        = 'explore';
+  var BACKUP = [
+    { script: 'Stories',      title: 'Albums',   sub: 'Original Music & Storytelling',
+      text:  'Full-length collections of original music, connected stories, and experiences about love, life, and personal growth.',
+      link:  'https://www.danyeloz.info/released/albums-original-music-stories',
+      image: 'https://lh7-us.googleusercontent.com/sitesv-images-rt/AMxu72uqLBkJB68azHlTUj9_8wlFCi0z4I-PUBIRDCMNQHCClKrUO3wSc2kbIaC3Cg7o3EDrU_1AMGhp4ZvXE8AwiwX_zUoEd7aDdOb_Q9AOalceqRgaRz56OLwxDkcZ5F0fz9pVXEh4UpP5LjPY8nRuCPGYrzzTdK5uCJEqO_ZnzMEaUqCCDK1ngqspDVpJQdN0KCBG1zn9J3Wc4FZiH1y2x6Xu8Z2U4CKfNM_bndLdigo',
+      focus: 'center 30%' },
+    { script: 'New Releases', title: 'Singles',  sub: 'Original Songs',
+      text:  'Standalone original songs exploring relationships, emotions, self-discovery, and everyday experiences.',
+      link:  'https://www.danyeloz.info/released/singles-original-songs-releases',
+      image: 'https://lh7-us.googleusercontent.com/sitesv-images-rt/AMxu72u5XgqAptvUAj8QdnH5KuUYAYRRCHbslMlcR4Z7AWG85RU0JmC-Vr3BT5JEY4L2MCXFVGXTS1_17Gdh-FS3ZultE3M0sYyHNkekVgQenl4wqS8H_vQ1uTqv7Kr1fgHC1hVPAHZnd5nS1Qr38KDk2Bb7UAC8HcewnOB7wrJvLrOSlZ_I-EigH-v6AwGpYftTYhIrchw0byKNnIoUAoOnSaq-q8U6igoU-ZMn1Hkncy8',
+      focus: 'center 25%' },
+    { script: 'Short Stories', title: "EP's",    sub: 'Alternative Pop',
+      text:  'Small collections of songs connected by one theme, one story, or one feeling.',
+      link:  'https://www.danyeloz.info/released/eps-alternative-pop-original-music',
+      image: 'https://lh7-us.googleusercontent.com/sitesv-images-rt/AMxu72sHtBGGbXWkUrys1ucAxS852zsQu45BDDFvhXdMOPCfV1q3XvMNsP1axkzhUX8cLG8NG18A_g0hkinNkjqR_eNvRIz-jxPrd2nYn0ppnKdgjPU7_4zqlPNc8W6YOTZ2OZuR4gmj3TelVuO9Gj2TTZTjDzywjOu9tCq7ntdB86b2VkYsDNiOI-N0UQWsPHNxMgzwgrdZDtHSUUcrPlO8FlHMoEl5QwBMsHXEHwpyfBE',
+      focus: 'center 30%' },
+    { script: 'Seasonal',     title: 'Holidays', sub: 'Songs for the Season',
+      text:  'Holiday songs and year-end releases for the moments shared with family, friends, and the ones we love.',
+      link:  'https://www.danyeloz.info/released/holiday-music-seasonal-songs',
+      image: 'https://lh7-us.googleusercontent.com/sitesv-images-rt/AMxu72tQi29YctYbI-J9VJqyMSx6gUC4wDuSobrbsujF9TjDMnHVLd80xsbkTbx8AFS3v4kdkJOmtG65ohe1JWDD6B1v0dCy1D5-PAlvEOli-6Ku_RvETITyYZwqX4Y6GH9LcpCcsd4L2gcR8uiiiq82I8YBgvdXyIjeQ3gnMTC_i9eC6kGCjxSJtpewQ6geGj_ZMj7wnPnXSYQp--_SNi_C5-gKSrFddgbSCFR2eqyJ',
+      focus: 'center 25%' }
+  ];
+  var BUTTON_TEXT = 'Explore';
+  /* ============================================ */
+
+  var row = document.getElementById('ozx-row');
+  var dots = document.getElementById('ozx-dots');
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function imageUrl(u) {
+    u = String(u || '').trim();
+    if (!/^https:\/\//i.test(u)) return '';
+    var m = /drive\.google\.com/.test(u) && (u.match(/\/d\/([\w-]+)/) || u.match(/[?&]id=([\w-]+)/));
+    if (m) return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1200';
+    if (/googleusercontent\.com\/sitesv-images/.test(u) && u.indexOf('=') < 0) return u + '=w1200';
+    return u;
+  }
+  function safeLink(u) { return /^https:\/\//i.test(u) ? u : '#'; }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function parseCSV(t) {
+    var rows = [], row = [], cur = '', q = false;
+    for (var i = 0; i < t.length; i++) {
+      var c = t[i];
+      if (q) { if (c === '"' && t[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+      else if (c === '"') q = true; else if (c === ',') { row.push(cur); cur = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+      else cur += c;
+    }
+    if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+    var head = (rows.shift() || []).map(function (h) { return h.trim().toLowerCase(); });
+    return rows.filter(function (r) { return r.join('').trim(); }).map(function (r) {
+      var o = {}; head.forEach(function (h, k) { o[h] = (r[k] || '').trim(); }); return o;
+    });
+  }
+  function fromSheet(rows) {
+    if (!rows.length || !('title' in rows[0])) return null;      // not the explore tab
+    return rows.filter(function (r) { return r.title && !/^(no|false|0|hide|hidden)$/i.test(r.visible || ''); })
+      .sort(function (a, b) { return (Number(a.order) || 999) - (Number(b.order) || 999); });
+  }
+
+  function build(list) {
+  row.innerHTML = ''; dots.innerHTML = '';
+  list.forEach(function (p, i) {
+    var linked = CLICKABLE && safeLink(p.link) !== '#';
+    var a = el(linked ? 'a' : 'div', 'ozx-card' + (OPEN_FIRST && i === 0 ? ' default' : '') + (linked ? '' : ' still'));
+    if (linked) {
+      a.href = safeLink(p.link);
+      a.target = '_blank';          // Google Sites embeds can only open links in a new tab
+      a.rel = 'noopener';
+    } else {
+      a.tabIndex = 0;               // keyboard users can still open each panel's text
+    }
+    a.setAttribute('aria-label', p.title + (p.sub ? ': ' + p.sub : ''));
+
+    var src = imageUrl(p.image);
+    if (src) {
+      var img = el('img'); img.alt = ''; img.loading = i < 2 ? 'eager' : 'lazy';
+      img.src = src; img.style.objectPosition = /^[\w %.-]+$/.test(p.focus || '') ? p.focus : 'center';
+      img.onerror = function () { img.remove(); };   // a broken picture leaves the dark red panel, not an icon
+      a.appendChild(img);
+    }
+
+    a.appendChild(el('span', 'ozx-num', pad(i + 1)));
+    a.appendChild(el('span', 'ozx-side', p.title));
+
+    var body = el('div', 'ozx-body');
+    if (p.script) body.appendChild(el('p', 'ozx-script', p.script));
+    body.appendChild(el('h3', 'ozx-title', p.title));
+    if (p.sub) body.appendChild(el('span', 'ozx-sub', p.sub));
+    if (p.text) body.appendChild(el('p', 'ozx-text', p.text));
+    if (linked) {
+      var go = el('span', 'ozx-go', BUTTON_TEXT + ' '); var arrow = el('span', null, '→'); go.appendChild(arrow);
+      body.appendChild(go);
+    }
+    a.appendChild(body);
+    row.appendChild(a);
+
+    var d = el('button', 'ozx-dot' + (i === 0 ? ' on' : '')); d.type = 'button';
+    d.setAttribute('aria-label', 'Show ' + p.title);
+    d.addEventListener('click', function () { a.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); });
+    dots.appendChild(d);
+  });
+  }
+
+  // Use the sheet's panels; if they haven't arrived within 2.5 seconds (or can't load), use the backup.
+  var done = false;
+  var backupTimer = setTimeout(function () { if (!done) { done = true; build(BACKUP); } }, 2500);
+  fetch('https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(TAB))
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+    .then(function (t) {
+      var list = fromSheet(parseCSV(t));
+      if (!list || !list.length) throw new Error('empty');
+      clearTimeout(backupTimer); done = true; build(list);
+    })
+    .catch(function () { clearTimeout(backupTimer); if (!done) { done = true; build(BACKUP); } });
+
+  /* Phone carousel: light up the dot for the panel in view */
+  var cards = row.children;
+  row.addEventListener('scroll', function () {
+    var mid = row.scrollLeft + row.clientWidth / 2, best = 0, bestD = Infinity;
+    for (var i = 0; i < cards.length; i++) {
+      var c = cards[i], d = Math.abs(c.offsetLeft + c.offsetWidth / 2 - mid);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    for (var k = 0; k < dots.children.length; k++) dots.children[k].classList.toggle('on', k === best);
+  }, { passive: true });
+})();
+</script>

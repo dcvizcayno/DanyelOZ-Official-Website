@@ -1,0 +1,186 @@
+<!-- Danyel OZ: Song Info panel (embed 2 of 2)
+     Paste into Google Sites: Insert > Embed > Embed code.
+     Reusable: change SONG below to show the latest release or any song from your Song Database,
+     and turn each part on or off in SHOW. -->
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; }
+  #ozi { color: #111; padding: 0 4px; font-family: 'Oswald', 'Arial Narrow', sans-serif; font-weight: 400; }
+  .ozi-art { display: block; width: 180px; max-width: 45%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; margin: 0 0 16px; }
+  .ozi-title { font-size: 46px; line-height: 1.1; margin: 0 0 14px; font-weight: 500; text-transform: uppercase; color: #2552c9; }
+  .ozi-lead { font-size: 18px; line-height: 1.6; color: #2a2fa8; font-weight: 500; margin: 0 0 22px; }
+  .ozi-story p { font-size: 16.5px; line-height: 1.7; margin: 0 0 16px; color: #111; letter-spacing: 0.2px; }
+  .ozi-meta { font-size: 16px; margin: 0 0 10px; color: #111; }
+  .ozi-more { display: block; background: none; border: 0; padding: 0; margin: -8px 0 28px; cursor: pointer;
+    font: 400 16px 'Oswald', 'Arial Narrow', sans-serif; color: #2552c9; }
+  .ozi-more:hover { text-decoration: underline; }
+  .ozi-story:not([hidden]) + .ozi-more { margin-top: 0; }
+  .ozi-qr { margin-top: 18px; display: flex; align-items: center; gap: 14px; }
+  .ozi-qr-box { background: #fff; padding: 8px; border-radius: 10px; border: 1px solid #e3dcf5; line-height: 0; }
+  .ozi-qr-box img, .ozi-qr-box canvas { width: 130px !important; height: 130px !important; }
+  .ozi-qr-text { font-size: 14px; color: #333; max-width: 200px; }
+  .ozi-muted { font-size: 15px; color: #444; }
+  @media (max-width: 480px) {
+    .ozi-title { font-size: 30px; }
+    .ozi-lead { font-size: 16px; }
+    .ozi-story p, .ozi-meta { font-size: 15px; }
+    .ozi-qr-box img, .ozi-qr-box canvas { width: 100px !important; height: 100px !important; }
+  }
+</style>
+
+<div id="ozi"><p class="ozi-muted">Loading…</p></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(function () {
+  /* ================= Settings ================= */
+  var SONG         = 'latest';   // 'latest', or a song title / Apple Music ID from your sheet, e.g. 'Carmen'
+  var TITLE_PREFIX = '';         // text before the song title, e.g. 'Title: ' ('' = just the title)
+  var SHOW = {
+    art:   false,   // cover image (song_arts)
+    title: true,
+    lead:  true,    // first paragraph, in blue
+    story: true,    // the rest of the description
+    date:  true,
+    type:  true,
+    genre: true,
+    label: false,   // record label
+    isrc:  true,
+    upc:   false,
+    qr:    true
+  };
+  var EMPTY_TEXT = 'The story behind this song is coming soon.';
+  var COLLAPSE   = true;          // true = show the first paragraph, with "Read more…" for the rest
+  var READ_MORE  = 'Read more…';
+  var READ_LESS  = 'Show less';
+  /* ============================================ */
+
+  var ARTIST_ID  = '1706653995';
+  var STOREFRONT = 'us';
+  var SHEET_ID   = '1WD98RYgWPURqwtczPYEblCOOPFutAIO1jf42oSfbzPw';
+  var SHEET_CSV  = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&gid=0';
+
+  var root = document.getElementById('ozi');
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function norm(s) { return String(s || '').toLowerCase().replace(/ - (single|ep)$/, '').replace(/[’']/g, "'").replace(/\s+/g, ' ').trim(); }
+  function parseCSV(t) {
+    var rows = [], row = [], cur = '', q = false;
+    for (var i = 0; i < t.length; i++) {
+      var c = t[i];
+      if (q) { if (c === '"' && t[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+      else if (c === '"') q = true; else if (c === ',') { row.push(cur); cur = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+      else cur += c;
+    }
+    if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+    var head = (rows.shift() || []).map(function (h) { return h.trim().toLowerCase(); });
+    return rows.filter(function (r) { return r.join('').trim(); }).map(function (r) {
+      var o = {}; head.forEach(function (h, k) { o[h] = (r[k] || '').trim(); }); return o;
+    });
+  }
+  function isImage(u) { return /^https:\/\//i.test(u) && (/\.(png|jpe?g|gif|webp)(\?|$)/i.test(u) || /drive\.google\.com|googleusercontent\.com|mzstatic\.com/i.test(u)); }
+  function imageUrl(u) {
+    if (!/drive\.google\.com/.test(u)) return u;
+    var m = u.match(/\/d\/([\w-]+)/) || u.match(/[?&]id=([\w-]+)/);
+    return m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w600' : u;
+  }
+
+  function pick(apple, rows) {
+    if (String(SONG).toLowerCase() === 'latest') {
+      var rel = (apple.results || []).filter(function (x) { return x.wrapperType === 'collection'; })
+        .sort(function (a, b) { return new Date(b.releaseDate) - new Date(a.releaseDate); })[0];
+      if (!rel) return null;
+      var name = rel.collectionName.replace(/ - (Single|EP)$/, '');
+      var row = rows.filter(function (r) { return String(r.song_id) === String(rel.collectionId); })[0] ||
+                rows.filter(function (r) { return norm(r.song_title) === norm(name); })[0] || {};
+      return { title: row.song_title || name, date: new Date(rel.releaseDate),
+               type: row.release_type || (/- EP$/.test(rel.collectionName) ? 'EP' : rel.trackCount > 1 ? 'Album' : 'Single'),
+               genre: row.song_genre || rel.primaryGenreName, appleUrl: rel.collectionViewUrl,
+               art: row.song_arts || (rel.artworkUrl100 || '').replace(/\/\d+x\d+bb\./, '/600x600bb.'), row: row };
+    }
+    var want = norm(SONG);
+    var r2 = rows.filter(function (r) { return String(r.song_id) === String(SONG).trim(); })[0] ||
+             rows.filter(function (r) { return norm(r.song_title) === want; })[0];
+    if (!r2) return null;
+    var d = r2.release_date ? new Date(r2.release_date + 'T00:00:00') : null;
+    return { title: r2.song_title, date: d && !isNaN(d) ? d : null, type: r2.release_type, genre: r2.song_genre,
+             appleUrl: r2.appl_music_link, art: r2.song_arts, row: r2 };
+  }
+
+  function meta(label, value) { if (value) root.appendChild(el('p', 'ozi-meta', label + ': ' + value)); }
+
+  function render(s) {
+    root.innerHTML = '';
+    var row = s.row;
+    if (SHOW.art && s.art && isImage(s.art)) {
+      var img = el('img', 'ozi-art'); img.alt = s.title + ' cover art'; img.src = imageUrl(s.art);
+      img.onerror = function () { img.remove(); };
+      root.appendChild(img);
+    }
+    if (SHOW.title) root.appendChild(el('h2', 'ozi-title', TITLE_PREFIX + s.title));
+
+    var paras = String(row.song_description || '').split(/\n\s*\n/).map(function (p) { return p.trim(); }).filter(Boolean);
+    if (!paras.length && (SHOW.lead || SHOW.story)) root.appendChild(el('p', 'ozi-lead', EMPTY_TEXT));
+    if (paras.length && SHOW.lead) root.appendChild(el('p', 'ozi-lead', paras[0]));
+    if (paras.length > 1 && SHOW.story) {
+      var story = el('div', 'ozi-story');
+      paras.slice(1).forEach(function (p) {
+        var para = el('p');
+        p.split('\n').forEach(function (line, k) { if (k) para.appendChild(document.createElement('br')); para.appendChild(document.createTextNode(line)); });
+        story.appendChild(para);
+      });
+      root.appendChild(story);
+      if (COLLAPSE) {
+        story.hidden = true;
+        var more = el('button', 'ozi-more', READ_MORE);
+        more.type = 'button';
+        more.setAttribute('aria-expanded', 'false');
+        more.addEventListener('click', function () {
+          story.hidden = !story.hidden;
+          more.textContent = story.hidden ? READ_MORE : READ_LESS;
+          more.setAttribute('aria-expanded', String(!story.hidden));
+        });
+        root.appendChild(more);
+      }
+    }
+
+    if (SHOW.date && s.date) meta('Release Date', s.date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }));
+    if (SHOW.type) meta('Release Type', s.type);
+    if (SHOW.genre) meta('Genre', s.genre);
+    if (SHOW.label) meta('Label', row.record_label);
+    if (SHOW.isrc) meta('ISRC', row.song_isrc);
+    if (SHOW.upc) meta('UPC', row.song_upc);
+
+    if (SHOW.qr) {
+      var qr = String(row.song_qr || '').trim();
+      if (qr) {
+        var wrap = el('div', 'ozi-qr'), box = el('div', 'ozi-qr-box');
+        wrap.appendChild(box); wrap.appendChild(el('div', 'ozi-qr-text', 'Scan to listen on your phone'));
+        root.appendChild(wrap);
+        if (isImage(qr)) {
+          var q = el('img'); q.alt = 'QR code for ' + s.title; q.src = imageUrl(qr);
+          q.onerror = function () { wrap.remove(); };
+          box.appendChild(q);
+        } else if (/^https?:\/\//i.test(qr) && typeof QRCode !== 'undefined') {
+          new QRCode(box, { text: qr, width: 260, height: 260, colorDark: '#000000', colorLight: '#ffffff' });
+        } else {
+          wrap.remove();
+        }
+      }
+    }
+  }
+
+  var needApple = String(SONG).toLowerCase() === 'latest';
+  var appleReq = needApple
+    ? fetch('https://itunes.apple.com/lookup?id=' + ARTIST_ID + '&entity=album&sort=recent&limit=50&country=' + STOREFRONT)
+        .then(function (r) { return r.json(); }).catch(function () { return {}; })
+    : Promise.resolve({});
+  var sheetReq = fetch(SHEET_CSV).then(function (r) { return r.text(); }).then(parseCSV).catch(function () { return []; });
+
+  Promise.all([appleReq, sheetReq]).then(function (res) {
+    var s = pick(res[0], res[1]);
+    if (!s) { root.innerHTML = ''; root.appendChild(el('p', 'ozi-muted', 'Song details are on the way.')); return; }
+    render(s);
+  });
+})();
+</script>

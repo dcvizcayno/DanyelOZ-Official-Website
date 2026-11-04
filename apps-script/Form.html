@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #1d1530; --purple: #2a1650; --lav: #c9b6ff; --soft: #f4f0ff; --line: #ddd5f0;
+          --blue: #2552c9; --lead: #2a2fa8; --ok: #1e7a46; --err: #b3261e; --warn: #8a5a00; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Open Sans', Arial, sans-serif; color: var(--ink); background: #faf8ff; }
+  header { background: var(--purple); color: #fff; padding: 16px 20px; }
+  header h1 { font-family: 'Oswald', sans-serif; font-weight: 500; font-size: 24px; margin: 0; letter-spacing: .5px; }
+  header p { margin: 2px 0 0; font-size: 13px; color: var(--lav); }
+  main { max-width: 1440px; margin: 0 auto; padding: 18px 16px 40px; }
+
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
+  .bar input { flex: 1 1 260px; }
+  button { font: 600 14px 'Open Sans', Arial, sans-serif; border: 0; border-radius: 999px; padding: 10px 18px; cursor: pointer; }
+  .primary { background: var(--purple); color: #fff; }
+  .primary:hover { background: #3d2470; }
+  .ghost { background: #fff; color: var(--purple); border: 1.5px solid var(--purple); }
+  .ghost:hover { background: var(--soft); }
+  button:disabled { opacity: .5; cursor: default; }
+
+  .grid { display: grid; grid-template-columns: 280px minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 1150px) {
+    .grid { grid-template-columns: 250px minmax(0, 1fr); }
+    .pv-card { grid-column: 2; }
+  }
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: 1fr; }
+    .pv-card { grid-column: auto; }
+    .songlist { height: 300px !important; }
+  }
+
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .card h2 { font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: #6a5a92; margin: 0 0 14px; }
+  .mode { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+          background: var(--soft); color: var(--purple); margin-left: 8px; letter-spacing: 0; text-transform: none; }
+
+  /* Left: all songs */
+  .list-card { padding: 14px 10px 10px; position: sticky; top: 12px; }
+  .list-card h2 { padding: 0 8px; margin-bottom: 10px; }
+  .count { color: #8a7fae; font-weight: 600; letter-spacing: 0; }
+  .songlist { height: calc(100vh - 210px); min-height: 320px; overflow-y: auto; padding-right: 4px; }
+  .songlist::-webkit-scrollbar { width: 10px; }
+  .songlist::-webkit-scrollbar-thumb { background: #cfc4ec; border-radius: 999px; border: 2px solid #fff; }
+  .songlist::-webkit-scrollbar-track { background: #f4f0ff; border-radius: 999px; }
+  .song { display: flex; align-items: center; gap: 10px; width: 100%;
+    text-align: left; background: transparent; border: 0; border-radius: 10px; padding: 7px 10px;
+    font: 400 14px 'Open Sans', Arial, sans-serif; color: var(--ink); cursor: pointer; }
+  .song:hover { background: var(--soft); }
+  .song.active { background: var(--purple); color: #fff; }
+  .song .art { flex: none; width: 34px; height: 34px; border-radius: 6px; background: #ece6fb center/cover no-repeat; }
+  .song .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .song .ty { flex: none; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+    background: #ece6fb; color: var(--purple); }
+  .song.active .ty { background: rgba(255,255,255,.2); color: #fff; }
+  .list-empty { font-size: 13px; color: #8a8399; padding: 10px; }
+
+  /* Form */
+  .section { font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #8a7fae;
+    margin: 22px 0 12px; padding-top: 16px; border-top: 1px solid var(--line); }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 0 0 5px; }
+  .hint { font-weight: 400; color: #6b6480; }
+  .field { margin-bottom: 14px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .row2 { grid-template-columns: 1fr; } }
+  input, select, textarea { width: 100%; font: 15px 'Open Sans', Arial, sans-serif; color: var(--ink);
+    border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fff; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--purple); }
+  textarea { line-height: 1.55; resize: vertical; }
+  #song_description { min-height: 240px; }
+  #bandcamp_embed { min-height: 90px; font: 13px ui-monospace, Menlo, Consolas, monospace; }
+  .bad { border-color: var(--err) !important; }
+  .msg-inline { font-size: 12px; color: var(--err); margin-top: 4px; display: none; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+  .tabs button { padding: 6px 12px; font-size: 13px; }
+  .tabs .on { background: var(--purple); color: #fff; border: 1.5px solid var(--purple); }
+  .img-preview { margin-top: 10px; display: none; gap: 12px; align-items: center; }
+  .img-box { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 6px; line-height: 0; }
+  .img-box img, .img-box canvas { width: 110px !important; height: 110px !important; object-fit: cover; border-radius: 6px; }
+  .note { font-size: 12px; color: #6b6480; }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px;
+    position: sticky; bottom: 0; background: #fff; padding: 12px 0 2px; }
+  #status { font-size: 14px; font-weight: 600; }
+  #status.ok { color: var(--ok); } #status.err { color: var(--err); }
+
+  /* Preview: matches the website panel */
+  .pv { font-family: 'Oswald', 'Arial Narrow', sans-serif; color: #111; }
+  .pv .cover { width: 160px; height: 160px; border-radius: 10px; object-fit: cover; margin-bottom: 14px; display: block; }
+  .pv h3 { font-size: 34px; line-height: 1.1; margin: 0 0 12px; font-weight: 500; text-transform: uppercase; color: var(--blue); }
+  .pv .lead { font-size: 17px; line-height: 1.6; color: var(--lead); font-weight: 500; margin: 0 0 18px; }
+  .pv p { font-size: 15.5px; line-height: 1.65; margin: 0 0 14px; }
+  .pv .meta { font-size: 15px; margin: 0 0 8px; }
+  .pv .empty { color: #8a8399; font-family: 'Open Sans', Arial, sans-serif; font-size: 14px; }
+  .pv .links { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0; font-family: 'Open Sans', Arial, sans-serif; }
+  .pv .links a { font-size: 13px; font-weight: 700; text-decoration: none; color: #fff; background: var(--purple);
+    padding: 7px 12px; border-radius: 999px; }
+  .pv .bc { margin-top: 10px; }
+  .pv .bc iframe { width: 100%; height: 120px; border: 0; border-radius: 8px; }
+
+  /* View switch */
+  .hrow { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .views { display: flex; gap: 4px; background: rgba(255,255,255,.12); padding: 4px; border-radius: 999px; }
+  .views button { background: transparent; color: #fff; padding: 8px 16px; }
+  .views button.on { background: #fff; color: var(--purple); }
+
+  /* Monthly features */
+  .fgrid { grid-template-columns: 240px minmax(0, 1.2fr) minmax(0, 1fr); }
+  @media (max-width: 1150px) { .fgrid { grid-template-columns: 220px minmax(0, 1fr); } }
+  @media (max-width: 760px) { .fgrid { grid-template-columns: 1fr; } }
+  .month { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left;
+    background: transparent; border: 0; border-radius: 10px; padding: 10px 10px; font: 400 14px 'Open Sans', Arial, sans-serif;
+    color: var(--ink); cursor: pointer; }
+  .month:hover { background: var(--soft); }
+  .month.active { background: var(--purple); color: #fff; }
+  .month .now { font-size: 10px; font-weight: 700; color: var(--ok); margin-left: 6px; }
+  .month.active .now { color: #9ef0c0; }
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #ece6fb; color: var(--purple); }
+  .badge.full { background: #dff3e7; color: var(--ok); }
+  .badge.part { background: #fff1d6; color: var(--warn); }
+  .badge.none { background: #f6e1e0; color: var(--err); }
+  .month.active .badge { background: rgba(255,255,255,.2); color: #fff; }
+  .mlabel { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #8a7fae; padding: 12px 10px 4px; }
+  .slot { border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .slot h4 { margin: 0 0 10px; font-size: 13px; color: var(--purple); display: flex; justify-content: space-between; align-items: center; }
+  .slot h4 button { padding: 4px 10px; font-size: 12px; }
+  .slot .thumbrow { display: flex; gap: 12px; align-items: flex-start; }
+  .slot .thumb { flex: none; width: 128px; aspect-ratio: 16/9; border-radius: 8px; background: #ece6fb center/cover no-repeat; }
+  .slot .thumbrow > div { flex: 1; min-width: 0; }
+  .slot textarea { min-height: 110px; }
+  #fStatus { font-size: 14px; font-weight: 600; }
+  #fStatus.ok { color: var(--ok); } #fStatus.err { color: var(--err); }
+
+  /* Features preview (matches the website widget) */
+  .fpv { display: grid; gap: 14px; }
+  .fcard { font-family: 'Oswald', 'Arial Narrow', sans-serif; color: #111; }
+  .fcard .fthumb { width: 100%; aspect-ratio: 16/9; border-radius: 10px; background: #1d1530 center/cover no-repeat; position: relative; }
+  .fcard .fthumb:after { content: ''; position: absolute; left: 50%; top: 50%; width: 52px; height: 36px; margin: -18px 0 0 -26px;
+    border-radius: 10px; background: #ff0033 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='white' d='M9 7l8 5-8 5z'/></svg>") center/22px no-repeat; }
+  .fcard h5 { font-size: 18px; font-weight: 500; margin: 10px 0 4px; }
+  .fcard p { font-size: 14px; line-height: 1.55; margin: 0; }
+  .fcard .more { font-family: 'Open Sans', Arial, sans-serif; font-size: 12px; font-weight: 700; color: var(--blue); }
+  .fempty { font-size: 14px; color: #8a8399; }
+
+  /* Explore panels */
+  .egrid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+  @media (max-width: 900px) { .egrid { grid-template-columns: 1fr; } }
+  .panel { border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .panel.off { opacity: .6; background: #faf8ff; }
+  .panel h4 { margin: 0 0 12px; font-size: 13px; color: var(--purple); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .panel h4 .sp { flex: 1; }
+  .panel h4 button { padding: 4px 10px; font-size: 12px; }
+  .panel h4 label { display: inline-flex; align-items: center; gap: 5px; margin: 0; font-weight: 600; font-size: 12px; cursor: pointer; }
+  .panel h4 input[type=checkbox] { width: auto; }
+  .panel .prow { display: flex; gap: 12px; align-items: flex-start; }
+  .panel .pthumb { flex: none; width: 96px; height: 128px; border-radius: 8px; background: #2a0a0d center/cover no-repeat; }
+  .panel .prow > div:not(.pthumb) { flex: 1; min-width: 0; }
+  .egrid .pv-card { position: sticky; top: 12px; }
+  .panel textarea { min-height: 70px; }
+  #eStatus { font-size: 14px; font-weight: 600; }
+  #eStatus.ok { color: var(--ok); } #eStatus.err { color: var(--err); }
+  .epv { display: flex; gap: 6px; height: 300px; }
+  .epv a { position: relative; flex: 1 1 0; min-width: 0; border-radius: 6px; overflow: hidden; background: #2a0a0d center/cover no-repeat;
+    color: #fff; text-decoration: none; transition: flex-grow .45s; }
+  .epv a:after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(80,0,8,.35), rgba(10,0,1,.9)); }
+  .epv a:hover, .epv:not(:hover) a:first-child { flex-grow: 3; }
+  .epv .t { position: absolute; left: 12px; right: 10px; bottom: 12px; z-index: 1; font-family: 'Oswald', sans-serif; }
+  .epv .t b { display: block; font-size: 22px; font-weight: 500; text-transform: uppercase; line-height: 1; }
+  .epv .t i { display: block; font-style: normal; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; opacity: .85; margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+</head>
+<body>
+<header>
+  <div class="hrow">
+    <div>
+      <h1>Danyel OZ · Song Database</h1>
+      <p>Changes save straight to your sheet, and your website updates on its next visit.</p>
+    </div>
+    <nav class="views">
+      <button type="button" class="on" data-view="songs">Songs</button>
+      <button type="button" data-view="features">Monthly Features</button>
+      <button type="button" data-view="explore">Explore Panels</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section id="viewSongs">
+  <div class="bar">
+    <input id="search" placeholder="Search songs…" autocomplete="off">
+    <button class="ghost" id="btnNew" type="button">+ New song</button>
+    <button class="ghost" id="btnImport" type="button">Import new releases from Apple Music</button>
+  </div>
+
+  <div class="grid">
+    <aside class="card list-card">
+      <h2>All songs <span class="count" id="count"></span></h2>
+      <div class="songlist" id="songs"><div class="list-empty">Loading songs…</div></div>
+    </aside>
+
+    <form class="card" id="form" autocomplete="off" novalidate>
+      <h2>Song details <span class="mode" id="mode">New song</span></h2>
+
+      <div class="field">
+        <label for="song_title">Song title *</label>
+        <input id="song_title" placeholder="Exactly as it appears on Apple Music">
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="release_date">Release date</label>
+          <input id="release_date" type="date">
+        </div>
+        <div class="field">
+          <label for="release_type">Release type</label>
+          <select id="release_type"><option>Single</option><option>EP</option><option>Album</option></select>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="song_genre">Genre</label>
+          <input id="song_genre" list="genres" placeholder="e.g. Alternative Pop">
+          <datalist id="genres"></datalist>
+        </div>
+        <div class="field" data-col="record_label">
+          <label for="record_label">Record label</label>
+          <input id="record_label" list="labels" placeholder="e.g. Danyel OZ, LLC">
+          <datalist id="labels"></datalist>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="song_description">Description
+          <span class="hint">First paragraph = blue intro line. Leave a blank line between paragraphs.</span></label>
+        <textarea id="song_description" placeholder="“Song” by Danyel OZ is…&#10;&#10;The story behind it…"></textarea>
+      </div>
+
+      <div class="field" data-col="song_arts">
+        <label>Song art <span class="hint">(album cover)</span></label>
+        <div class="tabs" data-picker="art">
+          <button type="button" class="ghost on" data-mode="link">Paste a link</button>
+          <button type="button" class="ghost" data-mode="upload">Upload image</button>
+        </div>
+        <div data-pane="art-link"><input id="song_arts" placeholder="Image link (Google Drive, Apple artwork, any .jpg/.png)"></div>
+        <div data-pane="art-upload" style="display:none">
+          <input id="artFile" type="file" accept="image/png,image/jpeg,image/webp">
+          <div class="note" style="margin-top:6px">Saved to a Drive folder called “Danyel OZ Song Art” and shared so your website can show it.</div>
+        </div>
+        <div class="img-preview" id="artPreview"><div class="img-box" id="artBox"></div><div class="note" id="artNote"></div></div>
+      </div>
+
+      <div class="section">Codes</div>
+      <div class="row2">
+        <div class="field">
+          <label for="song_ISRC">ISRC <span class="hint">(per song)</span></label>
+          <input id="song_ISRC" placeholder="e.g. QZ-ABC-26-00001">
+          <div class="msg-inline" id="song_ISRC_msg">An ISRC has 12 characters: 2 letters, 3 letters/numbers, 2 numbers, 5 numbers.</div>
+        </div>
+        <div class="field" data-col="song_upc">
+          <label for="song_upc">UPC <span class="hint">(per release)</span></label>
+          <input id="song_upc" inputmode="numeric" placeholder="12 or 13 digits">
+          <div class="msg-inline" id="song_upc_msg">A UPC is 12 digits (or 13 for EAN), numbers only.</div>
+        </div>
+      </div>
+
+      <div class="section">Listening links</div>
+      <div class="field" data-col="yt_video_link">
+        <label for="yt_video_link">YouTube video</label>
+        <input id="yt_video_link" type="url" placeholder="https://www.youtube.com/watch?v=…">
+        <div class="msg-inline" id="yt_video_link_msg">This doesn’t look like a YouTube link.</div>
+      </div>
+      <div class="row2">
+        <div class="field" data-col="spotify_link">
+          <label for="spotify_link">Spotify</label>
+          <input id="spotify_link" type="url" placeholder="https://open.spotify.com/…">
+          <div class="msg-inline" id="spotify_link_msg">This doesn’t look like a Spotify link.</div>
+        </div>
+        <div class="field" data-col="appl_music_link">
+          <label for="appl_music_link">Apple Music <span class="hint">(Import fills this)</span></label>
+          <input id="appl_music_link" type="url" placeholder="https://music.apple.com/…">
+          <div class="msg-inline" id="appl_music_link_msg">This doesn’t look like an Apple Music link.</div>
+        </div>
+      </div>
+      <div class="field" data-col="amazon_link">
+        <label for="amazon_link">Amazon Music</label>
+        <input id="amazon_link" type="url" placeholder="https://music.amazon.com/…">
+        <div class="msg-inline" id="amazon_link_msg">This doesn’t look like an Amazon Music link.</div>
+      </div>
+      <div class="field" data-col="bandcamp_embed">
+        <label for="bandcamp_embed">Bandcamp embed code
+          <span class="hint">On Bandcamp: Share/Embed → Embed this album → copy the code.</span></label>
+        <textarea id="bandcamp_embed" placeholder='<iframe style="border: 0; width: 100%; height: 120px;" src="https://bandcamp.com/EmbeddedPlayer/album=…"></iframe>'></textarea>
+        <div class="msg-inline" id="bandcamp_embed_msg">Paste the Bandcamp &lt;iframe&gt; code. It should contain bandcamp.com/EmbeddedPlayer.</div>
+      </div>
+
+      <div class="section">Extras</div>
+      <div class="field">
+        <label>QR code <span class="hint">(optional)</span></label>
+        <div class="tabs" data-picker="qr">
+          <button type="button" class="ghost on" data-mode="link">Paste a link</button>
+          <button type="button" class="ghost" data-mode="upload">Upload QR image</button>
+        </div>
+        <div data-pane="qr-link"><input id="song_qr" placeholder="Image link, or any link to turn into a QR (Linktree, Bandcamp…)"></div>
+        <div data-pane="qr-upload" style="display:none">
+          <input id="qrFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+          <div class="note" style="margin-top:6px">Saved to a Drive folder called “Danyel OZ QR Codes” and shared so your website can show it.</div>
+        </div>
+        <div class="img-preview" id="qrPreview"><div class="img-box" id="qrBox"></div><div class="note" id="qrNote"></div></div>
+      </div>
+
+      <div class="field">
+        <label for="song_id">Apple Music ID <span class="hint">(optional, filled in by Import)</span></label>
+        <input id="song_id" inputmode="numeric" placeholder="Leave blank for new songs">
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="btnSave" type="submit">Save song</button>
+        <span id="status"></span>
+      </div>
+    </form>
+
+    <div class="card pv-card">
+      <h2>Website preview</h2>
+      <div class="pv" id="preview"></div>
+    </div>
+  </div>
+</section>
+
+<section id="viewFeatures" hidden>
+  <div class="grid fgrid">
+    <aside class="card list-card">
+      <h2>Next 12 months</h2>
+      <div class="songlist" id="months"><div class="list-empty">Loading schedule…</div></div>
+    </aside>
+
+    <div class="card">
+      <h2>Features for <span id="fMonthLabel"></span> <span class="mode" id="fMode"></span></h2>
+      <p class="note" style="margin:-6px 0 14px">Pick a song to fill in its video and story, then edit anything. Each card shows the first paragraph, with “Read more” for the rest.</p>
+      <div id="slots"></div>
+      <div class="actions">
+        <button class="primary" id="btnSaveMonth" type="button">Save this month</button>
+        <button class="ghost" id="btnCopyPrev" type="button">Copy last month</button>
+        <span id="fStatus"></span>
+      </div>
+    </div>
+
+    <div class="card pv-card">
+      <h2>Website preview</h2>
+      <div id="fPreview" class="fpv"></div>
+    </div>
+  </div>
+</section>
+
+<section id="viewExplore" hidden>
+  <div class="grid egrid">
+    <div class="card">
+      <h2>Explore the Music panels <span class="mode" id="eCount"></span></h2>
+      <p class="note" style="margin:-6px 0 14px">Each panel is one tile in the “Explore the Music” section. Use the arrows to change the order, and hide a panel without deleting it.</p>
+      <div id="panels"><div class="list-empty">Loading panels…</div></div>
+      <div class="actions">
+        <button class="primary" id="btnSavePanels" type="button">Save panels</button>
+        <button class="ghost" id="btnAddPanel" type="button">+ Add panel</button>
+        <span id="eStatus"></span>
+      </div>
+    </div>
+    <div class="card pv-card">
+      <h2>Website preview <span class="hint" style="text-transform:none;letter-spacing:0">(hover a panel)</span></h2>
+      <div id="ePreview" class="epv"></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  var FIELDS = ['song_id', 'song_title', 'release_date', 'release_type', 'song_genre', 'song_description',
+                'song_ISRC', 'song_qr', 'song_upc', 'record_label', 'yt_video_link', 'spotify_link',
+                'appl_music_link', 'amazon_link', 'bandcamp_embed', 'song_arts'];
+  var songs = [];          // rows from the sheet
+  var columns = [];        // columns that exist in the sheet
+  var current = null;      // the song being edited (null = new)
+  var pickers = {};        // image pickers: art and qr
+
+  function $(id) { return document.getElementById(id); }
+  /* Escapes text for safe use inside HTML, including inside attribute quotes. */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function setStatus(text, kind) { var s = $('status'); s.textContent = text || ''; s.className = kind || ''; }
+  function busy(on) { ['btnSave', 'btnNew', 'btnImport'].forEach(function (id) { $(id).disabled = on; }); }
+  function label(s) { return s.song_title + (s.release_date ? '  (' + s.release_date + ')' : ''); }
+
+  /* ---------- Image helpers ---------- */
+  function isImage(u) {
+    return /\.(png|jpe?g|gif|webp|svg)(\?|$)/i.test(u) || /drive\.google\.com|googleusercontent\.com|mzstatic\.com/i.test(u);
+  }
+  function driveImage(u) {
+    if (!/drive\.google\.com/.test(u)) return u;
+    var m = u.match(/\/d\/([\w-]+)/) || u.match(/[?&]id=([\w-]+)/);
+    return m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w400' : u;
+  }
+
+  /* ---------- Link checks ---------- */
+  var CHECKS = {
+    song_ISRC: function (v) { return /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/.test(v.toUpperCase().replace(/-/g, '')); },
+    song_upc: function (v) { return /^\d{12,13}$/.test(v.replace(/[\s-]/g, '')); },
+    yt_video_link: function (v) { return /^https:\/\/(www\.|m\.|music\.)?(youtube\.com|youtu\.be)\//i.test(v); },
+    spotify_link: function (v) { return /^https:\/\/(open\.spotify\.com|spotify\.link)\//i.test(v); },
+    appl_music_link: function (v) { return /^https:\/\/(music|itunes|geo\.music)\.apple\.com\//i.test(v); },
+    amazon_link: function (v) { return /^https:\/\/(music\.)?amazon\.[a-z.]+\//i.test(v) || /^https:\/\/amzn\.to\//i.test(v); },
+    bandcamp_embed: function (v) { return !!bandcampSrc(v); }
+  };
+  function check(id) {
+    var el = $(id), v = el.value.trim(), ok = !v || CHECKS[id](v);
+    el.classList.toggle('bad', !ok);
+    var m = $(id + '_msg'); if (m) m.style.display = ok ? 'none' : 'block';
+    return ok;
+  }
+  /* Pulls the player URL out of Bandcamp's embed code (only bandcamp.com players are accepted). */
+  function bandcampSrc(code) {
+    var m = String(code || '').match(/src\s*=\s*["'](https:\/\/bandcamp\.com\/EmbeddedPlayer\/[^"']+)["']/i);
+    return m ? m[1] : '';
+  }
+  Object.keys(CHECKS).forEach(function (id) {
+    $(id).addEventListener('input', function () { check(id); renderPreview(); });
+  });
+
+  /* ---------- Image pickers (song art and QR) ---------- */
+  function makePicker(key, inputId, fileId, boxId, noteId, previewId, drawQr) {
+    var p = { mode: 'link', upload: null };
+    function setMode(m) {
+      p.mode = m;
+      document.querySelectorAll('[data-picker="' + key + '"] button').forEach(function (b) {
+        b.classList.toggle('on', b.getAttribute('data-mode') === m);
+      });
+      document.querySelector('[data-pane="' + key + '-link"]').style.display = m === 'link' ? '' : 'none';
+      document.querySelector('[data-pane="' + key + '-upload"]').style.display = m === 'upload' ? '' : 'none';
+      render();
+    }
+    function render() {
+      var box = $(boxId), note = $(noteId), wrap = $(previewId);
+      box.innerHTML = '';
+      if (p.mode === 'upload' && p.upload) {
+        var img = document.createElement('img');
+        img.src = 'data:' + p.upload.mimeType + ';base64,' + p.upload.base64;
+        box.appendChild(img); note.textContent = 'This image will be uploaded when you save.';
+        wrap.style.display = 'flex'; renderPreview(); return;
+      }
+      var v = $(inputId).value.trim();
+      if (p.mode !== 'link' || !v) { wrap.style.display = 'none'; renderPreview(); return; }
+      if (isImage(v)) {
+        var im = document.createElement('img');
+        im.src = driveImage(v);
+        im.onerror = function () { note.textContent = 'Can’t load this image. If it’s on Drive, share it as “Anyone with the link”.'; };
+        box.appendChild(im); note.textContent = 'This is how the image will look.';
+      } else if (drawQr && typeof QRCode !== 'undefined') {
+        new QRCode(box, { text: v, width: 220, height: 220 });
+        note.textContent = 'A QR code will be drawn for this link.';
+      } else {
+        note.textContent = 'This doesn’t look like an image link.';
+      }
+      wrap.style.display = 'flex'; renderPreview();
+    }
+    document.querySelectorAll('[data-picker="' + key + '"] button').forEach(function (b) {
+      b.addEventListener('click', function () { setMode(b.getAttribute('data-mode')); });
+    });
+    $(inputId).addEventListener('input', render);
+    $(fileId).addEventListener('change', function () {
+      var f = this.files[0]; p.upload = null;
+      if (!f) { render(); return; }
+      if (f.size > 5 * 1024 * 1024) { setStatus('That image is over 5 MB. Please use a smaller file.', 'err'); this.value = ''; return; }
+      var r = new FileReader();
+      r.onload = function () { p.upload = { name: f.name, mimeType: f.type || 'image/png', base64: String(r.result).split(',')[1] }; render(); };
+      r.readAsDataURL(f);
+    });
+    p.reset = function () { p.upload = null; $(fileId).value = ''; setMode('link'); };
+    p.loading = function () { return p.mode === 'upload' && $(fileId).files[0] && !p.upload; };
+    p.render = render;
+    return p;
+  }
+  pickers.art = makePicker('art', 'song_arts', 'artFile', 'artBox', 'artNote', 'artPreview', false);
+  pickers.qr = makePicker('qr', 'song_qr', 'qrFile', 'qrBox', 'qrNote', 'qrPreview', true);
+
+  /* ---------- Load ---------- */
+  function loadSongs(thenSelectRow) {
+    google.script.run
+      .withSuccessHandler(function (res) {
+        songs = res.songs || []; columns = res.columns || [];
+        // Hide inputs for columns the sheet doesn't have.
+        document.querySelectorAll('[data-col]').forEach(function (el) {
+          el.style.display = columns.indexOf(el.getAttribute('data-col')) >= 0 ? '' : 'none';
+        });
+        fillList('genres', 'song_genre', ['Alternative Pop', 'Pop', 'Alternative', 'Rock', 'Hip-Hop/Rap', 'R&B/Soul', 'Ballad', 'Holiday']);
+        fillList('labels', 'record_label', []);
+        renderList();
+        buildSongOptions();
+        if (thenSelectRow) {
+          var s = songs.filter(function (x) { return x.row === thenSelectRow; })[0];
+          if (s) fill(s, true);
+        }
+      })
+      .withFailureHandler(function (e) {
+        setStatus(e.message, 'err');
+        $('songs').innerHTML = '<div class="list-empty">Couldn’t load songs: ' + esc(e.message) + '</div>';
+      })
+      .getSongs();
+  }
+  function fillList(listId, field, extras) {
+    var seen = {}; extras.forEach(function (g) { seen[g] = true; });
+    songs.forEach(function (s) { if (s[field]) seen[s[field]] = true; });
+    var dl = $(listId); dl.innerHTML = '';
+    Object.keys(seen).sort().forEach(function (g) { var o = document.createElement('option'); o.value = g; dl.appendChild(o); });
+  }
+
+  /* ---------- Song list (left column) ---------- */
+  function renderList() {
+    var q = $('search').value.trim().toLowerCase();
+    var box = $('songs'); box.innerHTML = '';
+    var shown = songs.filter(function (s) { return !q || s.song_title.toLowerCase().indexOf(q) >= 0; });
+    $('count').textContent = q ? '(' + shown.length + ' of ' + songs.length + ')' : '(' + songs.length + ')';
+    if (!shown.length) {
+      box.innerHTML = '<div class="list-empty">' + (songs.length ? 'No songs match “' + esc(q) + '”.' : 'No songs yet.') + '</div>';
+      return;
+    }
+    shown.forEach(function (s) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'song'; b.setAttribute('data-row', s.row); b.title = label(s);
+      var art = document.createElement('span'); art.className = 'art';
+      if (s.song_arts && isImage(s.song_arts)) art.style.backgroundImage = 'url("' + driveImage(s.song_arts).replace(/"/g, '%22') + '")';
+      var t = document.createElement('span'); t.className = 't'; t.textContent = s.song_title;
+      var ty = document.createElement('span'); ty.className = 'ty'; ty.textContent = s.release_type || 'Single';
+      b.appendChild(art); b.appendChild(t); b.appendChild(ty);
+      b.addEventListener('click', function () { fill(s); });
+      box.appendChild(b);
+    });
+    markActive(false);
+  }
+  function markActive(scroll) {
+    var row = current ? String(current.row) : '';
+    document.querySelectorAll('#songs .song').forEach(function (b) {
+      var on = b.getAttribute('data-row') === row;
+      b.classList.toggle('active', on);
+      if (on && scroll) b.scrollIntoView({ block: 'nearest' });
+    });
+  }
+  $('search').addEventListener('input', renderList);
+
+  /* ---------- Form ---------- */
+  function fill(s, keepStatus) {
+    current = s;
+    FIELDS.forEach(function (f) { $(f).value = s ? (s[f] || '') : ''; });
+    if (!s) { $('release_type').value = 'Single'; $('release_date').value = new Date().toISOString().slice(0, 10); }
+    $('mode').textContent = s ? 'Editing row ' + s.row : 'New song';
+    markActive(true);
+    pickers.art.reset(); pickers.qr.reset();
+    Object.keys(CHECKS).forEach(check);
+    renderPreview();
+    if (!keepStatus) setStatus('');
+  }
+  $('btnNew').addEventListener('click', function () { fill(null); $('song_title').focus(); });
+
+  /* ---------- Preview ---------- */
+  function renderPreview() {
+    var title = $('song_title').value.trim();
+    var html = '';
+    var art = pickers.art && pickers.art.mode === 'upload' && pickers.art.upload
+      ? 'data:' + pickers.art.upload.mimeType + ';base64,' + pickers.art.upload.base64
+      : ($('song_arts').value.trim() && isImage($('song_arts').value.trim()) ? driveImage($('song_arts').value.trim()) : '');
+    if (art) html += '<img class="cover" alt="" src="' + esc(art) + '">';
+    html += '<h3>Title: ' + esc(title || 'Song title') + '</h3>';
+    var paras = $('song_description').value.split(/\n\s*\n/).map(function (p) { return p.trim(); }).filter(Boolean);
+    if (paras.length) {
+      html += '<p class="lead">' + esc(paras[0]) + '</p>';
+      paras.slice(1).forEach(function (p) { html += '<p>' + esc(p).replace(/\n/g, '<br>') + '</p>'; });
+    } else {
+      html += '<p class="empty">Your description will appear here.</p>';
+    }
+    var d = $('release_date').value;
+    if (d) html += '<p class="meta">Release Date: ' + new Date(d + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) + '</p>';
+    html += '<p class="meta">Release Type: ' + esc($('release_type').value) + '</p>';
+    if ($('song_genre').value.trim()) html += '<p class="meta">Genre: ' + esc($('song_genre').value.trim()) + '</p>';
+    if ($('record_label').value.trim()) html += '<p class="meta">Label: ' + esc($('record_label').value.trim()) + '</p>';
+
+    var links = [['yt_video_link', 'YouTube'], ['spotify_link', 'Spotify'], ['appl_music_link', 'Apple Music'], ['amazon_link', 'Amazon Music']]
+      .filter(function (l) { var v = $(l[0]).value.trim(); return v && CHECKS[l[0]](v); });
+    if (links.length) {
+      html += '<div class="links">' + links.map(function (l) {
+        return '<a target="_blank" rel="noopener" href="' + esc($(l[0]).value.trim()) + '">' + l[1] + '</a>';
+      }).join('') + '</div>';
+    }
+    var bc = bandcampSrc($('bandcamp_embed').value);
+    if (bc) html += '<div class="bc"><iframe src="' + esc(bc) + '" seamless title="Bandcamp player"></iframe></div>';
+    $('preview').innerHTML = html;
+  }
+  ['song_title', 'song_description', 'release_date', 'release_type', 'song_genre', 'record_label']
+    .forEach(function (id) { $(id).addEventListener('input', renderPreview); });
+
+  /* ---------- Save ---------- */
+  $('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!$('song_title').value.trim()) { setStatus('Please enter a song title.', 'err'); $('song_title').focus(); return; }
+    var bad = Object.keys(CHECKS).filter(function (id) { return $(id).offsetParent !== null && !check(id); });
+    if (bad.length) { setStatus('Please fix the highlighted field' + (bad.length > 1 ? 's' : '') + '.', 'err'); $(bad[0]).focus(); return; }
+    if (pickers.art.loading() || pickers.qr.loading()) { setStatus('An image is still loading. Try again in a second.', 'err'); return; }
+
+    var data = {};
+    FIELDS.forEach(function (f) { data[f] = $(f).value; });
+    data.row = current ? current.row : 0;
+    data.original_title = current ? current.song_title : '';
+    if (pickers.qr.mode === 'upload' && pickers.qr.upload) data.qrFile = pickers.qr.upload;
+    if (pickers.art.mode === 'upload' && pickers.art.upload) data.artFile = pickers.art.upload;
+
+    busy(true); setStatus('Saving…');
+    google.script.run
+      .withSuccessHandler(function (r) {
+        busy(false);
+        setStatus((r.isNew ? 'Added' : 'Saved') + ' “' + data.song_title.trim() + '”.' + (r.warning ? ' ' + r.warning : ''),
+                  r.warning ? 'err' : 'ok');
+        loadSongs(r.row);
+      })
+      .withFailureHandler(function (err) { busy(false); setStatus(err.message, 'err'); })
+      .saveSong(data);
+  });
+
+  /* ---------- Import from Apple ---------- */
+  $('btnImport').addEventListener('click', function () {
+    busy(true); setStatus('Checking Apple Music for new releases…');
+    google.script.run
+      .withSuccessHandler(function (r) { busy(false); setStatus(r.message, 'ok'); loadSongs(r.added ? 2 : (current ? current.row : 0)); })
+      .withFailureHandler(function (err) { busy(false); setStatus(err.message, 'err'); })
+      .importFromApple();
+  });
+
+  /* =================== Monthly features =================== */
+  var features = {};      // { 'YYYY-MM': [slot, slot, slot] }
+  var fMonth = '';
+  var fLoaded = false;
+  var fDirty = false;
+
+  function pad2(n) { return ('0' + n).slice(-2); }
+  /* Month key in Singapore time, offset by n months (0 = this month). */
+  function sgMonth(n) {
+    var parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapore', year: 'numeric', month: '2-digit' })
+      .formatToParts(new Date());
+    var y = Number(parts.filter(function (p) { return p.type === 'year'; })[0].value);
+    var m = Number(parts.filter(function (p) { return p.type === 'month'; })[0].value);
+    var d = new Date(Date.UTC(y, m - 1 + (n || 0), 1));
+    return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1);
+  }
+  function shiftMonth(key, n) {
+    var y = Number(key.slice(0, 4)), m = Number(key.slice(5, 7));
+    var d = new Date(Date.UTC(y, m - 1 + n, 1));
+    return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1);
+  }
+  function monthName(key) {
+    var d = new Date(Date.UTC(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1));
+    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  }
+  function ytId(url) {
+    var m = String(url || '').match(/(?:youtu\.be\/|[?&]v=|\/shorts\/|\/embed\/|\/live\/)([\w-]{11})(?![\w-])/);
+    return m ? m[1] : '';
+  }
+  function filled(s) { return !!(s && (s.yt_video_link || s.title || s.song_id)); }
+  function countFor(m) { return (features[m] || []).filter(filled).length; }
+
+  /* ---------- Switch between Songs and Monthly Features ---------- */
+  document.querySelectorAll('[data-view]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var v = b.getAttribute('data-view');
+      document.querySelectorAll('[data-view]').forEach(function (x) { x.classList.toggle('on', x === b); });
+      $('viewSongs').hidden = v !== 'songs';
+      $('viewFeatures').hidden = v !== 'features';
+      $('viewExplore').hidden = v !== 'explore';
+      if (v === 'features' && !fLoaded) loadFeatures();
+      if (v === 'explore' && !eLoaded) loadPanels();
+    });
+  });
+
+  function loadFeatures() {
+    google.script.run
+      .withSuccessHandler(function (res) {
+        features = res || {}; fLoaded = true;
+        renderMonths();
+        selectMonth(fMonth || sgMonth(0), true);
+      })
+      .withFailureHandler(function (e) {
+        $('months').innerHTML = '<div class="list-empty">Couldn’t load the schedule: ' + esc(e.message) + '</div>';
+      })
+      .getFeatures();
+  }
+
+  /* ---------- Month list ---------- */
+  function renderMonths() {
+    var box = $('months'); box.innerHTML = '';
+    var now = sgMonth(0);
+    function add(m) {
+      var n = countFor(m);
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'month'; b.setAttribute('data-month', m);
+      b.innerHTML = '<span>' + esc(monthName(m)) + (m === now ? '<span class="now">NOW</span>' : '') + '</span>' +
+        '<span class="badge ' + (n === 3 ? 'full' : n ? 'part' : 'none') + '">' + (n ? n + '/3' : 'Empty') + '</span>';
+      b.addEventListener('click', function () { selectMonth(m); });
+      box.appendChild(b);
+    }
+    var up = document.createElement('div'); up.className = 'mlabel'; up.textContent = 'Upcoming'; box.appendChild(up);
+    for (var i = 0; i < 12; i++) add(sgMonth(i));
+    var past = Object.keys(features).filter(function (m) { return m < now && countFor(m); }).sort().reverse();
+    if (past.length) {
+      var pl = document.createElement('div'); pl.className = 'mlabel'; pl.textContent = 'Past'; box.appendChild(pl);
+      past.forEach(add);
+    }
+    markMonth();
+  }
+  function markMonth() {
+    document.querySelectorAll('#months .month').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-month') === fMonth);
+    });
+  }
+
+  function selectMonth(m, force) {
+    if (!force && fDirty && m !== fMonth &&
+        !confirm('You have unsaved changes for ' + monthName(fMonth) + '. Leave without saving?')) return;
+    fMonth = m; fDirty = false;
+    $('fMonthLabel').textContent = monthName(m);
+    $('fMode').textContent = m === sgMonth(0) ? 'Live now' : (m < sgMonth(0) ? 'Past' : 'Scheduled');
+    renderSlots(features[m] || []);
+    markMonth();
+    fStatus('');
+  }
+
+  /* ---------- The 3 slot editors ---------- */
+  function renderSlots(data) {
+    var box = $('slots'); box.innerHTML = '';
+    for (var i = 0; i < 3; i++) box.appendChild(slotEditor(i, data[i] || {}));
+    renderFeaturePreview();
+  }
+
+  function slotEditor(i, s) {
+    var wrap = document.createElement('div'); wrap.className = 'slot'; wrap.setAttribute('data-slot', i);
+    wrap.innerHTML =
+      '<h4>Feature ' + (i + 1) + ' <button type="button" class="ghost" data-act="clear">Clear</button></h4>' +
+      '<div class="field"><label>Pick a song <span class="hint">(optional, fills in the details below)</span></label>' +
+        '<input data-f="song" list="songOptions" placeholder="Type a song title…"></div>' +
+      '<div class="thumbrow"><div class="thumb" data-f="thumb"></div><div>' +
+        '<div class="field"><label>YouTube video link</label><input data-f="yt_video_link" type="url" placeholder="https://www.youtube.com/watch?v=… or /shorts/…">' +
+        '<div class="msg-inline">This doesn’t look like a YouTube video link.</div></div>' +
+        '<div class="field"><label>Title</label><input data-f="title" placeholder="e.g. Back to December (Cover)"></div>' +
+      '</div></div>' +
+      '<div class="field" style="margin-bottom:0"><label>Story <span class="hint">First paragraph shows on the card. Blank line between paragraphs.</span></label>' +
+        '<textarea data-f="description"></textarea></div>';
+
+    function q(f) { return wrap.querySelector('[data-f="' + f + '"]'); }
+    q('yt_video_link').value = s.yt_video_link || '';
+    q('title').value = s.title || '';
+    q('description').value = s.description || '';
+    wrap.setAttribute('data-song-id', s.song_id || '');
+    var linked = songs.filter(function (x) { return s.song_id && String(x.song_id) === String(s.song_id); })[0];
+    if (linked) q('song').value = label(linked);
+
+    function refresh() {
+      var v = q('yt_video_link').value.trim(), id = ytId(v), ok = !v || !!id;
+      q('yt_video_link').classList.toggle('bad', !ok);
+      wrap.querySelector('.msg-inline').style.display = ok ? 'none' : 'block';
+      q('thumb').style.backgroundImage = id ? 'url("https://i.ytimg.com/vi/' + id + '/hqdefault.jpg")' : '';
+      renderFeaturePreview();
+    }
+    q('song').addEventListener('change', function () {
+      var v = this.value;
+      var song = songs.filter(function (x) { return label(x) === v; })[0] ||
+                 songs.filter(function (x) { return x.song_title.toLowerCase() === v.trim().toLowerCase(); })[0];
+      if (!song) return;
+      wrap.setAttribute('data-song-id', song.song_id || '');
+      if (song.yt_video_link) q('yt_video_link').value = song.yt_video_link;
+      q('title').value = song.song_title;
+      q('description').value = song.song_description || '';
+      if (!song.yt_video_link) fStatus('“' + song.song_title + '” has no YouTube link in your songs yet. Paste one here.', 'err');
+      fDirty = true; refresh();
+    });
+    ['yt_video_link', 'title', 'description'].forEach(function (f) {
+      q(f).addEventListener('input', function () { fDirty = true; refresh(); });
+    });
+    wrap.querySelector('[data-act="clear"]').addEventListener('click', function () {
+      ['song', 'yt_video_link', 'title', 'description'].forEach(function (f) { q(f).value = ''; });
+      wrap.setAttribute('data-song-id', ''); fDirty = true; refresh();
+    });
+    setTimeout(refresh, 0);
+    return wrap;
+  }
+
+  function collectSlots() {
+    return [].map.call(document.querySelectorAll('#slots .slot'), function (w) {
+      function v(f) { return w.querySelector('[data-f="' + f + '"]').value; }
+      return { song_id: w.getAttribute('data-song-id') || '', yt_video_link: v('yt_video_link').trim(),
+               title: v('title').trim(), description: v('description') };
+    });
+  }
+
+  /* ---------- Preview (same look as the website widget) ---------- */
+  function renderFeaturePreview() {
+    var box = $('fPreview'); if (!box) return;
+    var slots = collectSlots().filter(filled);
+    if (!slots.length) {
+      box.innerHTML = '<p class="fempty">No features yet for this month. On the website, this month would show your 3 newest videos instead.</p>';
+      return;
+    }
+    box.innerHTML = slots.map(function (s) {
+      var id = ytId(s.yt_video_link);
+      var paras = s.description.split(/\n\s*\n/).map(function (p) { return p.trim(); }).filter(Boolean);
+      return '<div class="fcard"><div class="fthumb"' + (id ? ' style="background-image:url(&quot;https://i.ytimg.com/vi/' + id + '/hqdefault.jpg&quot;)"' : '') + '></div>' +
+        '<h5>' + esc(s.title || 'Untitled') + '</h5>' +
+        (paras.length ? '<p>' + esc(paras[0]) + '</p>' : '') +
+        (paras.length > 1 ? '<span class="more">Read more</span>' : '') + '</div>';
+    }).join('');
+  }
+
+  function fStatus(t, k) { var s = $('fStatus'); s.textContent = t || ''; s.className = k || ''; }
+
+  $('btnSaveMonth').addEventListener('click', function () {
+    var slots = collectSlots();
+    var bad = slots.filter(function (s) { return s.yt_video_link && !ytId(s.yt_video_link); });
+    if (bad.length) { fStatus('Please fix the highlighted YouTube link.', 'err'); return; }
+    var btn = this; btn.disabled = true; fStatus('Saving…');
+    google.script.run
+      .withSuccessHandler(function (r) {
+        btn.disabled = false; fDirty = false;
+        features[fMonth] = slots.map(function (s) { return filled(s) ? s : null; });
+        renderMonths();
+        fStatus('Saved ' + r.saved + ' feature' + (r.saved === 1 ? '' : 's') + ' for ' + monthName(fMonth) + '.', 'ok');
+      })
+      .withFailureHandler(function (e) { btn.disabled = false; fStatus(e.message, 'err'); })
+      .saveFeaturesMonth(fMonth, slots);
+  });
+
+  $('btnCopyPrev').addEventListener('click', function () {
+    var prev = shiftMonth(fMonth, -1);
+    if (!countFor(prev)) { fStatus(monthName(prev) + ' has no features to copy.', 'err'); return; }
+    renderSlots(features[prev]); fDirty = true;
+    fStatus('Copied from ' + monthName(prev) + '. Edit, then save.', 'ok');
+  });
+
+  /* Song picker list for the feature slots */
+  function buildSongOptions() {
+    var dl = $('songOptions');
+    if (!dl) { dl = document.createElement('datalist'); dl.id = 'songOptions'; document.body.appendChild(dl); }
+    dl.innerHTML = '';
+    songs.forEach(function (s) { var o = document.createElement('option'); o.value = label(s); dl.appendChild(o); });
+  }
+
+  /* =================== Explore panels =================== */
+  var panels = [];       // [{title, script, sub, text, link, image, focus, visible, _upload}]
+  var eLoaded = false;
+
+  function eStatus(t, k) { var s = $('eStatus'); s.textContent = t || ''; s.className = k || ''; }
+  function panelImg(p) {
+    if (p._upload) return 'data:' + p._upload.mimeType + ';base64,' + p._upload.base64;
+    var u = String(p.image || '').trim();
+    if (!/^https:\/\//i.test(u)) return '';
+    if (/drive\.google\.com/.test(u)) return driveImage(u);
+    if (/googleusercontent\.com\/sitesv-images/.test(u) && u.indexOf('=') < 0) return u + '=w600';
+    return u;
+  }
+  function cssUrl(u) { return u ? 'url("' + u.replace(/["\\\n]/g, '') + '")' : ''; }
+
+  function loadPanels() {
+    google.script.run
+      .withSuccessHandler(function (list) { panels = list || []; eLoaded = true; renderPanels(); })
+      .withFailureHandler(function (e) { $('panels').innerHTML = '<div class="list-empty">Couldn’t load panels: ' + esc(e.message) + '</div>'; })
+      .getPanels();
+  }
+
+  function renderPanels() {
+    var box = $('panels'); box.innerHTML = '';
+    $('eCount').textContent = panels.filter(function (p) { return p.visible !== false; }).length + ' shown';
+    if (!panels.length) box.innerHTML = '<div class="list-empty">No panels yet. Click “+ Add panel”.</div>';
+    panels.forEach(function (p, i) { box.appendChild(panelEditor(p, i)); });
+    renderPanelPreview();
+  }
+
+  function panelEditor(p, i) {
+    var w = document.createElement('div');
+    w.className = 'panel' + (p.visible === false ? ' off' : '');
+    w.innerHTML =
+      '<h4><span>Panel ' + (i + 1) + '</span><span class="sp"></span>' +
+        '<label><input type="checkbox" data-k="visible"> Show</label>' +
+        '<button type="button" class="ghost" data-a="up" title="Move up">↑</button>' +
+        '<button type="button" class="ghost" data-a="down" title="Move down">↓</button>' +
+        '<button type="button" class="ghost" data-a="del">Delete</button></h4>' +
+      '<div class="prow"><div class="pthumb" data-k="thumb"></div><div>' +
+        '<div class="row2"><div class="field"><label>Header *</label><input data-k="title" placeholder="e.g. Albums"></div>' +
+        '<div class="field"><label>Accent word <span class="hint">(script)</span></label><input data-k="script" placeholder="e.g. Stories"></div></div>' +
+        '<div class="field"><label>Tag <span class="hint">(red label)</span></label><input data-k="sub" placeholder="e.g. Original Music & Storytelling"></div>' +
+      '</div></div>' +
+      '<div class="field"><label>Short description</label><textarea data-k="text"></textarea></div>' +
+      '<div class="field"><label>Link <span class="hint">(page it opens)</span></label><input data-k="link" type="url" placeholder="https://www.danyeloz.info/…"></div>' +
+      '<div class="row2"><div class="field"><label>Image link</label><input data-k="image" placeholder="Google Drive share link or any https image"></div>' +
+      '<div class="field"><label>…or upload an image</label><input data-k="file" type="file" accept="image/png,image/jpeg,image/webp"></div></div>' +
+      '<div class="field" style="margin-bottom:0"><label>Photo focus <span class="hint">(which part stays in view)</span></label>' +
+        '<select data-k="focus"><option value="center 25%">Top (faces)</option><option value="center 30%">Upper middle</option>' +
+        '<option value="center">Center</option><option value="center 75%">Lower</option></select></div>';
+    function q(k) { return w.querySelector('[data-k="' + k + '"]'); }
+    ['title', 'script', 'sub', 'text', 'link', 'image'].forEach(function (k) {
+      q(k).value = p[k] || '';
+      q(k).addEventListener('input', function () { p[k] = this.value; if (k === 'image') p._upload = null; refresh(); });
+    });
+    q('focus').value = p.focus || 'center 30%';
+    if (q('focus').selectedIndex < 0) q('focus').value = 'center 30%';
+    q('focus').addEventListener('change', function () { p.focus = this.value; renderPanelPreview(); });
+    q('visible').checked = p.visible !== false;
+    q('visible').addEventListener('change', function () { p.visible = this.checked; w.classList.toggle('off', !this.checked); renderPanels(); });
+    q('file').addEventListener('change', function () {
+      var f = this.files[0]; if (!f) return;
+      if (f.size > 5 * 1024 * 1024) { eStatus('That image is over 5 MB. Please use a smaller file.', 'err'); this.value = ''; return; }
+      var r = new FileReader();
+      r.onload = function () { p._upload = { name: f.name, mimeType: f.type || 'image/jpeg', base64: String(r.result).split(',')[1] }; refresh(); };
+      r.readAsDataURL(f);
+    });
+    w.querySelector('[data-a="up"]').addEventListener('click', function () { move(i, -1); });
+    w.querySelector('[data-a="down"]').addEventListener('click', function () { move(i, 1); });
+    w.querySelector('[data-a="del"]').addEventListener('click', function () {
+      if (confirm('Delete the “' + (p.title || 'untitled') + '” panel?')) { panels.splice(i, 1); renderPanels(); }
+    });
+    function refresh() {
+      q('thumb').style.backgroundImage = cssUrl(panelImg(p));
+      var badLink = p.link && !/^https:\/\//i.test(p.link.trim());
+      q('link').classList.toggle('bad', !!badLink);
+      renderPanelPreview();
+    }
+    refresh();
+    return w;
+  }
+
+  function move(i, d) {
+    var j = i + d; if (j < 0 || j >= panels.length) return;
+    var t = panels[i]; panels[i] = panels[j]; panels[j] = t; renderPanels();
+  }
+
+  function renderPanelPreview() {
+    var box = $('ePreview'); box.innerHTML = '';
+    panels.filter(function (p) { return p.visible !== false && p.title; }).forEach(function (p) {
+      var a = document.createElement('a'); a.href = '#';
+      a.addEventListener('click', function (e) { e.preventDefault(); });
+      a.style.backgroundImage = cssUrl(panelImg(p));
+      a.style.backgroundPosition = p.focus || 'center 30%';
+      var t = document.createElement('div'); t.className = 't';
+      var b = document.createElement('b'); b.textContent = p.title;
+      var s = document.createElement('i'); s.textContent = p.sub || '';
+      t.appendChild(b); t.appendChild(s); a.appendChild(t); box.appendChild(a);
+    });
+    if (!box.children.length) box.innerHTML = '<p class="fempty">No panels are shown.</p>';
+  }
+
+  $('btnAddPanel').addEventListener('click', function () {
+    panels.push({ title: '', script: '', sub: '', text: '', link: 'https://www.danyeloz.info/', image: '', focus: 'center 30%', visible: true });
+    renderPanels();
+    var last = $('panels').lastElementChild; if (last) { last.scrollIntoView({ block: 'nearest' }); last.querySelector('[data-k="title"]').focus(); }
+  });
+
+  $('btnSavePanels').addEventListener('click', function () {
+    var bad = panels.map(function (p, i) { return !String(p.title || '').trim() ? i + 1 : 0; }).filter(Boolean);
+    if (bad.length) { eStatus('Panel ' + bad[0] + ' needs a header.', 'err'); return; }
+    var badLink = panels.map(function (p, i) { return p.link && !/^https:\/\//i.test(p.link.trim()) ? i + 1 : 0; }).filter(Boolean);
+    if (badLink.length) { eStatus('Panel ' + badLink[0] + ': the link must start with https://', 'err'); return; }
+    var data = panels.map(function (p) {
+      return { title: p.title, script: p.script, sub: p.sub, text: p.text, link: p.link, image: p._upload ? '' : p.image,
+               focus: p.focus, visible: p.visible !== false, imageFile: p._upload || null };
+    });
+    var btn = this; btn.disabled = true; eStatus('Saving…');
+    google.script.run
+      .withSuccessHandler(function (r) {
+        btn.disabled = false; panels = r.panels || panels; renderPanels();
+        eStatus('Saved ' + r.saved + ' panel' + (r.saved === 1 ? '' : 's') + '.' + (r.warning ? ' ' + r.warning : ''), r.warning ? 'err' : 'ok');
+      })
+      .withFailureHandler(function (e) { btn.disabled = false; eStatus(e.message, 'err'); })
+      .savePanels(data);
+  });
+
+  fill(null);
+  loadSongs();
+</script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!-- Danyel OZ: Monthly Featured Videos widget
+     Paste into Google Sites: Insert > Embed > Embed code.
+     Shows this month's 3 features from the "features" tab of your Song Database (Singapore time).
+     On the 1st of each month it switches by itself. -->
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; height: 100%; }
+  #fv { font-family: 'Oswald', 'Arial Narrow', sans-serif; color: #111; position: relative; height: 100%; box-sizing: border-box; }
+  #fv * { box-sizing: border-box; }
+  #fv button { font: inherit; cursor: pointer; }
+
+  /* Wide: three cards side by side */
+  .fv-track { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; height: 100%; }
+  .fv-card { display: flex; flex-direction: column; min-width: 0; }
+  .fv-thumb { position: relative; width: 100%; aspect-ratio: 16 / 9; border: 0; padding: 0; border-radius: 10px;
+    background: #1d1530 center / cover no-repeat; flex: none; }
+  .fv-thumb:focus-visible { outline: 3px solid #2552c9; outline-offset: 2px; }
+  .fv-play { position: absolute; left: 50%; top: 50%; width: 58px; height: 40px; margin: -20px 0 0 -29px; border-radius: 11px;
+    background: #ff0033; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+  .fv-thumb:hover .fv-play { background: #e0002d; }
+  .fv-play svg { width: 22px; height: 22px; fill: #fff; }
+  .fv-body { padding-top: 12px; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+  .fv-title { font-size: 20px; line-height: 1.2; font-weight: 500; margin: 0 0 6px; }
+  .fv-lead { font-size: 15px; line-height: 1.55; margin: 0; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .fv-more { align-self: flex-start; margin-top: 6px; background: none; border: 0; padding: 0; color: #2552c9; font-size: 15px; font-weight: 500; }
+  .fv-more:hover { text-decoration: underline; }
+  .fv-nav { display: none; }
+
+  /* Narrow (phones): one card at a time, image left, words right */
+  @media (max-width: 620px) {
+    .fv-track { display: block; height: calc(100% - 26px); overflow: hidden; }
+    .fv-card { display: none; flex-direction: row; gap: 12px; height: 100%; align-items: flex-start; }
+    .fv-card.on { display: flex; }
+    .fv-thumb { width: 46%; }
+    .fv-body { padding-top: 0; flex: 1; height: 100%; }
+    .fv-title { font-size: 16px; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .fv-lead { font-size: 13px; line-height: 1.45; -webkit-line-clamp: 3; }
+    .fv-more { font-size: 13px; margin-top: 4px; }
+    .fv-play { width: 42px; height: 30px; margin: -15px 0 0 -21px; }
+    .fv-play svg { width: 16px; height: 16px; }
+    .fv-nav { display: flex; align-items: center; justify-content: center; gap: 10px; height: 26px; }
+    .fv-arrow { background: none; border: 0; color: #2a1650; font-size: 18px; line-height: 1; padding: 0 6px; }
+    .fv-dot { width: 8px; height: 8px; border-radius: 50%; border: 0; padding: 0; background: #d4cbee; }
+    .fv-dot.on { background: #2a1650; }
+  }
+
+  /* Overlay: video player or full story, fills the widget */
+  .fv-over { position: absolute; inset: 0; background: #0f0a1c; border-radius: 10px; display: none; z-index: 5; overflow: hidden; }
+  .fv-over.on { display: block; }
+  .fv-over iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .fv-close { position: absolute; top: 8px; right: 8px; z-index: 6; width: 34px; height: 34px; border-radius: 50%; border: 0;
+    background: rgba(255,255,255,.92); color: #111; font-size: 20px; line-height: 34px; text-align: center; padding: 0; }
+  .fv-story { position: absolute; inset: 0; overflow-y: auto; background: #fff; padding: 22px 54px 22px 22px; }
+  .fv-story h3 { font-size: 26px; line-height: 1.15; font-weight: 500; margin: 0 0 12px; color: #2552c9; text-transform: uppercase; }
+  .fv-story p { font-size: 16px; line-height: 1.65; margin: 0 0 14px; }
+  .fv-story .fv-lead-p { color: #2a2fa8; font-weight: 500; }
+  .fv-watch { display: inline-block; margin-top: 4px; background: #2a1650; color: #fff; border: 0; border-radius: 999px; padding: 10px 18px; font-size: 15px; }
+  .fv-msg { font-size: 15px; color: #444; padding: 10px 0; }
+  .fv-msg a { color: #2552c9; }
+  @media (max-width: 620px) {
+    .fv-story { padding: 14px 46px 14px 14px; }
+    .fv-story h3 { font-size: 20px; } .fv-story p { font-size: 14px; }
+  }
+</style>
+
+<div id="fv" aria-live="polite">
+  <div class="fv-track" id="fv-track"><p class="fv-msg">Loading this month’s features…</p></div>
+  <div class="fv-nav" id="fv-nav"></div>
+  <div class="fv-over" id="fv-over" role="dialog" aria-modal="true">
+    <button class="fv-close" id="fv-close" aria-label="Close">×</button>
+    <div id="fv-over-body"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  /* ===== Settings ===== */
+  var SHEET_ID     = '1WD98RYgWPURqwtczPYEblCOOPFutAIO1jf42oSfbzPw';   // Danyel OZ Song Database
+  var FEATURES_TAB = 'features';
+  var SONGS_GID    = '0';
+  var CHANNEL_URL  = 'https://www.youtube.com/@danyeloz1554';
+  var TIME_ZONE    = 'Asia/Singapore';   // the month switches at midnight here
+
+  var BASE = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv';
+  var track = document.getElementById('fv-track');
+  var nav = document.getElementById('fv-nav');
+  var over = document.getElementById('fv-over');
+  var overBody = document.getElementById('fv-over-body');
+  var items = [], current = 0;
+
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function norm(s) { return String(s || '').toLowerCase().replace(/[’']/g, "'").replace(/\s+/g, ' ').trim(); }
+
+  /* Only real 11-character YouTube IDs are ever used. */
+  function ytId(url) {
+    var m = String(url || '').match(/(?:youtu\.be\/|[?&]v=|\/shorts\/|\/embed\/|\/live\/)([\w-]{11})(?![\w-])/);
+    return m && /^[\w-]{11}$/.test(m[1]) ? m[1] : '';
+  }
+
+  function thisMonth() {
+    var parts = new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, year: 'numeric', month: '2-digit' }).formatToParts(new Date());
+    function get(t) { return parts.filter(function (p) { return p.type === t; })[0].value; }
+    return get('year') + '-' + get('month');
+  }
+  function monthKey(v) {
+    var s = String(v || '').trim(), m = s.match(/^(\d{4})-(\d{1,2})/);
+    if (m) return m[1] + '-' + ('0' + m[2]).slice(-2);
+    var d = new Date(s);
+    return isNaN(d) ? '' : d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2);
+  }
+
+  function parseCSV(text) {
+    var rows = [], row = [], cur = '', q = false;
+    for (var i = 0; i < text.length; i++) {
+      var c = text[i];
+      if (q) { if (c === '"' && text[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+      else if (c === '"') q = true;
+      else if (c === ',') { row.push(cur); cur = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+      else cur += c;
+    }
+    if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+    if (!rows.length) return [];
+    var head = rows.shift().map(function (h) { return h.trim().toLowerCase(); });
+    return rows.filter(function (r) { return r.join('').trim() !== ''; }).map(function (r) {
+      var o = {}; head.forEach(function (h, k) { o[h] = (r[k] || '').trim(); }); return o;
+    });
+  }
+  function getCSV(url) {
+    return fetch(url).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); }).then(parseCSV);
+  }
+
+  /* Fill blanks in a feature from its linked song. */
+  function complete(f, songs) {
+    var s = songs.filter(function (x) { return f.song_id && String(x.song_id) === String(f.song_id); })[0] ||
+            songs.filter(function (x) { return f.title && norm(x.song_title) === norm(f.title); })[0] || {};
+    return {
+      id: ytId(f.yt_video_link) || ytId(s.yt_video_link),
+      title: f.title || s.song_title || '',
+      description: f.description || s.song_description || ''
+    };
+  }
+
+  function pickItems(features, songs) {
+    var now = thisMonth();
+    var byMonth = {};
+    features.forEach(function (f) {
+      var m = monthKey(f.month), slot = Number(f.slot);
+      if (!m || !(slot >= 1 && slot <= 3)) return;
+      (byMonth[m] = byMonth[m] || [])[slot - 1] = f;
+    });
+    function usable(m) {
+      return (byMonth[m] || []).filter(Boolean).map(function (f) { return complete(f, songs); })
+        .filter(function (x) { return x.id; });
+    }
+    var list = usable(now);
+    if (list.length) return list;
+    // This month is empty: use the most recent month that had features.
+    var past = Object.keys(byMonth).filter(function (m) { return m < now; }).sort().reverse();
+    for (var i = 0; i < past.length; i++) { list = usable(past[i]); if (list.length) return list; }
+    // Nothing scheduled at all: the 3 newest songs that have a video.
+    return songs.filter(function (s) { return ytId(s.yt_video_link); })
+      .sort(function (a, b) { return String(b.release_date).localeCompare(String(a.release_date)); })
+      .slice(0, 3).map(function (s) { return complete({ song_id: s.song_id }, songs); });
+  }
+
+  function paragraphs(text) {
+    return String(text || '').split(/\n\s*\n/).map(function (p) { return p.trim(); }).filter(Boolean);
+  }
+
+  /* ---------- Render ---------- */
+  function render() {
+    track.innerHTML = ''; nav.innerHTML = '';
+    if (!items.length) {
+      var msg = el('p', 'fv-msg', 'New videos are on the way. ');
+      var a = el('a', null, 'Visit my YouTube channel'); a.href = CHANNEL_URL; a.target = '_blank'; a.rel = 'noopener';
+      msg.appendChild(a); track.appendChild(msg); return;
+    }
+    items.forEach(function (it, i) {
+      var card = el('article', 'fv-card' + (i === 0 ? ' on' : ''));
+      var thumb = el('button', 'fv-thumb');
+      thumb.type = 'button';
+      thumb.setAttribute('aria-label', 'Play ' + (it.title || 'video'));
+      thumb.style.backgroundImage = 'url("https://i.ytimg.com/vi/' + it.id + '/hqdefault.jpg")';
+      var play = el('span', 'fv-play');
+      play.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>';
+      thumb.appendChild(play);
+      thumb.addEventListener('click', function () { openVideo(it); });
+
+      var body = el('div', 'fv-body');
+      body.appendChild(el('h3', 'fv-title', it.title));
+      var paras = paragraphs(it.description);
+      if (paras.length) body.appendChild(el('p', 'fv-lead', paras[0]));
+      if (paras.length > 1 || (paras[0] && paras[0].length > 180)) {
+        var more = el('button', 'fv-more', 'Read more');
+        more.type = 'button';
+        more.addEventListener('click', function () { openStory(it); });
+        body.appendChild(more);
+      }
+      card.appendChild(thumb); card.appendChild(body);
+      track.appendChild(card);
+    });
+
+    if (items.length > 1) {
+      var prev = el('button', 'fv-arrow', '‹'); prev.setAttribute('aria-label', 'Previous'); prev.type = 'button';
+      prev.addEventListener('click', function () { show(current - 1); });
+      nav.appendChild(prev);
+      items.forEach(function (_, i) {
+        var d = el('button', 'fv-dot' + (i === 0 ? ' on' : '')); d.type = 'button';
+        d.setAttribute('aria-label', 'Feature ' + (i + 1));
+        d.addEventListener('click', function () { show(i); });
+        nav.appendChild(d);
+      });
+      var next = el('button', 'fv-arrow', '›'); next.setAttribute('aria-label', 'Next'); next.type = 'button';
+      next.addEventListener('click', function () { show(current + 1); });
+      nav.appendChild(next);
+    }
+  }
+
+  function show(i) {
+    current = (i + items.length) % items.length;
+    [].forEach.call(track.querySelectorAll('.fv-card'), function (c, k) { c.classList.toggle('on', k === current); });
+    [].forEach.call(nav.querySelectorAll('.fv-dot'), function (d, k) { d.classList.toggle('on', k === current); });
+  }
+
+  /* Swipe on phones */
+  var startX = null;
+  track.addEventListener('touchstart', function (e) { startX = e.touches[0].clientX; }, { passive: true });
+  track.addEventListener('touchend', function (e) {
+    if (startX == null) return;
+    var dx = e.changedTouches[0].clientX - startX; startX = null;
+    if (Math.abs(dx) > 40) show(current + (dx < 0 ? 1 : -1));
+  });
+
+  /* ---------- Overlay ---------- */
+  function openVideo(it) {
+    overBody.innerHTML = '';
+    var f = document.createElement('iframe');
+    f.src = 'https://www.youtube-nocookie.com/embed/' + it.id + '?autoplay=1&rel=0&playsinline=1&modestbranding=1';
+    f.title = it.title || 'YouTube video';
+    f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+    f.allowFullscreen = true;
+    overBody.appendChild(f);
+    over.classList.add('on');
+  }
+  function openStory(it) {
+    overBody.innerHTML = '';
+    var s = el('div', 'fv-story');
+    s.appendChild(el('h3', null, it.title));
+    paragraphs(it.description).forEach(function (p, i) {
+      var para = el('p', i === 0 ? 'fv-lead-p' : null);
+      p.split('\n').forEach(function (line, k) { if (k) para.appendChild(document.createElement('br')); para.appendChild(document.createTextNode(line)); });
+      s.appendChild(para);
+    });
+    var w = el('button', 'fv-watch', '▶ Watch the video'); w.type = 'button';
+    w.addEventListener('click', function () { openVideo(it); });
+    s.appendChild(w);
+    overBody.appendChild(s);
+    over.classList.add('on');
+  }
+  function closeOverlay() { over.classList.remove('on'); overBody.innerHTML = ''; }   // emptying it stops the video
+  document.getElementById('fv-close').addEventListener('click', closeOverlay);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeOverlay(); });
+
+  /* ---------- Load ---------- */
+  Promise.all([
+    getCSV(BASE + '&sheet=' + encodeURIComponent(FEATURES_TAB)).catch(function () { return []; }),
+    getCSV(BASE + '&gid=' + SONGS_GID).catch(function () { return []; })
+  ]).then(function (res) {
+    items = pickItems(res[0], res[1]);
+    render();
+  });
+})();
+</script>
