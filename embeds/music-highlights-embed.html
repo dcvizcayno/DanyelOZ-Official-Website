@@ -1,0 +1,289 @@
+<!-- Danyel OZ: Music Highlights
+     Paste into Google Sites: Insert > Embed > Embed code (or By URL from GitHub Pages).
+     Cards come from the "music_highlights" tab of your Song Database. Covers, audio previews and
+     track lists come from Apple Music, matched by title. -->
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #050505; }
+  #mh { --line: rgba(255,255,255,.08); position: relative; min-height: 100vh; box-sizing: border-box; overflow: hidden;
+    background: #050505; color: #f4f4f6; font-family: 'Plus Jakarta Sans', Arial, sans-serif; padding: 26px 28px 30px; }
+  #mh * { box-sizing: border-box; }
+  #mh button { font: inherit; color: inherit; cursor: pointer; }
+  .mh-glow { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+  .mh-wrap { position: relative; z-index: 1; }
+
+  .mh-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+    padding-bottom: 20px; margin-bottom: 26px; border-bottom: 1px solid var(--line); }
+  .mh-eyebrow { font-size: 12px; color: #a1a1aa; margin: 0 0 6px; }
+  .mh-title { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: clamp(26px, 3.4vw, 36px); letter-spacing: -.02em; margin: 0; }
+  .mh-chips { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.02); }
+  .mh-chip { background: none; border: 0; border-radius: 8px; padding: 7px 12px; font-size: 13px; color: #a1a1aa; }
+  .mh-chip:hover { color: #fff; }
+  .mh-chip.on { background: rgba(255,255,255,.1); color: #fff; font-weight: 600; }
+
+  .mh-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 22px; }
+  .mh-card { position: relative; display: flex; flex-direction: column; background: #111115; border: 1px solid var(--line);
+    border-radius: 16px; padding: 22px; transition: transform .18s cubic-bezier(.16,1,.3,1), border-color .18s; }
+  .mh-card:hover { transform: translateY(-4px); }
+  .mh-card[hidden] { display: none; }
+  .mh-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: #a1a1aa; margin-bottom: 14px; }
+  .mh-meta b { font-weight: 600; }
+  .mh-tl { background: none; border: 0; padding: 0; font-size: 12px; color: #a1a1aa; white-space: nowrap; }
+  .mh-tl:hover { color: #fff; }
+  .mh-cover { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: #18181b; margin-bottom: 18px; }
+  .mh-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .mh-play { position: absolute; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 7px; border: 0;
+    background: rgba(0,0,0,.78); border: 1px solid rgba(255,255,255,.14); border-radius: 9px; padding: 7px 12px; font-size: 13px; font-weight: 600; }
+  .mh-play:hover { background: rgba(0,0,0,.92); }
+  .mh-play svg { width: 12px; height: 12px; fill: #fff; }
+  .mh-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; }
+  .mh-name { font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 22px; margin: 0 0 4px; color: #fff; }
+  .mh-sub { font-size: 14px; color: #a1a1aa; margin: 0 0 18px; }
+  .mh-foot { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line); }
+  .mh-avail { display: flex; justify-content: space-between; font-size: 11.5px; color: #71717a; margin-bottom: 10px; }
+  .mh-avail code { font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .mh-links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .mh-btn { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; font-size: 12.5px; font-weight: 500; color: #f4f4f6;
+    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 7px 11px; transition: background .15s; }
+  .mh-btn:hover { background: rgba(255,255,255,.12); }
+  .mh-btn i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+  /* Track list overlay */
+  .mh-over { position: absolute; inset: 0; z-index: 5; display: none; align-items: center; justify-content: center; padding: 16px;
+    background: rgba(0,0,0,.72); }
+  .mh-over.on { display: flex; }
+  .mh-box { width: min(480px, 100%); max-height: 100%; overflow-y: auto; background: #111115; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 16px; padding: 22px; }
+  .mh-box h3 { font-family: 'Outfit', sans-serif; font-size: 22px; margin: 0 0 4px; }
+  .mh-box p { font-size: 13px; color: #a1a1aa; margin: 0 0 14px; }
+  .mh-box ol { margin: 0; padding: 0; list-style: none; }
+  .mh-box li { display: flex; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .mh-box li span { color: #71717a; width: 20px; }
+  .mh-box li em { margin-left: auto; font-style: normal; color: #71717a; font-size: 12px; }
+  .mh-x { float: right; background: rgba(255,255,255,.08); border: 0; border-radius: 50%; width: 32px; height: 32px; font-size: 18px; }
+
+  /* Phones: one row you can swipe, so the section stays short */
+  @media (max-width: 640px) {
+    #mh { padding: 20px 16px 22px; }
+    .mh-chips { display: none; }
+    .mh-grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 14px; padding-bottom: 6px; scrollbar-width: none; }
+    .mh-grid::-webkit-scrollbar { display: none; }
+    .mh-card { flex: 0 0 84%; scroll-snap-align: center; padding: 18px; }
+    .mh-card:hover { transform: none; }
+  }
+</style>
+
+<div id="mh">
+  <div class="mh-glow" id="mh-glow"></div>
+  <div class="mh-wrap">
+    <div class="mh-head">
+      <div><p class="mh-eyebrow" id="mh-eyebrow"></p><h2 class="mh-title" id="mh-title"></h2></div>
+      <div class="mh-chips" id="mh-chips"></div>
+    </div>
+    <div class="mh-grid" id="mh-grid"></div>
+  </div>
+  <div class="mh-over" id="mh-over" role="dialog" aria-modal="true"><div class="mh-box" id="mh-box"></div></div>
+</div>
+
+<script>
+(function () {
+  /* ================= Settings ================= */
+  var TITLE     = 'Music Highlights';
+  var EYEBROW   = 'Danyel OZ · Extended Play Trilogy · #b3';
+  var SHOW_HEX  = true;    // show each Act's color code, like the design
+  var SHEET_ID  = '1WD98RYgWPURqwtczPYEblCOOPFutAIO1jf42oSfbzPw';
+  var SHEET_GID = '1521214689';    // the music_highlights tab
+  /* ============================================ */
+
+  var ARTIST_ID = '1706653995';
+  var BACKUP = [   // shown if the sheet can't be reached
+    { actlabel: 'Act I',   title: 'The Encounter',   subtitle: 'Listen now', catalogtag: 'Extended Play · #b3', accenthex: '#C82829' },
+    { actlabel: 'Act II',  title: 'The Search',      subtitle: 'Listen now', catalogtag: 'Extended Play · #b3', accenthex: '#5E6F64' },
+    { actlabel: 'Act III', title: 'The Realization', subtitle: 'Listen now', catalogtag: 'Extended Play · #b3', accenthex: '#D4C66A' }
+  ];
+  var PLATFORMS = [
+    { key: 'applemusicurl',   name: 'Apple Music',   dot: '#fa2d48', ok: /^https:\/\/(music|geo\.music|itunes)\.apple\.com\//i },
+    { key: 'spotifyurl',      name: 'Spotify',       dot: '#1ed760', ok: /^https:\/\/(open\.spotify\.com|spotify\.link)\//i },
+    { key: 'youtubemusicurl', name: 'YouTube Music', dot: '#ff4e45', ok: /^https:\/\/(music\.|www\.|m\.)?(youtube\.com|youtu\.be)\//i },
+    { key: 'amazonmusicurl',  name: 'Amazon',        dot: '#25d1da', ok: /^https:\/\/(music\.)?amazon\.[a-z.]+\/|^https:\/\/amzn\.to\//i }
+  ];
+
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function norm(s) { return String(s || '').toLowerCase().replace(/ - (single|ep)$/, '').replace(/[’']/g, "'").replace(/\s+/g, ' ').trim(); }
+  function hex(v, fb) { return /^#[0-9a-f]{6}$/i.test(String(v || '').trim()) ? String(v).trim() : fb; }
+  function rgba(h, a) { var n = parseInt(h.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')'; }
+  function parseCSV(t) {
+    var rows = [], row = [], cur = '', q = false;
+    for (var i = 0; i < t.length; i++) {
+      var c = t[i];
+      if (q) { if (c === '"' && t[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+      else if (c === '"') q = true; else if (c === ',') { row.push(cur); cur = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+      else cur += c;
+    }
+    if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+    var head = (rows.shift() || []).map(function (h) { return h.trim().toLowerCase(); });
+    return rows.filter(function (r) { return r.join('').trim(); }).map(function (r) {
+      var o = {}; head.forEach(function (h, k) { o[h] = (r[k] || '').trim(); }); return o;
+    });
+  }
+  function getJSON(u) { return fetch(u).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
+
+  $('mh-title').textContent = TITLE;
+  $('mh-eyebrow').textContent = EYEBROW;
+
+  var catalog = {};           // title -> Apple release
+  var audio = null, playingBtn = null;
+
+  /* ---------- Cards ---------- */
+  function render(items) {
+    var grid = $('mh-grid'), chips = $('mh-chips');
+    grid.innerHTML = ''; chips.innerHTML = '';
+    var glows = [];
+    items.forEach(function (it, i) {
+      var c = hex(it.accenthex, '#C82829');
+      glows.push('radial-gradient(40% 55% at ' + (items.length > 1 ? 10 + 80 * i / (items.length - 1) : 50) + '% 0%, ' + rgba(c, .16) + ', transparent 70%)');
+      var rel = catalog[norm(it.title)] || null;
+
+      var card = el('article', 'mh-card'); card.dataset.i = i;
+      card.style.borderColor = rgba(c, .28);
+      card.style.boxShadow = 'inset 0 1px 0 0 ' + rgba(c, .3) + ', 0 24px 60px -30px ' + rgba(c, .45);
+
+      var meta = el('div', 'mh-meta'), left = el('span');
+      var act = el('b', null, it.actlabel || ''); act.style.color = c;
+      left.appendChild(act);
+      if (it.catalogtag) left.appendChild(document.createTextNode((it.actlabel ? '  ·  ' : '') + it.catalogtag));
+      meta.appendChild(left);
+      if (rel) {
+        var tl = el('button', 'mh-tl', 'Tracklist ↗'); tl.type = 'button';
+        tl.addEventListener('click', function () { openTracklist(it, rel); });
+        meta.appendChild(tl);
+      }
+      card.appendChild(meta);
+
+      var cover = el('div', 'mh-cover');
+      var art = String(it.coverimageurl || '').trim();
+      if (!/^https:\/\//i.test(art) && rel && rel.artworkUrl100) art = rel.artworkUrl100.replace(/\/\d+x\d+bb\./, '/1000x1000bb.');
+      if (/^https:\/\//i.test(art)) {
+        var img = el('img'); img.alt = (it.title || '') + ' cover art'; img.loading = 'lazy'; img.src = art;
+        img.onerror = function () { img.remove(); };
+        cover.appendChild(img);
+      }
+      if (rel) {
+        var bar = el('div', 'mh-bar'); bar.style.background = c; cover.appendChild(bar);
+        var play = el('button', 'mh-play'); play.type = 'button';
+        play.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg>';
+        play.appendChild(document.createTextNode('Preview Audio'));
+        play.addEventListener('click', function () { togglePreview(play, bar, rel); });
+        cover.appendChild(play);
+      }
+      card.appendChild(cover);
+
+      card.appendChild(el('h3', 'mh-name', it.title));
+      if (it.subtitle) card.appendChild(el('p', 'mh-sub', it.subtitle));
+
+      var foot = el('div', 'mh-foot'), avail = el('div', 'mh-avail');
+      avail.appendChild(el('span', null, 'Available on streaming platforms'));
+      if (SHOW_HEX) { var code = el('code', null, c.toUpperCase()); code.style.color = c; avail.appendChild(code); }
+      foot.appendChild(avail);
+      var links = el('div', 'mh-links');
+      PLATFORMS.forEach(function (p) {
+        var url = String(it[p.key] || '').trim();
+        // A real Apple Music album page beats a search page
+        if (p.key === 'applemusicurl' && rel && (!url || /\/search\?/i.test(url))) url = rel.collectionViewUrl.replace(/[?&]uo=\d+/, '');
+        if (!url || !p.ok.test(url)) return;
+        var a = el('a', 'mh-btn'); a.href = url; a.target = '_blank'; a.rel = 'noopener';
+        var d = el('i'); d.style.background = p.dot; a.appendChild(d); a.appendChild(document.createTextNode(p.name));
+        links.appendChild(a);
+      });
+      foot.appendChild(links);
+      card.appendChild(foot);
+      grid.appendChild(card);
+    });
+    $('mh-glow').style.background = glows.join(',');
+
+    // Filter chips: All + one per Act
+    function chip(label, idx) {
+      var b = el('button', 'mh-chip' + (idx < 0 ? ' on' : ''), label); b.type = 'button';
+      b.addEventListener('click', function () {
+        [].forEach.call(chips.children, function (x) { x.classList.toggle('on', x === b); });
+        [].forEach.call(grid.children, function (cd) { cd.hidden = idx >= 0 && Number(cd.dataset.i) !== idx; });
+      });
+      chips.appendChild(b);
+    }
+    if (items.length > 1) {
+      chip('All Acts (' + items.length + ')', -1);
+      items.forEach(function (it, i) { chip(it.actlabel || it.title, i); });
+    }
+  }
+
+  /* ---------- Apple Music: tracks, previews ---------- */
+  var trackCache = {};
+  function tracks(rel) {
+    if (!trackCache[rel.collectionId]) {
+      trackCache[rel.collectionId] = getJSON('https://itunes.apple.com/lookup?id=' + rel.collectionId + '&entity=song&country=us')
+        .then(function (d) { return (d.results || []).filter(function (x) { return x.wrapperType === 'track'; })
+          .sort(function (a, b) { return (a.discNumber - b.discNumber) || (a.trackNumber - b.trackNumber); }); });
+    }
+    return trackCache[rel.collectionId];
+  }
+
+  function stop() {
+    if (audio) { audio.pause(); audio = null; }
+    if (playingBtn) { playingBtn.btn.lastChild.textContent = 'Preview Audio'; playingBtn.btn.firstChild.innerHTML = '<path d="M7 4v16l13-8z"/>'; playingBtn.bar.style.width = '0'; playingBtn = null; }
+  }
+  function togglePreview(btn, bar, rel) {
+    if (playingBtn && playingBtn.btn === btn) { stop(); return; }
+    stop();
+    btn.lastChild.textContent = 'Loading…';
+    tracks(rel).then(function (list) {
+      var t = list.filter(function (x) { return /^https:\/\//.test(x.previewUrl || ''); })[0];
+      if (!t) { btn.lastChild.textContent = 'No preview'; return; }
+      audio = new Audio(t.previewUrl);
+      playingBtn = { btn: btn, bar: bar };
+      btn.lastChild.textContent = 'Pause';
+      btn.firstChild.innerHTML = '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>';
+      audio.addEventListener('timeupdate', function () { if (audio && audio.duration) bar.style.width = (audio.currentTime / audio.duration * 100) + '%'; });
+      audio.addEventListener('ended', stop);
+      audio.play().catch(function () { stop(); btn.lastChild.textContent = 'Tap to play'; });
+    }).catch(function () { btn.lastChild.textContent = 'Preview Audio'; });
+  }
+
+  function openTracklist(it, rel) {
+    var box = $('mh-box'); box.innerHTML = '';
+    var x = el('button', 'mh-x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Close'); x.addEventListener('click', close);
+    box.appendChild(x);
+    box.appendChild(el('h3', null, it.title));
+    box.appendChild(el('p', null, [it.actlabel, it.catalogtag].filter(Boolean).join(' · ')));
+    var ol = el('ol'); ol.appendChild(el('li', null, 'Loading tracks…')); box.appendChild(ol);
+    $('mh-over').classList.add('on');
+    tracks(rel).then(function (list) {
+      ol.innerHTML = '';
+      if (!list.length) { ol.appendChild(el('li', null, 'Track list not available yet.')); return; }
+      list.forEach(function (t, i) {
+        var li = el('li'); li.appendChild(el('span', null, String(i + 1)));
+        li.appendChild(document.createTextNode(t.trackName));
+        var s = Math.round((t.trackTimeMillis || 0) / 1000);
+        if (s) li.appendChild(el('em', null, Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2)));
+        ol.appendChild(li);
+      });
+    }).catch(function () { ol.innerHTML = ''; ol.appendChild(el('li', null, 'Couldn’t load the track list right now.')); });
+  }
+  function close() { $('mh-over').classList.remove('on'); }
+  $('mh-over').addEventListener('click', function (e) { if (e.target === this) close(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+  /* ---------- Load ---------- */
+  var sheetReq = fetch('https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&gid=' + SHEET_GID)
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+    .then(function (t) { var rows = parseCSV(t).filter(function (r) { return r.title; }); if (!rows.length || !('title' in rows[0])) throw new Error('empty'); return rows; })
+    .catch(function () { return BACKUP; });
+  var appleReq = getJSON('https://itunes.apple.com/lookup?id=' + ARTIST_ID + '&entity=album&limit=200&country=us')
+    .then(function (d) { (d.results || []).forEach(function (r) {
+      if (r.wrapperType === 'collection') { var k = norm(r.collectionName); if (!catalog[k]) catalog[k] = r; } }); })
+    .catch(function () {});
+  render(BACKUP);   // immediate, then refined once data arrives
+  Promise.all([sheetReq, appleReq]).then(function (res) { render(res[0]); });
+})();
+</script>

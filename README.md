@@ -39,6 +39,7 @@ After any change: **Deploy → Manage deployments → pencil → New version →
 | `upcoming-details-embed.html` | Upcoming Release: song details | 520px |
 | `featured-videos-embed.html` | Featured Videos (changes on the 1st of each month) | 380px |
 | `explore-music-embed.html` | Explore the Music panels (visual; links are native Sites text links) | 460px |
+| `music-highlights-embed.html` | Music Highlights (music_highlights tab, covers and previews from Apple Music) | 780px |
 
 Each embed has a **Settings** block at the top of its script (song to show, labels, what to show).
 
