@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Danyel OZ: Release Shelf</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600&family=Plus+Jakarta+Sans:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<!-- Danyel OZ: Release shelf (Released page)
+     A swipeable row of releases from the Song Database, newest first.
+     Embed in Google Sites with Insert > Embed > By URL:
+       https://dcvizcayno.github.io/danyeloz-embeds/release-shelf.html?type=Single
+     ?type= can be Single, EP or Album (matches the release_type column). ?count= sets how many to show. -->
+<style>
+  html, body { margin: 0; padding: 0; background: #050505; height: 100%; }
+  #rs { font-family: 'Plus Jakarta Sans', Arial, sans-serif; color: #f4f4f6; background: #050505;
+    border-radius: 16px; padding: 16px 0 14px 16px; box-sizing: border-box; height: 100%; display: flex; flex-direction: column; }
+  #rs * { box-sizing: border-box; }
+  .rs-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-right: 16px; margin: 0 0 12px; }
+  .rs-title { font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 18px; margin: 0; }
+  .rs-hint { font-size: 12px; color: #a1a1aa; margin: 0; white-space: nowrap; }
+  .rs-row { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 16px 6px 0;
+    scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; flex: 1; min-height: 0; }
+  .rs-item { flex: 0 0 var(--w, 150px); scroll-snap-align: start; text-decoration: none; color: inherit; }
+  .rs-item:focus-visible { outline: 2px solid #f26b6b; outline-offset: 3px; border-radius: 10px; }
+  .rs-cover { width: 100%; aspect-ratio: 1; border-radius: 10px; background: #18181b; overflow: hidden; position: relative; }
+  .rs-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .rs-cover span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 10px;
+    text-align: center; font-family: 'Outfit', sans-serif; font-size: 15px; color: #d4d4d8; }
+  .rs-new { position: absolute; top: 8px; left: 8px; background: #D3413F; color: #fff; font-size: 10px; font-weight: 600;
+    letter-spacing: .06em; padding: 3px 7px; border-radius: 6px; }
+  .rs-name { margin: 8px 0 2px; font-weight: 600; font-size: 14px; line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .rs-meta { margin: 0; font-size: 12px; color: #a1a1aa; }
+  .rs-msg { font-size: 14px; color: #c4c4cc; margin: 4px 16px 0 0; line-height: 1.5; }
+  .rs-msg a { color: #f26b6b; font-weight: 600; }
+</style>
+
+<div id="rs">
+  <div class="rs-head"><p class="rs-title" id="rs-title"></p><p class="rs-hint" id="rs-hint"></p></div>
+  <div class="rs-row" id="rs-row"><p class="rs-msg">Loading…</p></div>
+</div>
+
+<script>
+(function () {
+  /* ================= Settings ================= */
+  var TYPE      = 'Single';   // Single, EP or Album (the release_type column). The URL ?type= overrides this.
+  var COUNT     = 12;         // how many releases to show. The URL ?count= overrides this.
+  var TITLE     = 'auto';     // 'auto' = "Newest singles" / "Newest EPs" / "Newest albums", any text, or '' to hide
+  var NEW_DAYS  = 14;         // NEW badge for this many days after release (0 = never)
+  var LINK_TO   = ['appl_music_link', 'spotify_link', 'yt_video_link', 'amazon_link'];  // first valid one wins
+  /* ============================================ */
+
+  var ARTIST_ID  = '1706653995';
+  var STOREFRONT = 'us';
+  var SHEET_ID   = '1WD98RYgWPURqwtczPYEblCOOPFutAIO1jf42oSfbzPw';
+  var SHEET_CSV  = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&gid=0';
+  var ARTIST_URL = 'https://music.apple.com/us/artist/danyel-oz/1706653995';
+  var OK = {
+    appl_music_link: /^https:\/\/(music|geo\.music|itunes)\.apple\.com\//i,
+    spotify_link:    /^https:\/\/(open\.spotify\.com|spotify\.link)\//i,
+    yt_video_link:   /^https:\/\/(www\.|m\.|music\.)?(youtube\.com|youtu\.be)\//i,
+    amazon_link:     /^https:\/\/(music\.)?amazon\.[a-z.]+\/|^https:\/\/amzn\.to\//i
+  };
+  var ART_OK = /^https:\/\/is\d*-ssl\.mzstatic\.com\//i;
+
+  var q = new URLSearchParams(location.search);
+  var types = { single: 'Single', ep: 'EP', album: 'Album' };
+  TYPE  = types[String(q.get('type') || TYPE).toLowerCase()] || 'Single';
+  COUNT = Math.max(1, Math.min(50, parseInt(q.get('count'), 10) || COUNT));
+  var plural = { Single: 'singles', EP: 'EPs', Album: 'albums' }[TYPE];
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function norm(s) { return String(s || '').toLowerCase().replace(/ - (single|ep)$/, '').replace(/[’']/g, "'").replace(/\s+/g, ' ').trim(); }
+  function parseCSV(t) {
+    var rows = [], row = [], cur = '', inq = false;
+    for (var i = 0; i < t.length; i++) {
+      var c = t[i];
+      if (inq) { if (c === '"' && t[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') inq = false; else cur += c; }
+      else if (c === '"') inq = true; else if (c === ',') { row.push(cur); cur = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+      else cur += c;
+    }
+    if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+    var head = (rows.shift() || []).map(function (h) { return h.trim().toLowerCase(); });
+    return rows.filter(function (r) { return r.join('').trim(); }).map(function (r) {
+      var o = {}; head.forEach(function (h, k) { o[h] = (r[k] || '').trim(); }); return o;
+    });
+  }
+  function appleIdFrom(row) {
+    if (/^\d{6,}$/.test(row.song_id || '')) return row.song_id;
+    var m = String(row.appl_music_link || '').match(/\/(\d{6,})(?:[?#]|$)/);
+    return m ? m[1] : '';
+  }
+
+  var title = TITLE === 'auto' ? 'Newest ' + plural : TITLE;
+  $('rs-title').textContent = title;
+  if (!title) $('rs-title').style.display = 'none';
+
+  var appleReq = fetch('https://itunes.apple.com/lookup?id=' + ARTIST_ID + '&entity=album&sort=recent&limit=200&country=' + STOREFRONT)
+    .then(function (r) { return r.json(); }).catch(function () { return {}; });
+  var sheetReq = fetch(SHEET_CSV).then(function (r) { return r.text(); }).then(parseCSV);
+
+  Promise.all([appleReq, sheetReq]).then(function (res) {
+    var byId = {}, byName = {};
+    (res[0].results || []).forEach(function (x) {
+      if (x.wrapperType !== 'collection') return;
+      byId[String(x.collectionId)] = x; byName[norm(x.collectionName)] = x;
+    });
+
+    var today = new Date(); today.setHours(23, 59, 59, 999);
+    var seen = {}, list = [];
+    res[1].forEach(function (r) {
+      if (String(r.release_type || '').toLowerCase() !== TYPE.toLowerCase()) return;
+      var d = r.release_date ? new Date(r.release_date + 'T00:00:00') : null;
+      if (!d || isNaN(d) || d > today) return;                 // released only; upcoming songs live elsewhere
+      var id = appleIdFrom(r), key = id || norm(r.song_title); // album tracks share one collection id
+      if (!key || seen[key]) return; seen[key] = true;
+      list.push({ row: r, id: id, date: d });
+    });
+    list.sort(function (a, b) { return b.date - a.date; });
+    var total = list.length;
+    list = list.slice(0, COUNT);
+    if (!list.length) throw new Error('empty');
+
+    $('rs-hint').textContent = total > list.length ? 'Swipe for more' : '';
+    var row = $('rs-row'); row.textContent = '';
+    list.forEach(function (it) {
+      var r = it.row, apple = byId[it.id] || byName[norm(r.song_title)];
+      var name = TYPE === 'Album' && apple ? apple.collectionName : r.song_title;
+
+      var url = '';
+      for (var k = 0; k < LINK_TO.length && !url; k++) {
+        var v = String(r[LINK_TO[k]] || '').trim();
+        if (v && OK[LINK_TO[k]] && OK[LINK_TO[k]].test(v)) url = v;
+      }
+      if (!url && apple && OK.appl_music_link.test(apple.collectionViewUrl || '')) url = apple.collectionViewUrl;
+      if (!url) url = ARTIST_URL;
+
+      var a = el('a', 'rs-item'); a.href = url; a.target = '_blank'; a.rel = 'noopener';
+      a.setAttribute('aria-label', name + ', opens in a new tab');
+      var cover = el('div', 'rs-cover');
+      var art = apple && apple.artworkUrl100 ? apple.artworkUrl100.replace(/\/\d+x\d+bb\./, '/400x400bb.') : '';
+      if (art && ART_OK.test(art)) {
+        var img = el('img'); img.src = art; img.alt = ''; img.loading = 'lazy';
+        img.onerror = function () { cover.textContent = ''; cover.appendChild(el('span', null, name)); };
+        cover.appendChild(img);
+      } else {
+        cover.appendChild(el('span', null, name));             // no artwork: show the title on a dark tile
+      }
+      var age = (Date.now() - it.date.getTime()) / 86400000;
+      if (NEW_DAYS > 0 && age >= 0 && age <= NEW_DAYS) cover.appendChild(el('span', 'rs-new', 'NEW'));
+      a.appendChild(cover);
+      a.appendChild(el('p', 'rs-name', name));
+      a.appendChild(el('p', 'rs-meta', it.date.getFullYear() + ' · ' + TYPE));
+      row.appendChild(a);
+    });
+    fit();
+  }).catch(function () {
+    var row = $('rs-row'); row.textContent = '';
+    var p = el('p', 'rs-msg', 'The ' + plural + ' are taking a moment to load. ');
+    var a = el('a', null, 'Listen on Apple Music'); a.href = ARTIST_URL; a.target = '_blank'; a.rel = 'noopener';
+    p.appendChild(a); row.appendChild(p);
+    $('rs-hint').textContent = '';
+  });
+
+  /* Sizes the covers to the embed box, so the row still fits when Google Sites shrinks the box on phones. */
+  function fit() {
+    var head = document.querySelector('.rs-head').offsetHeight + 12;
+    var room = window.innerHeight - 30 - head - 52;             // padding, title, and name + year under each cover
+    var w = Math.max(110, Math.min(180, room));
+    $('rs').style.setProperty('--w', w + 'px');
+  }
+  window.addEventListener('resize', fit);
+})();
+</script>
+
+</body>
+</html>
