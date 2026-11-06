@@ -594,3 +594,108 @@ function savePanels(panels) {
     lock.releaseLock();
   }
 }
+
+/* =====================================================================
+   Music Highlights: up to 3 cards per month, planned 12 months ahead.
+   Stored in the "music_highlights" tab. Missing columns are added automatically;
+   columns the app doesn't use (like "Row" or "Actions") are left alone.
+   ===================================================================== */
+
+const HIGHLIGHTS_TAB = 'music_highlights';
+const HIGHLIGHT_COLUMNS = ['month', 'slot', 'actLabel', 'title', 'subtitle', 'catalogTag', 'accentHex',
+  'bandcamp_embed', 'coverImageUrl', 'appleMusicUrl', 'spotifyUrl', 'youtubeMusicUrl', 'amazonMusicUrl'];
+
+function highlightsSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(HIGHLIGHTS_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(HIGHLIGHTS_TAB);
+    sh.getRange(1, 1, 1, HIGHLIGHT_COLUMNS.length).setValues([HIGHLIGHT_COLUMNS]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+/* Column positions by header (any order, any capitalization). Adds any that are missing. */
+function highlightIdx_(sh) {
+  const width = Math.max(sh.getLastColumn(), 1);
+  const head = sh.getRange(1, 1, 1, width).getValues()[0].map(function (h) { return String(h).trim().toLowerCase(); });
+  const idx = {};
+  let next = head.filter(String).length ? head.length : 0;
+  HIGHLIGHT_COLUMNS.forEach(function (c) {
+    let i = head.indexOf(c.toLowerCase());
+    if (i < 0) { i = next++; sh.getRange(1, i + 1).setValue(c).setFontWeight('bold'); }
+    idx[c] = i;
+  });
+  return idx;
+}
+
+function getHighlights() {
+  const sh = highlightsSheet_();
+  const idx = highlightIdx_(sh);
+  const last = sh.getLastRow();
+  const out = {};
+  if (last < 2) return out;
+  sh.getRange(2, 1, last - 1, sh.getLastColumn()).getValues().forEach(function (r) {
+    const month = monthKey_(r[idx.month]);
+    const slot = Number(r[idx.slot]);
+    if (!month || !(slot >= 1 && slot <= 3) || !String(r[idx.title] || '').trim()) return;
+    const o = {};
+    HIGHLIGHT_COLUMNS.forEach(function (c) { o[c] = String(r[idx[c]] == null ? '' : r[idx[c]]); });
+    o.month = month; o.slot = slot;
+    out[month] = out[month] || [null, null, null];
+    out[month][slot - 1] = o;
+  });
+  return out;
+}
+
+/* Replaces one month's cards. Empty slots are simply not stored. */
+function saveHighlightsMonth(month, slots) {
+  month = monthKey_(month);
+  if (!month) throw new Error('Pick a month first.');
+  const linkCols = ['coverImageUrl', 'appleMusicUrl', 'spotifyUrl', 'youtubeMusicUrl', 'amazonMusicUrl'];
+  (slots || []).forEach(function (s, i) {
+    if (!s || !String(s.title || '').trim()) return;
+    linkCols.forEach(function (c) {
+      if (s[c] && !/^https:\/\//i.test(String(s[c]).trim())) throw new Error('Card ' + (i + 1) + ': the ' + c + ' link must start with https://');
+    });
+    if (s.accentHex && !/^#[0-9a-f]{6}$/i.test(String(s.accentHex).trim())) throw new Error('Card ' + (i + 1) + ': the color must look like #C82829.');
+    if (s.bandcamp_embed && !/bandcamp\.com\/EmbeddedPlayer\//i.test(s.bandcamp_embed)) throw new Error('Card ' + (i + 1) + ': that doesn\'t look like Bandcamp embed code.');
+  });
+
+  const lock = lock_();
+  try {
+    const sh = highlightsSheet_();
+    const idx = highlightIdx_(sh);
+    const width = sh.getLastColumn();
+
+    const last = sh.getLastRow();
+    if (last >= 2) {
+      const months = sh.getRange(2, idx.month + 1, last - 1, 1).getValues();
+      for (let i = months.length - 1; i >= 0; i--) {
+        if (monthKey_(months[i][0]) === month) sh.deleteRow(i + 2);
+      }
+    }
+
+    const rows = [];
+    (slots || []).slice(0, 3).forEach(function (s, i) {
+      if (!s || !String(s.title || '').trim()) return;
+      const r = new Array(width).fill('');
+      HIGHLIGHT_COLUMNS.forEach(function (c) { r[idx[c]] = safeText_(String(s[c] == null ? '' : s[c]).trim()); });
+      r[idx.month] = month;
+      r[idx.slot] = i + 1;
+      rows.push(r);
+    });
+    if (rows.length) {
+      const start = sh.getLastRow() + 1;
+      sh.getRange(start, idx.month + 1, rows.length, 1).setNumberFormat('@');
+      sh.getRange(start, 1, rows.length, width).setValues(rows);
+    }
+    if (sh.getLastRow() > 2) {
+      sh.getRange(2, 1, sh.getLastRow() - 1, width).sort([{ column: idx.month + 1, ascending: true }, { column: idx.slot + 1, ascending: true }]);
+    }
+    return { ok: true, month: month, saved: rows.length };
+  } finally {
+    lock.releaseLock();
+  }
+}

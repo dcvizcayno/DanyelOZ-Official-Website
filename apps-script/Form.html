@@ -147,6 +147,23 @@
   .fcard .more { font-family: 'Open Sans', Arial, sans-serif; font-size: 12px; font-weight: 700; color: var(--blue); }
   .fempty { font-size: 14px; color: #8a8399; }
 
+  /* Music highlights */
+  #hStatus { font-size: 14px; font-weight: 600; }
+  #hStatus.ok { color: var(--ok); } #hStatus.err { color: var(--err); }
+  .hcolor { display: flex; gap: 8px; align-items: center; }
+  .hcolor input[type=color] { width: 44px; height: 40px; padding: 2px; flex: none; }
+  .slot textarea.code { min-height: 64px; font: 12px ui-monospace, Menlo, Consolas, monospace; }
+  #viewHighlights .pv-card { position: sticky; top: 12px; }
+  .hpv { display: grid; gap: 12px; background: #050505; border-radius: 12px; padding: 14px; }
+  .hcard { background: #111115; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 12px; color: #f4f4f6; font-family: 'Open Sans', Arial, sans-serif; }
+  .hcard .m { font-size: 11px; color: #a1a1aa; margin-bottom: 8px; }
+  .hcard .m b { font-weight: 700; }
+  .hcard .art { aspect-ratio: 1; border-radius: 8px; background: #18181b center/cover no-repeat; position: relative; }
+  .hcard .bc { position: absolute; left: 8px; top: 8px; font-size: 10px; font-weight: 700; background: #1da0c3; color: #fff; padding: 2px 7px; border-radius: 999px; }
+  .hcard h5 { font-family: 'Oswald', sans-serif; font-size: 17px; font-weight: 500; margin: 8px 0 2px; }
+  .hcard p { font-size: 12px; color: #a1a1aa; margin: 0; }
+  .hcard .l { margin-top: 8px; font-size: 11px; color: #a1a1aa; }
+
   /* Explore panels */
   .egrid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
   @media (max-width: 900px) { .egrid { grid-template-columns: 1fr; } }
@@ -185,6 +202,7 @@
     <nav class="views">
       <button type="button" class="on" data-view="songs">Songs</button>
       <button type="button" data-view="features">Monthly Features</button>
+      <button type="button" data-view="highlights">Music Highlights</button>
       <button type="button" data-view="explore">Explore Panels</button>
     </nav>
   </div>
@@ -354,6 +372,31 @@
     <div class="card pv-card">
       <h2>Website preview</h2>
       <div id="fPreview" class="fpv"></div>
+    </div>
+  </div>
+</section>
+
+<section id="viewHighlights" hidden>
+  <div class="grid fgrid">
+    <aside class="card list-card">
+      <h2>Next 12 months</h2>
+      <div class="songlist" id="hMonths"><div class="list-empty">Loading schedule…</div></div>
+    </aside>
+
+    <div class="card">
+      <h2>Music Highlights for <span id="hMonthLabel"></span> <span class="mode" id="hMode"></span></h2>
+      <p class="note" style="margin:-6px 0 14px">Up to 3 cards. Pick a song to fill in its Bandcamp player, cover and links from your songs, then edit anything. Bandcamp is the main player; without it, the card shows the cover with an Apple Music preview.</p>
+      <div id="hSlots"></div>
+      <div class="actions">
+        <button class="primary" id="btnSaveH" type="button">Save this month</button>
+        <button class="ghost" id="btnCopyH" type="button">Copy last month</button>
+        <span id="hStatus"></span>
+      </div>
+    </div>
+
+    <div class="card pv-card">
+      <h2>Website preview</h2>
+      <div id="hPreview" class="hpv"></div>
     </div>
   </div>
 </section>
@@ -680,6 +723,8 @@
       $('viewSongs').hidden = v !== 'songs';
       $('viewFeatures').hidden = v !== 'features';
       $('viewExplore').hidden = v !== 'explore';
+      $('viewHighlights').hidden = v !== 'highlights';
+      if (v === 'highlights' && !hLoaded) loadHighlights();
       if (v === 'features' && !fLoaded) loadFeatures();
       if (v === 'explore' && !eLoaded) loadPanels();
     });
@@ -854,6 +899,160 @@
     dl.innerHTML = '';
     songs.forEach(function (s) { var o = document.createElement('option'); o.value = label(s); dl.appendChild(o); });
   }
+
+  /* =================== Music highlights =================== */
+  var highlights = {}, hMonth = '', hLoaded = false, hDirty = false;
+  var H_FIELDS = ['actLabel', 'title', 'subtitle', 'catalogTag', 'accentHex', 'bandcamp_embed', 'coverImageUrl',
+                  'appleMusicUrl', 'spotifyUrl', 'youtubeMusicUrl', 'amazonMusicUrl'];
+  var H_DEFAULT_COLORS = ['#C82829', '#5E6F64', '#D4C66A'];
+  function hStatus(t, k) { var x = $('hStatus'); x.textContent = t || ''; x.className = k || ''; }
+  function hCount(m) { return (highlights[m] || []).filter(function (x) { return x && x.title; }).length; }
+  function bcOk(code) { return /src\s*=\s*["']https:\/\/bandcamp\.com\/EmbeddedPlayer\//i.test(code || ''); }
+
+  function loadHighlights() {
+    google.script.run
+      .withSuccessHandler(function (res) { highlights = res || {}; hLoaded = true; renderHMonths(); selectHMonth(hMonth || sgMonth(0), true); })
+      .withFailureHandler(function (e) { $('hMonths').innerHTML = '<div class="list-empty">Couldn’t load the schedule: ' + esc(e.message) + '</div>'; })
+      .getHighlights();
+  }
+
+  function renderHMonths() {
+    var box = $('hMonths'); box.innerHTML = '';
+    var now = sgMonth(0);
+    function add(m) {
+      var n = hCount(m);
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'month'; b.setAttribute('data-month', m);
+      b.innerHTML = '<span>' + esc(monthName(m)) + (m === now ? '<span class="now">NOW</span>' : '') + '</span>' +
+        '<span class="badge ' + (n === 3 ? 'full' : n ? 'part' : 'none') + '">' + (n ? n + '/3' : 'Empty') + '</span>';
+      b.addEventListener('click', function () { selectHMonth(m); });
+      box.appendChild(b);
+    }
+    var up = document.createElement('div'); up.className = 'mlabel'; up.textContent = 'Upcoming'; box.appendChild(up);
+    for (var i = 0; i < 12; i++) add(sgMonth(i));
+    var past = Object.keys(highlights).filter(function (m) { return m < now && hCount(m); }).sort().reverse();
+    if (past.length) { var pl = document.createElement('div'); pl.className = 'mlabel'; pl.textContent = 'Past'; box.appendChild(pl); past.forEach(add); }
+    document.querySelectorAll('#hMonths .month').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-month') === hMonth); });
+  }
+
+  function selectHMonth(m, force) {
+    if (!force && hDirty && m !== hMonth && !confirm('You have unsaved changes for ' + monthName(hMonth) + '. Leave without saving?')) return;
+    hMonth = m; hDirty = false;
+    $('hMonthLabel').textContent = monthName(m);
+    $('hMode').textContent = m === sgMonth(0) ? 'Live now' : (m < sgMonth(0) ? 'Past' : 'Scheduled');
+    renderHSlots(highlights[m] || []);
+    renderHMonths(); hStatus('');
+  }
+
+  function renderHSlots(data) {
+    var box = $('hSlots'); box.innerHTML = '';
+    for (var i = 0; i < 3; i++) box.appendChild(hEditor(i, data[i] || {}));
+    renderHPreview();
+  }
+
+  function hEditor(i, s) {
+    var w = document.createElement('div'); w.className = 'slot';
+    w.innerHTML =
+      '<h4>Card ' + (i + 1) + ' <button type="button" class="ghost" data-act="clear">Clear</button></h4>' +
+      '<div class="field"><label>Pick a song <span class="hint">(fills in the details below)</span></label>' +
+        '<input data-f="song" list="songOptions" placeholder="Type a song title…"></div>' +
+      '<div class="row2"><div class="field"><label>Title *</label><input data-f="title"></div>' +
+        '<div class="field"><label>Label <span class="hint">(e.g. Act I)</span></label><input data-f="actLabel"></div></div>' +
+      '<div class="row2"><div class="field"><label>Subtitle</label><input data-f="subtitle" placeholder="Listen now"></div>' +
+        '<div class="field"><label>Tag</label><input data-f="catalogTag" placeholder="Extended Play · #b3"></div></div>' +
+      '<div class="field"><label>Glow color</label><div class="hcolor"><input type="color" data-f="picker"><input data-f="accentHex" placeholder="#C82829"></div></div>' +
+      '<div class="field"><label>Bandcamp embed code <span class="hint">(main player)</span></label><textarea class="code" data-f="bandcamp_embed"></textarea>' +
+        '<div class="msg-inline">Paste the Bandcamp &lt;iframe&gt; code. It should contain bandcamp.com/EmbeddedPlayer.</div></div>' +
+      '<div class="field"><label>Cover image link <span class="hint">(used when there’s no Bandcamp code)</span></label><input data-f="coverImageUrl" placeholder="Google Drive share link or https image"></div>' +
+      '<div class="row2"><div class="field"><label>Apple Music</label><input data-f="appleMusicUrl"></div>' +
+        '<div class="field"><label>Spotify</label><input data-f="spotifyUrl"></div></div>' +
+      '<div class="row2"><div class="field" style="margin-bottom:0"><label>YouTube Music</label><input data-f="youtubeMusicUrl"></div>' +
+        '<div class="field" style="margin-bottom:0"><label>Amazon Music</label><input data-f="amazonMusicUrl"></div></div>';
+    function q(f) { return w.querySelector('[data-f="' + f + '"]'); }
+    H_FIELDS.forEach(function (f) { q(f).value = s[f] || ''; });
+    if (!s.title) { q('subtitle').value = 'Listen now'; q('accentHex').value = H_DEFAULT_COLORS[i]; }
+    function syncPicker() { var v = q('accentHex').value.trim(); if (/^#[0-9a-f]{6}$/i.test(v)) q('picker').value = v; }
+    syncPicker();
+    function refresh() {
+      var hexOk = !q('accentHex').value.trim() || /^#[0-9a-f]{6}$/i.test(q('accentHex').value.trim());
+      q('accentHex').classList.toggle('bad', !hexOk);
+      var code = q('bandcamp_embed').value.trim(), ok = !code || bcOk(code);
+      q('bandcamp_embed').classList.toggle('bad', !ok); q('bandcamp_embed').nextElementSibling.style.display = ok ? 'none' : 'block';
+      ['coverImageUrl', 'appleMusicUrl', 'spotifyUrl', 'youtubeMusicUrl', 'amazonMusicUrl'].forEach(function (f) {
+        var v = q(f).value.trim(); q(f).classList.toggle('bad', !!v && !/^https:\/\//i.test(v));
+      });
+      renderHPreview();
+    }
+    q('picker').addEventListener('input', function () { q('accentHex').value = this.value.toUpperCase(); hDirty = true; refresh(); });
+    q('accentHex').addEventListener('input', function () { syncPicker(); });
+    H_FIELDS.forEach(function (f) { q(f).addEventListener('input', function () { hDirty = true; refresh(); }); });
+    q('song').addEventListener('change', function () {
+      var v = this.value;
+      var song = songs.filter(function (x) { return label(x) === v; })[0] ||
+                 songs.filter(function (x) { return x.song_title.toLowerCase() === v.trim().toLowerCase(); })[0];
+      if (!song) return;
+      q('title').value = song.song_title;
+      if (song.bandcamp_embed) q('bandcamp_embed').value = song.bandcamp_embed;
+      if (song.song_arts) q('coverImageUrl').value = song.song_arts;
+      if (song.appl_music_link) q('appleMusicUrl').value = song.appl_music_link;
+      if (song.spotify_link) q('spotifyUrl').value = song.spotify_link;
+      if (song.amazon_link) q('amazonMusicUrl').value = song.amazon_link;
+      if (!q('catalogTag').value && song.release_type) q('catalogTag').value = song.release_type;
+      hStatus(song.bandcamp_embed ? '' : '“' + song.song_title + '” has no Bandcamp code yet, so this card will show the cover with an Apple preview.', song.bandcamp_embed ? '' : 'err');
+      hDirty = true; refresh();
+    });
+    w.querySelector('[data-act="clear"]').addEventListener('click', function () {
+      ['song'].concat(H_FIELDS).forEach(function (f) { q(f).value = ''; }); hDirty = true; refresh();
+    });
+    w._collect = function () { var o = {}; H_FIELDS.forEach(function (f) { o[f] = q(f).value.trim(); }); return o; };
+    setTimeout(refresh, 0);
+    return w;
+  }
+
+  function collectH() { return [].map.call(document.querySelectorAll('#hSlots .slot'), function (w) { return w._collect ? w._collect() : {}; }); }
+
+  function renderHPreview() {
+    var box = $('hPreview'); if (!box) return; box.innerHTML = '';
+    var cards = collectH().filter(function (c) { return c.title; });
+    if (!cards.length) { box.innerHTML = '<p class="fempty" style="color:#a1a1aa">No cards yet. On the website, this month would show the most recent earlier month instead.</p>'; return; }
+    cards.forEach(function (c) {
+      var color = /^#[0-9a-f]{6}$/i.test(c.accentHex) ? c.accentHex : '#C82829';
+      var d = document.createElement('div'); d.className = 'hcard'; d.style.borderColor = color + '66';
+      var m = document.createElement('div'); m.className = 'm';
+      var b = document.createElement('b'); b.textContent = c.actLabel; b.style.color = color; m.appendChild(b);
+      m.appendChild(document.createTextNode((c.actLabel && c.catalogTag ? ' · ' : '') + c.catalogTag));
+      var art = document.createElement('div'); art.className = 'art';
+      var img = panelImg({ image: c.coverImageUrl }); if (img) art.style.backgroundImage = cssUrl(img);
+      if (bcOk(c.bandcamp_embed)) { var t = document.createElement('span'); t.className = 'bc'; t.textContent = 'Bandcamp player'; art.appendChild(t); }
+      var h = document.createElement('h5'); h.textContent = c.title;
+      var p = document.createElement('p'); p.textContent = c.subtitle;
+      var l = document.createElement('div'); l.className = 'l';
+      l.textContent = ['Apple Music', 'Spotify', 'YouTube Music', 'Amazon'].filter(function (_, k) {
+        return /^https:\/\//i.test([c.appleMusicUrl, c.spotifyUrl, c.youtubeMusicUrl, c.amazonMusicUrl][k]); }).join(' · ') || 'No platform links';
+      [m, art, h, p, l].forEach(function (x) { d.appendChild(x); });
+      box.appendChild(d);
+    });
+  }
+
+  $('btnSaveH').addEventListener('click', function () {
+    var slots = collectH();
+    if (document.querySelector('#hSlots .bad')) { hStatus('Please fix the highlighted fields.', 'err'); return; }
+    var btn = this; btn.disabled = true; hStatus('Saving…');
+    google.script.run
+      .withSuccessHandler(function (r) {
+        btn.disabled = false; hDirty = false;
+        highlights[hMonth] = slots.map(function (x) { return x.title ? x : null; });
+        renderHMonths();
+        hStatus('Saved ' + r.saved + ' card' + (r.saved === 1 ? '' : 's') + ' for ' + monthName(hMonth) + '.', 'ok');
+      })
+      .withFailureHandler(function (e) { btn.disabled = false; hStatus(e.message, 'err'); })
+      .saveHighlightsMonth(hMonth, slots);
+  });
+  $('btnCopyH').addEventListener('click', function () {
+    var prev = shiftMonth(hMonth, -1);
+    if (!hCount(prev)) { hStatus(monthName(prev) + ' has no cards to copy.', 'err'); return; }
+    renderHSlots(highlights[prev]); hDirty = true;
+    hStatus('Copied from ' + monthName(prev) + '. Edit, then save.', 'ok');
+  });
 
   /* =================== Explore panels =================== */
   var panels = [];       // [{title, script, sub, text, link, image, focus, visible, _upload}]

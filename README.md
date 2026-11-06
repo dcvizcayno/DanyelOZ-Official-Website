@@ -10,6 +10,7 @@ itself when the sheet changes.
 Song Database (Google Sheet)
  ├─ songs tab      ← Songs screen in the app      → Listen Now, Upcoming Release
  ├─ features tab   ← Monthly Features screen      → Featured Videos
+ ├─ music_highlights ← Music Highlights screen    → Music Highlights
  └─ explore tab    ← Explore Panels screen        → Explore the Music
 Apple Music catalog → newest release for Listen Now
 ```
@@ -27,6 +28,7 @@ After any change: **Deploy → Manage deployments → pencil → New version →
 |---|---|
 | Songs | All 16 song columns, cover art and QR uploads, Import from Apple Music |
 | Monthly Features | 3 featured videos per month, planned 12 months ahead |
+| Music Highlights | Up to 3 cards per month (Bandcamp player first), planned 12 months ahead |
 | Explore Panels | The four "Explore the Music" tiles: text, links, images, order, show/hide |
 
 ## embeds/ (Google Sites: Insert → Embed → Embed code)

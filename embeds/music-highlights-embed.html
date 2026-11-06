@@ -1,7 +1,7 @@
 <!-- Danyel OZ: Music Highlights
      Paste into Google Sites: Insert > Embed > Embed code (or By URL from GitHub Pages).
-     Cards come from the "music_highlights" tab of your Song Database. Covers, audio previews and
-     track lists come from Apple Music, matched by title. -->
+     Cards come from the "music_highlights" tab of your Song Database, scheduled by month (Singapore time).
+     Bandcamp is the main player (full songs, pre-orders). Apple Music fills in previews and track lists. -->
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; padding: 0; background: #050505; }
@@ -21,7 +21,7 @@
   .mh-chip:hover { color: #fff; }
   .mh-chip.on { background: rgba(255,255,255,.1); color: #fff; font-weight: 600; }
 
-  .mh-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 22px; }
+  .mh-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 22px; margin: 0 auto; }
   .mh-card { position: relative; display: flex; flex-direction: column; background: #111115; border: 1px solid var(--line);
     border-radius: 16px; padding: 22px; transition: transform .18s cubic-bezier(.16,1,.3,1), border-color .18s; }
   .mh-card:hover { transform: translateY(-4px); }
@@ -40,8 +40,8 @@
   .mh-name { font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 22px; margin: 0 0 4px; color: #fff; }
   .mh-sub { font-size: 14px; color: #a1a1aa; margin: 0 0 18px; }
   .mh-foot { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line); }
-  .mh-avail { display: flex; justify-content: space-between; font-size: 11.5px; color: #71717a; margin-bottom: 10px; }
-  .mh-avail code { font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .mh-avail { font-size: 11.5px; color: #71717a; margin-bottom: 10px; }
+  .mh-bc { display: block; width: 100%; border: 0; border-radius: 10px; margin: 0 auto 18px; background: #fff; }
   .mh-links { display: flex; flex-wrap: wrap; gap: 8px; }
   .mh-btn { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; font-size: 12.5px; font-weight: 500; color: #f4f4f6;
     background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 7px 11px; transition: background .15s; }
@@ -90,11 +90,14 @@
   /* ================= Settings ================= */
   var TITLE     = 'Music Highlights';
   var EYEBROW   = 'Danyel OZ · Extended Play Trilogy · #b3';
-  var SHOW_HEX  = true;    // show each Act's color code, like the design
+  var PLAYER    = 'bandcamp';   // 'bandcamp' = Bandcamp player when the song has a code (cover + Preview Audio otherwise)
+                                // 'apple'    = always cover + Apple Music preview
   var SHEET_ID  = '1WD98RYgWPURqwtczPYEblCOOPFutAIO1jf42oSfbzPw';
   var SHEET_GID = '1521214689';    // the music_highlights tab
   /* ============================================ */
 
+  var SONGS_GID = '0';             // the songs tab: fills in Bandcamp, cover and links by title
+  var TIME_ZONE = 'Asia/Singapore';
   var ARTIST_ID = '1706653995';
   var BACKUP = [   // shown if the sheet can't be reached
     { actlabel: 'Act I',   title: 'The Encounter',   subtitle: 'Listen now', catalogtag: 'Extended Play · #b3', accenthex: '#C82829' },
@@ -128,12 +131,46 @@
       var o = {}; head.forEach(function (h, k) { o[h] = (r[k] || '').trim(); }); return o;
     });
   }
+  function thisMonth() {
+    var p = new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, year: 'numeric', month: '2-digit' }).formatToParts(new Date());
+    function g(t) { return p.filter(function (x) { return x.type === t; })[0].value; }
+    return g('year') + '-' + g('month');
+  }
+  function monthKey(v) {
+    var s = String(v || '').trim(), m = s.match(/^(\d{4})-(\d{1,2})/);
+    if (m) return m[1] + '-' + ('0' + m[2]).slice(-2);
+    var d = s ? new Date(s) : null;
+    return d && !isNaN(d) ? d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) : '';
+  }
+  /* Keeps only Bandcamp's player address from the pasted code (the pasted HTML never runs). */
+  function bandcamp(code) {
+    var m = String(code || '').match(/src\s*=\s*["'](https:\/\/bandcamp\.com\/EmbeddedPlayer\/[\w=\/.-]+)["']/i);
+    if (!m) return null;
+    var src = m[1], size = (src.match(/\/size=(\w+)/) || [])[1] || 'large', art = (src.match(/\/artwork=(\w+)/) || [])[1] || '';
+    var px = (String(code).match(/height\s*:\s*(\d+)px/i) || [])[1];
+    var kind = /\/minimal=true/.test(src) ? 'square' : size === 'large' && art !== 'small' && art !== 'none' ? 'art' : 'strip';
+    return { src: src, kind: kind, h: px ? Number(px) : (size === 'small' ? 42 : 120) };
+  }
+  function imageUrl(u) {
+    u = String(u || '').trim(); if (!/^https:\/\//i.test(u)) return '';
+    var m = /drive\.google\.com/.test(u) && (u.match(/\/d\/([\w-]+)/) || u.match(/[?&]id=([\w-]+)/));
+    return m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1000' : u;
+  }
+  /* Picks this month's cards; if none, the latest earlier month; then unscheduled rows. */
+  function pickMonth(rows) {
+    var now = thisMonth(), by = {}, loose = [];
+    rows.forEach(function (r) { var m = monthKey(r.month); if (m) (by[m] = by[m] || []).push(r); else loose.push(r); });
+    var key = by[now] ? now : Object.keys(by).filter(function (m) { return m < now; }).sort().pop();
+    var list = key ? by[key] : loose;
+    return list.slice().sort(function (a, b) { return (Number(a.slot) || 99) - (Number(b.slot) || 99); }).slice(0, 3);
+  }
   function getJSON(u) { return fetch(u).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
 
   $('mh-title').textContent = TITLE;
   $('mh-eyebrow').textContent = EYEBROW;
 
   var catalog = {};           // title -> Apple release
+  var songsByTitle = {};      // title -> row from the songs tab
   var audio = null, playingBtn = null;
 
   /* ---------- Cards ---------- */
@@ -145,6 +182,8 @@
       var c = hex(it.accenthex, '#C82829');
       glows.push('radial-gradient(40% 55% at ' + (items.length > 1 ? 10 + 80 * i / (items.length - 1) : 50) + '% 0%, ' + rgba(c, .16) + ', transparent 70%)');
       var rel = catalog[norm(it.title)] || null;
+      var song = songsByTitle[norm(it.title)] || {};
+      var bc = PLAYER === 'bandcamp' ? (bandcamp(it.bandcamp_embed) || bandcamp(song.bandcamp_embed)) : null;
 
       var card = el('article', 'mh-card'); card.dataset.i = i;
       card.style.borderColor = rgba(c, .28);
@@ -162,15 +201,21 @@
       }
       card.appendChild(meta);
 
+      if (bc) {
+        var f = el('iframe', 'mh-bc'); f.src = bc.src; f.title = 'Listen to ' + (it.title || '') + ' on Bandcamp';
+        f.setAttribute('seamless', ''); f.dataset.kind = bc.kind; f.dataset.h = bc.h;
+        card.appendChild(f);
+      }
       var cover = el('div', 'mh-cover');
-      var art = String(it.coverimageurl || '').trim();
-      if (!/^https:\/\//i.test(art) && rel && rel.artworkUrl100) art = rel.artworkUrl100.replace(/\/\d+x\d+bb\./, '/1000x1000bb.');
-      if (/^https:\/\//i.test(art)) {
+      var art = imageUrl(it.coverimageurl) || imageUrl(song.song_arts);
+      if (!art && rel && rel.artworkUrl100) art = rel.artworkUrl100.replace(/\/\d+x\d+bb\./, '/1000x1000bb.');
+      if (art) {
         var img = el('img'); img.alt = (it.title || '') + ' cover art'; img.loading = 'lazy'; img.src = art;
         img.onerror = function () { img.remove(); };
         cover.appendChild(img);
       }
-      if (rel) {
+      if (bc) cover = null;
+      if (cover && rel) {
         var bar = el('div', 'mh-bar'); bar.style.background = c; cover.appendChild(bar);
         var play = el('button', 'mh-play'); play.type = 'button';
         play.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg>';
@@ -178,18 +223,17 @@
         play.addEventListener('click', function () { togglePreview(play, bar, rel); });
         cover.appendChild(play);
       }
-      card.appendChild(cover);
+      if (cover) card.appendChild(cover);
 
       card.appendChild(el('h3', 'mh-name', it.title));
       if (it.subtitle) card.appendChild(el('p', 'mh-sub', it.subtitle));
 
-      var foot = el('div', 'mh-foot'), avail = el('div', 'mh-avail');
-      avail.appendChild(el('span', null, 'Available on streaming platforms'));
-      if (SHOW_HEX) { var code = el('code', null, c.toUpperCase()); code.style.color = c; avail.appendChild(code); }
-      foot.appendChild(avail);
+      var foot = el('div', 'mh-foot');
+      foot.appendChild(el('div', 'mh-avail', 'Available on streaming platforms'));
       var links = el('div', 'mh-links');
       PLATFORMS.forEach(function (p) {
-        var url = String(it[p.key] || '').trim();
+        var own = { applemusicurl: 'appl_music_link', spotifyurl: 'spotify_link', youtubemusicurl: 'yt_video_link', amazonmusicurl: 'amazon_link' }[p.key];
+        var url = String(it[p.key] || '').trim() || String(song[own] || '').trim();
         // A real Apple Music album page beats a search page
         if (p.key === 'applemusicurl' && rel && (!url || /\/search\?/i.test(url))) url = rel.collectionViewUrl.replace(/[?&]uo=\d+/, '');
         if (!url || !p.ok.test(url)) return;
@@ -202,6 +246,8 @@
       grid.appendChild(card);
     });
     $('mh-glow').style.background = glows.join(',');
+    grid.style.maxWidth = (items.length * 400 + (items.length - 1) * 22) + 'px';   // 1 or 2 cards stay card-sized and centered
+    fitPlayers();
 
     // Filter chips: All + one per Act
     function chip(label, idx) {
@@ -217,6 +263,16 @@
       items.forEach(function (it, i) { chip(it.actlabel || it.title, i); });
     }
   }
+
+  /* Bandcamp players fill the card's width: square cover, plus about 120px of controls on the big player. */
+  function fitPlayers() {
+    [].forEach.call(document.querySelectorAll('.mh-bc'), function (f) {
+      var w = f.parentNode.clientWidth - 2 * parseFloat(getComputedStyle(f.parentNode).paddingLeft);
+      if (f.dataset.kind === 'strip') { f.style.height = f.dataset.h + 'px'; return; }
+      f.style.height = Math.round(w + (f.dataset.kind === 'art' ? 120 : 0)) + 'px';
+    });
+  }
+  window.addEventListener('resize', fitPlayers);
 
   /* ---------- Apple Music: tracks, previews ---------- */
   var trackCache = {};
@@ -275,15 +331,18 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
 
   /* ---------- Load ---------- */
-  var sheetReq = fetch('https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&gid=' + SHEET_GID)
-    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
-    .then(function (t) { var rows = parseCSV(t).filter(function (r) { return r.title; }); if (!rows.length || !('title' in rows[0])) throw new Error('empty'); return rows; })
+  var BASE = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&gid=';
+  function csv(gid) { return fetch(BASE + gid).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); }).then(parseCSV); }
+  var sheetReq = csv(SHEET_GID)
+    .then(function (rows) { rows = pickMonth(rows.filter(function (r) { return r.title; })); if (!rows.length) throw new Error('empty'); return rows; })
     .catch(function () { return BACKUP; });
-  var appleReq = getJSON('https://itunes.apple.com/lookup?id=' + ARTIST_ID + '&entity=album&limit=200&country=us')
+  var songsReq = csv(SONGS_GID).then(function (rows) {
+    rows.forEach(function (r) { var k = norm(r.song_title); if (k && !songsByTitle[k]) songsByTitle[k] = r; });
+  }).catch(function () {});
+  var appleReq = getJSON('https://itunes.apple.com/lookup?id=' + ARTIST_ID + '&entity=album&sort=recent&limit=200&country=us')
     .then(function (d) { (d.results || []).forEach(function (r) {
       if (r.wrapperType === 'collection') { var k = norm(r.collectionName); if (!catalog[k]) catalog[k] = r; } }); })
     .catch(function () {});
-  render(BACKUP);   // immediate, then refined once data arrives
-  Promise.all([sheetReq, appleReq]).then(function (res) { render(res[0]); });
+  Promise.all([sheetReq, songsReq, appleReq]).then(function (res) { render(res[0]); });
 })();
 </script>
