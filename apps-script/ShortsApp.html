@@ -508,7 +508,7 @@
       left.appendChild(h('div', { cls: 'sx-head' }, [h('div', {}, [h('h3', { text: dr.song }),
         h('div', { cls: 'meta' }, [document.createTextNode('Drafted ' + String(dr.created).slice(0, 10) + ' · '),
           h('a', { href: safeUrl(dr.url), target: '_blank', rel: 'noopener', text: 'GitHub Issue #' + dr.number })])])]));
-      if (dr.testMode) left.appendChild(h('div', { cls: 'sx-warn', style: 'margin-bottom:12px', text: 'This draft was written in test mode, before your X keys were added. Click Revise once to refresh it, then Post.' }));
+      if (dr.testMode) left.appendChild(h('div', { cls: 'sx-warn', style: 'margin-bottom:12px', text: 'This draft was written before your X keys were added, so it still shows an old test-mode note on GitHub. Posting now goes to X for real.' }));
       left.appendChild(h('div', { cls: 'sx-edit' }, [
         h('div', { cls: 'f' }, [
           h('div', { cls: 'field' }, [h('label', {}, ['Post text (you can edit it)', count]), ta]),
@@ -519,7 +519,7 @@
               say('xStatus', 'Saving…');
               call('saveXText', [dr.number, ta.value], function () { say('xStatus', 'Saved to the draft on GitHub.', 'ok'); }, function (e) { say('xStatus', e.message, 'err'); });
             } }),
-            h('button', { type: 'button', cls: 'ok-btn', text: 'Post to X', disabled: dr.testMode, onclick: function () {
+            h('button', { type: 'button', cls: 'ok-btn', text: 'Post to X', onclick: function () {
               if (xLen(ta.value) > 280) { say('xStatus', 'Too long for X. Trim it to 280.', 'err'); return; }
               if (!confirm('Post this to X now?')) return;
               act('xPost', [dr.number, ta.value], 'Sent. The agent posts it within a minute or two and logs it here.');

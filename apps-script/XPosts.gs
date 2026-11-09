@@ -164,9 +164,6 @@ function saveXText(num, text) {
 /* Same as editing the text on GitHub and ticking Post. The agent posts within a minute or two. */
 function xPost(num, text) {
   const it = xDraftIssue_(num);
-  if (parseXIssue_(it.body).testMode) {
-    throw new Error('This draft was written in test mode, before your X keys were added. Click Revise once to refresh it, then Post.');
-  }
   const body = xWithText_(it.body, text).replace('- [ ] Post', '- [x] Post');
   gh_('PATCH', '/repos/' + xRepo_() + '/issues/' + it.number, { body: body });
   return { queued: true, url: it.html_url };
