@@ -1,65 +1,178 @@
-# Danyel OZ Official Website: context for Claude
+# Danyel OZ: project handbook
 
-Read this first. It sums up how the site was built so work can continue from here.
+_Last updated: November 9, 2026. One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
 
-## Owner
-Daniel, music artist **Danyel OZ**. Site: https://www.danyeloz.info/home (Google Sites).
-Releases new music every 2 weeks. Times are **Singapore (Asia/Singapore)**.
-Google Sites editing is done on his **Windows** machine (the Mac has limited Google Sites access).
+**Copies of this file** (keep them identical; update all three together):
+1. `CLAUDE.md` in private repo **dcvizcayno/DanyelOZ-Official-Website** (Claude Code reads it automatically)
+2. `HANDOFF.md` in public repo **dcvizcayno/danyeloz-embeds**
+3. `claude/handoff-summary.md` in the claude.ai Project "Danyel OZ Official Website"
 
-## Writing and design preferences
-- Plain, encouraging, honest tone. Explain decisions, not just changes. Light humor is fine.
-- **No em dashes** in anything written for him or for the site.
-- Keep fan-facing text short; let the music and stories do the work.
+---
 
-## Architecture
-One Google Sheet, the **Song Database**, feeds everything:
-`https://docs.google.com/spreadsheets/d/1WD98RYgWPURqwtczPYEblCOOPFutAIO1jf42oSfbzPw`
-Shared "Anyone with the link: Viewer" so embeds can read it, so **every tab is public**. Keep only public info in it.
+## 1. Owner and working rules
 
-| Tab (gid) | Managed in app screen | Used by embed |
+**Daniel, music artist Danyel OZ.** Site: https://www.danyeloz.info. YouTube and X: @danyeloz1554. Releases new music every 2 weeks.
+Time zone: **Manila / Singapore (UTC+8)**. Google Sites editing happens on his **Windows** machine (the Mac has limited Sites access).
+Goal of the site: get the songs out there and give fans one central place to go.
+
+**Rules to keep**
+- **Ask before anything permanent:** publishing, moving pages, changing URLs, deleting. Daniel does the Sites swaps and publishing himself.
+- **No new tabs.** Players play in place; internal links are native Sites buttons or text links. Only outside sites open a new tab.
+- **Bandcamp first.** It plays full songs and sells or pre-orders; Apple Music and Spotify only preview. Apple is the backup player.
+- **Cover art: `song_arts` first**, then Apple artwork found by `song_id`.
+- **Writing voice:** simple and honest, show don't tell, light humor, **no em dashes**. Avoid the words narrator, delve, tapestry, foster.
+- **Explain decisions,** not just changes. Be honest about trade-offs and limits.
+- **Commits** go out as **Danyel OZ <daniel.vizcayno@gmail.com>**.
+
+---
+
+## 2. Where everything lives
+
+| What | Where |
+|---|---|
+| Website | Google Sites, https://www.danyeloz.info |
+| Song Database (single source of truth) | Google Sheet `1WD98RYgWPURqwtczPYEblCOOPFutAIO1jf42oSfbzPw` |
+| Widgets (live, canonical) | Public repo **dcvizcayno/danyeloz-embeds**, served at https://dcvizcayno.github.io/danyeloz-embeds/ |
+| Widget list | `README.md` and `index.html` in danyeloz-embeds |
+| Data entry app (Apps Script) | Private repo **dcvizcayno/DanyelOZ-Official-Website**, folder `apps-script/` |
+| X post agent | `x-agent/`, `data/x-posts.json`, `x-dashboard.html`, `.github/workflows/x-*.yml` in danyeloz-embeds (moving to the private repo, see Pending) |
+| X dashboard | https://dcvizcayno.github.io/danyeloz-embeds/x-dashboard.html |
+| YouTube video relay (separate Apps Script) | Project doc `claude/danyel-oz-apps-script.gs`; feeds the YouTube grid with channel stats and public uploads |
+| Contact and letters | Cognito Forms (`cognitoforms.com/DanyelOZ/...`), embedded on Connect |
+
+**Two repos, two jobs.** danyeloz-embeds is public because free GitHub Pages needs it; nothing secret goes there.
+The `embeds/` folder in the private repo is an **older snapshot** of a few widgets. The live versions are in danyeloz-embeds.
+
+---
+
+## 3. The Song Database
+
+Shared as **Anyone with the link: Viewer** so the widgets can read it. That means **every tab is public**: keep only public information in it. Only Editors can change it.
+
+| Tab (gid) | Edited in app screen | Feeds |
 |---|---|---|
-| `Sheet1` (0): songs, 16 columns | Songs | player, song-info, upcoming-*, highlights fallback |
-| `features` (546510737) | Monthly Features | featured-videos |
-| `explore` (1777896887) | Explore Panels | explore-music |
-| `music_highlights` (1521214689) | Music Highlights | music-highlights |
+| `Sheet1` (0), the songs | Songs | almost every widget, the X agent, Music Highlights fallback |
+| `features` (546510737) | Monthly Features | Featured Videos |
+| `explore` (1777896887) | Explore Panels | Explore the Music |
+| `music_highlights` (1521214689) | Music Highlights | Music Highlights |
 
-Song columns: song_id (Apple collection ID), song_title, release_date (yyyy-mm-dd), release_type,
-song_genre, song_description (first paragraph = blue intro line, blank line between paragraphs),
-song_ISRC, song_qr, song_upc (text), record_label, yt_video_link, spotify_link, appl_music_link,
-amazon_link, bandcamp_embed (raw iframe code), song_arts (Drive share link).
+**Song columns (Sheet1):** `song_id` (Apple collection ID), `song_title`, `release_date` (yyyy-mm-dd), `release_type` (Single, EP, Album),
+`song_genre` ("Acoustic" puts a song on the Live page), `song_description` (first paragraph = intro line; blank line between paragraphs),
+`song_ISRC`, `song_qr`, `song_upc` (stored as text), `record_label`, `yt_video_link`, `spotify_link`, `appl_music_link`, `amazon_link`,
+`bandcamp_embed` (raw Bandcamp iframe code), `song_arts` (Google Drive share link, file shared "Anyone with the link").
 
-Apple Music artist ID `1706653995`. Use `sort=recent` on lookups (200+ releases).
+**Other tabs:** `features`: month (YYYY-MM), slot 1 to 3, song_id, yt_video_link, title, description.
+`explore`: order, visible, title, script, sub, text, link, image, focus.
+`music_highlights`: month, slot, actLabel, title, subtitle, catalogTag, accentHex, bandcamp_embed, coverImageUrl, and four platform links. Its "Row" and "Actions" columns are unused and left alone.
 
-## Code locations
-- `apps-script/Code.gs` + `apps-script/Form.html`: private data entry web app (Apps Script bound to the sheet,
-  Execute as Me, Only myself). Screens: Songs, Monthly Features, Music Highlights, Explore Panels.
-  After edits: Deploy > Manage deployments > New version.
-- `embeds/*.html`: Google Sites embeds. Also published as full pages in the public repo
-  **dcvizcayno/danyeloz-embeds** for GitHub Pages (`https://dcvizcayno.github.io/danyeloz-embeds/<name>.html`),
-  embedded with Insert > Embed > By URL. Keep both repos in sync.
+**Coverage (Nov 9, 2026):** 215 songs. `song_description` 38, `bandcamp_embed` 50, `song_arts` 53.
+Some releases are under a different stage name (for example the EP "Money"); they belong in the database too.
 
-## Rules every embed follows
-- Read sheet data by **header name**, never column position (gviz CSV `...&gid=<gid>`).
-- Build the page with `textContent`/DOM, never by pasting sheet text into HTML. Accept only `https://` links,
-  check platform domains, accept colors only as `#RRGGBB`, and use only the `src` of Bandcamp code
-  (`https://bandcamp.com/EmbeddedPlayer/...`), never the pasted HTML.
-- Always have a fallback (backup data, cover image, or a friendly message). Never show an empty box.
-- Settings block at the top of each script for labels and options.
-- Bandcamp is the preferred player (full songs, pre-orders); Apple Music is the backup.
-- Phones: Google Sites shrinks embed boxes, so layouts fit the box height (swipe rows, fit-to-box players).
+**Apple Music:** artist ID `1706653995`. Always add `sort=recent` to catalog lookups; without it Apple returns the 200 oldest releases and misses new ones.
 
-## Known Google Sites limits (don't promise otherwise)
-- Embeds are sandboxed: links can only open **new tabs**; nested iframes inherit this. Same-tab navigation needs
-  native Sites buttons or text links (used under Explore the Music).
-- Embeds can't resize their own box; set heights in the Sites editor.
-- Publishing can take a few minutes to show live.
+---
 
-## Tests
-Earlier work was tested with Node mocks of SpreadsheetApp (save/import/features/panels/highlights)
-and Playwright renders with mocked sheet and Apple data. Re-test the same way after changes.
+## 4. Data entry app (private)
 
-## Open items
-- GitHub Pages: make `danyeloz-embeds` public, enable Pages (main, root), then swap each Sites embed to By URL.
-  Checklist: Danyel-OZ-Embed-Setup-Checklist.xlsx.
-- Listen Now could get a phone-friendly pass like the newer embeds.
+Apps Script bound to the Song Database: `apps-script/Code.gs` + an HTML file named `Form`.
+Deployed as a web app, **Execute as: Me**, **Who has access: Only myself**. After any code change: **Deploy > Manage deployments > pencil > New version > Deploy** (the link stays the same).
+
+| Screen | What it does |
+|---|---|
+| Songs | Song list with covers, all 16 fields, cover and QR uploads (to Drive folders "Danyel OZ Song Art" and "Danyel OZ QR Codes"), **Import new releases from Apple Music** (adds new releases, links rows by title, fills blank Apple links and covers, never overwrites) |
+| Monthly Features | 3 videos per month, 12 months ahead, Copy last month |
+| Music Highlights | Up to 3 cards per month, pick a song to fill Bandcamp, cover and links, color picker |
+| Explore Panels | The Explore the Music tiles: text, link, image upload ("Danyel OZ Site Images"), order, show or hide |
+
+The sheet also gets a **Danyel OZ** menu (open the form as a sidebar, import from Apple).
+Saves use a lock that fails fast with a clear message, and log step timings under **Executions**.
+To share the app with a helper: Execute as **User accessing the web app**, access **Anyone with Google account**, and add the helper as an Editor of the sheet.
+
+---
+
+## 5. The widgets
+
+All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of its script.
+
+| Page | Widgets |
+|---|---|
+| Home | `player.html` + `song-info.html` (Listen Now), `upcoming-player.html` + `upcoming-details.html` (Upcoming Release), `featured-videos.html`, `music-highlights.html`, `explore-music.html` |
+| Released | `explore-releases.html`, `release-shelf.html?type=Single|EP|Album|Holiday` |
+| Behind the Scenes | `tiny-desk.html`, `in-progress.html` |
+| Connect | `follow-along.html`, `letter.html` (Cognito), plus the Cognito contact form embed |
+| Live | `acoustic-takes.html` (songs whose genre contains "Acoustic"), plus the Songkick widget |
+| Store | `available-now.html` (Bandcamp releases), `coming-soon.html` (merch waitlist, Production Vault) |
+| About | `know-me.html`, `support.html` (Patreon, Buy Me a Coffee, Ko-fi, PayPal) |
+| Every page | `footer.html`: LISTEN EVERYWHERE pills (Spotify, Apple Music, YouTube Music, Bandcamp) and +6 more (Amazon Music, Deezer, YouTube, Pandora, Audiomack, Boomplay) |
+
+**How the Home widgets choose what to show**
+- **Listen Now** shows Apple's newest release; the song's own row supplies the story and links. Bandcamp is the player when the song has a code. It switches when Apple publishes, usually around 4 PM Manila on release day.
+- **Upcoming Release** shows the nearest song whose release date is still ahead; it moves on at midnight Manila on release day. A countdown badge shows in the last week.
+- **Featured Videos** and **Music Highlights** show the current month's picks and switch at midnight on the 1st. An empty month keeps the last month that had picks.
+- **Read more** in the song panels shows the first paragraph, then the rest on click.
+
+**Rules every widget follows**
+- Read the sheet by **header name**, never column position (gviz CSV with `&gid=`).
+- Build the page with text and DOM elements, never by pasting sheet text in as HTML. Accept only `https://` links and check each platform's domain. Colors only as `#RRGGBB`. From Bandcamp code use only the `https://bandcamp.com/EmbeddedPlayer/...` address, never the pasted HTML.
+- Always have a fallback: backup data, a cover, or a friendly message. Never an empty box.
+- Fit the box: Google Sites shrinks embeds on phones, so players and layouts size to the box (swipe rows, fit-to-box players).
+
+**Tests:** logic was tested with Node mocks of SpreadsheetApp, layouts with Playwright using mocked sheet and Apple data, at desktop and phone sizes, plus planted bad data. Test the same way after changes.
+
+---
+
+## 6. X post agent
+
+- **Daily draft at 7:07 PM Manila** (`x-draft.yml`). It picks a song with a `bandcamp_embed` (every song gets a turn before any repeats) and drafts a post linking to the song's Bandcamp page. No new draft while one is waiting.
+- **Approval:** each draft is a GitHub Issue assigned to Daniel. Tick **Post** to publish, or **Revise** for a new version (comment a note first to steer it). He can also edit the draft text, then tick Post. Only the repo owner's ticks count.
+- **Weekly report every Monday at 9:23 AM Manila** (`x-metrics.yml`): views, likes, replies, reposts, link clicks. It updates `playbook.json`, tries each approach (question, story, invite, behind) at least 3 times, then mostly uses the winners and experiments 20% of the time.
+- **Account:** @danyeloz1554, X app in **Default Project (Pay Per Use)**. Key check (`x-check.yml`) passed. About **$0.20 per post** with a link.
+- **Voice rules** live in `x-agent/config.json` and match section 1.
+- **Keys:** GitHub Secrets `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET`. Without all four it runs in test mode. Optional `ANTHROPIC_API_KEY` makes Claude write in Daniel's voice instead of templates.
+- **Status:** no posts sent yet (`data/x-posts.json` is empty).
+
+---
+
+## 7. Google Sites: limits and tips
+
+**Limits (don't promise otherwise)**
+- Embeds are sandboxed: a link inside an embed can only open a **new tab**, and nested iframes inherit this. Same-tab navigation needs native Sites buttons or text links.
+- An embed can't resize its own box. Set heights in the editor; long text scrolls inside the box.
+- After Publish, the live page can take a few minutes to update. Hard refresh (Ctrl+Shift+R) if it looks stale.
+- TikTok's feed embed hits TikTok's rate limit ("overload-protect"); keep a plain "Watch on TikTok" button as backup.
+
+**Editing tips**
+- Duplicate a page as "X v2" to work on it safely.
+- Swap embed code with the pencil on a code embed.
+- Paste text through the clipboard; typing "·" fails.
+- Check focus before pressing Backspace; it can delete whole sections.
+- Link Sites buttons by picking the page from the list (pasting a full address can open a new tab).
+
+---
+
+## 8. Pending
+
+1. **First real X post.** Open Issue #2 ("NOTE TO SELF"), tick **Revise** to clear the old test-mode banner, then tick **Post**.
+2. **Store waitlist link.** `coming-soon.html` has `WAITLIST = ''`. When the Cognito "Merch waitlist" form is ready, send its public link; it gets converted to the `/f/` address and pushed.
+3. **Tiny Desk video.** `tiny-desk.html` has `VIDEO = ''`. Send the YouTube link when ready.
+4. **Move the X agent to the private repo** (DanyelOZ-Official-Website): `x-agent/`, `data/x-posts.json`, `x-dashboard.html` and the four `x-*.yml` workflows. Daniel re-adds the 4 X secrets there. Also remove the committed `x-agent/__pycache__/` and add a `.gitignore`.
+5. **Regenerate the keys of the app in the Ads project** (DanyelOZ_Official_Websites). They were pasted in chat. Unused, so regenerating is safe.
+6. **Song Database gaps.** 12 of the 50 X-eligible songs have no description, so their posts read generic: fill those first. Then add Bandcamp codes and `song_arts` for the rest, and add releases under other stage names.
+7. **Shorts inventory, then automation.** Build a "Shorts" tab (song_title, TikTok link, YouTube link, where the original file lives). Backfill gaps by hand from original files, not watermarked TikTok downloads. Then automate with the same Post or Revise approval. YouTube and TikTok only post publicly after an app audit, so apply early. Open question: where do the original files live (Mac, Google Drive, or only on the platforms)?
+8. **Optional:** add `ANTHROPIC_API_KEY` as a GitHub secret for posts in Daniel's own voice.
+
+**Smaller items from the site QA (Nov 3)**
+- Header banner photo on Home is about 1.3 MB (43% of the page); compress to about 200 KB.
+- Add alt text to images (9 of 10 large Home images had none) and a site description for search.
+- Text fixes: "combimation" on Fan Letter, "Check-out" in the top banner. Onsra page heading vs menu name, and EP vs Single filing.
+- Keep only public info in the sheet: any new tab (for example a Form Responses tab) is readable by anyone with the link.
+
+---
+
+## 9. Decisions on record
+
+- **Bandcamp** is the main player everywhere; Apple Music is the backup.
+- **Explore the Music** panels are visual only; text links under them handle navigation so pages open in the same tab.
+- **ISRC** is safe to show (it's public). UPC and record label are hidden by default.
+- **Widgets on GitHub Pages:** edit in danyeloz-embeds and the site updates within about 10 minutes, no pasting.
+- **The data entry app stays private** ("Only myself"), so one link controls the whole site's content.

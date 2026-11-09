@@ -1,5 +1,8 @@
 # Danyel OZ Official Website
 
+> **Start with `CLAUDE.md`**: the full project handbook (also `HANDOFF.md` in danyeloz-embeds).
+> The live widgets are in the public repo **dcvizcayno/danyeloz-embeds**; `embeds/` here is an older snapshot.
+
 Code behind [danyeloz.info](https://www.danyeloz.info/home): the Google Sites embeds and the
 Song Database data entry app. Everything reads from one Google Sheet, so the site updates
 itself when the sheet changes.
