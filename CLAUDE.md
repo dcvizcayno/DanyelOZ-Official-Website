@@ -118,7 +118,7 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 | Every page | `footer.html`: LISTEN EVERYWHERE pills (Spotify, Apple Music, YouTube Music, Bandcamp) and +6 more (Amazon Music, Deezer, YouTube, Pandora, Audiomack, Boomplay) |
 
 **How the Home widgets choose what to show**
-- **Listen Now** shows Apple's newest release; the song's own row supplies the story and links. Bandcamp is the player when the song has a code. It switches when Apple publishes, usually around 4 PM Manila on release day.
+- **Listen Now** shows the song with the newest `release_date` in the Song Database that is today or earlier, and switches at midnight Manila on release day. Same day: a song with a Bandcamp code wins. No Apple lookups for picking (Apple was unreliable). Bandcamp is the player; Apple Music only plays when a song has no Bandcamp code but has an Apple `song_id`.
 - **Upcoming Release** shows the nearest song whose release date is still ahead; it moves on at midnight Manila on release day. A countdown badge shows in the last week.
 - **Featured Videos** and **Music Highlights** show the current month's picks and switch at midnight on the 1st. An empty month keeps the last month that had picks.
 - **Read more** in the song panels shows the first paragraph, then the rest on click.
