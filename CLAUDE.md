@@ -137,11 +137,12 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 
 - **Daily draft at 7:07 PM Manila** (`x-draft.yml`). It picks a song with a `bandcamp_embed` (every song gets a turn before any repeats) and drafts a post linking to the song's Bandcamp page. No new draft while one is waiting.
 - **Approval:** each draft is a GitHub Issue assigned to Daniel. Tick **Post** to publish, or **Revise** for a new version (comment a note first to steer it). He can also edit the draft text, then tick Post. Only the repo owner's ticks count.
+- **Release posts, automatic, about 1 AM Manila** (`x-release.yml`, no approval by Daniel's choice): "coming soon" once a song is 1 to 7 days from its `release_date`, and "out now" on release day, both linking to the song's Bandcamp page. At most one per night ("out now" first). Each song gets each post once; a missed night is not made up. No Bandcamp code means no post and an Issue saying so. Each post leaves a closed `x-release` Issue with the link. Release posts are left out of the song rotation and the playbook. Run it by hand with **dry run** ticked to preview.
 - **Weekly report every Monday at 9:23 AM Manila** (`x-metrics.yml`): views, likes, replies, reposts, link clicks. It updates `playbook.json`, tries each approach (question, story, invite, behind) at least 3 times, then mostly uses the winners and experiments 20% of the time.
 - **Account:** @danyeloz1554, X app in **Default Project (Pay Per Use)**. Key check (`x-check.yml`) passed. About **$0.20 per post** with a link.
 - **Voice rules** live in `x-agent/config.json` and match section 1.
 - **Keys:** GitHub Secrets `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET`. Without all four it runs in test mode. Optional `ANTHROPIC_API_KEY` makes Claude write in Daniel's voice instead of templates.
-- **Status:** no posts sent yet (`data/x-posts.json` is empty).
+- **Status:** first real post went out Nov 9, 2026 (NOTE TO SELF).
 
 ---
 
@@ -164,7 +165,7 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 
 ## 8. Pending
 
-1. **First real X post.** Open Issue #2 ("NOTE TO SELF"), tick **Revise** to clear the old test-mode banner, then tick **Post**.
+1. ~~First real X post~~ Done Nov 9, 2026.
 2. **Store waitlist link.** `coming-soon.html` has `WAITLIST = ''`. When the Cognito "Merch waitlist" form is ready, send its public link; it gets converted to the `/f/` address and pushed.
 3. **Tiny Desk video.** `tiny-desk.html` has `VIDEO = ''`. Send the YouTube link when ready.
 4. **Move the X agent to the private repo** (DanyelOZ-Official-Website): `x-agent/`, `data/x-posts.json`, `x-dashboard.html` and the four `x-*.yml` workflows. Daniel re-adds the 4 X secrets there. Also remove the committed `x-agent/__pycache__/` and add a `.gitignore`.
