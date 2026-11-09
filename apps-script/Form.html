@@ -674,7 +674,7 @@
   }
   function renderCoverage() {
     var box = $('coverage'); box.innerHTML = '';
-    var keys = [['song_description', 'Story'], ['bandcamp_embed', 'Bandcamp code'], ['song_arts', 'Cover art']]
+    var keys = [['song_description', 'Story'], ['bandcamp_embed', 'Bandcamp code'], ['song_arts', 'Cover art'], ['yt_video_link', 'YouTube video']]
       .filter(function (k) { return columns.indexOf(k[0]) >= 0; });
     keys.forEach(function (k) {
       var n = songs.filter(function (s) { return String(s[k[0]] || '').trim(); }).length;
