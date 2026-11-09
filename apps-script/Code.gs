@@ -23,9 +23,19 @@ const TEXT_ONLY = ['song_ISRC', 'song_upc'];    // kept as text so leading zeros
 /* ---------- Web page ---------- */
 
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Form')
+  return page_()
     .setTitle('Danyel OZ Song Database')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/* Builds the page from Form plus the Shorts, X and Analytics screens (ShortsViews and ShortsApp files). */
+function page_() {
+  return HtmlService.createTemplateFromFile('Form').evaluate();
+}
+
+/* Pastes another HTML file of this project into the page. */
+function include(name) {
+  return HtmlService.createHtmlOutputFromFile(name).getContent();
 }
 
 /* Adds a menu inside the sheet so the form can also open from there. */
@@ -37,7 +47,7 @@ function onOpen() {
 }
 
 function openSidebar_() {
-  const html = HtmlService.createHtmlOutputFromFile('Form').setTitle('Song Database');
+  const html = page_().setTitle('Song Database');
   SpreadsheetApp.getUi().showSidebar(html);
 }
 

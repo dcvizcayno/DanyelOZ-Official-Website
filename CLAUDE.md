@@ -74,15 +74,27 @@ Some releases are under a different stage name (for example the EP "Money"); the
 
 ## 4. Data entry app (private)
 
-Apps Script bound to the Song Database: `apps-script/Code.gs` + an HTML file named `Form`.
+Apps Script bound to the Song Database. Files: `Code.gs`, `Shorts.gs`, `XPosts.gs` (scripts) and `Form`, `ShortsViews`, `ShortsApp` (HTML). `Form` pulls in the other two HTML files, so all six must be in the project.
 Deployed as a web app, **Execute as: Me**, **Who has access: Only myself**. After any code change: **Deploy > Manage deployments > pencil > New version > Deploy** (the link stays the same).
 
 | Screen | What it does |
 |---|---|
-| Songs | Song list with covers, all 16 fields, cover and QR uploads (to Drive folders "Danyel OZ Song Art" and "Danyel OZ QR Codes"), **Import new releases from Apple Music** (adds new releases, links rows by title, fills blank Apple links and covers, never overwrites) |
+| Songs | Song list with covers, all 16 fields, cover and QR uploads (to Drive folders "Danyel OZ Song Art" and "Danyel OZ QR Codes"), **Import new releases from Apple Music** (adds new releases, links rows by title, fills blank Apple links and covers, never overwrites). **Missing info** filter with fill bars, "x of 16 fields filled" per song, a Shorts panel per song, and **Check changes before saving** (before/after list; can be switched off) |
 | Monthly Features | 3 videos per month, 12 months ahead, Copy last month |
 | Music Highlights | Up to 3 cards per month, pick a song to fill Bandcamp, cover and links, color picker |
 | Explore Panels | The Explore the Music tiles: text, link, image upload ("Danyel OZ Site Images"), order, show or hide |
+| Shorts | Pick a song and a video from the Drive folder "Danyel OZ Shorts" (or upload up to 30 MB), captions for YouTube, TikTok and Instagram from the song's story, batch scheduling, upload to YouTube as **private** (up to 50 MB). TikTok and Instagram: copy and post by hand |
+| X Posts | The X agent's waiting draft: edit, Revise (with a note), Post, Draft one now, Pause drafts. Same as ticking boxes on the GitHub Issue |
+| Analytics | YouTube numbers for Shorts uploaded from the app, X numbers from the agent's log, hashtag ranking, Export CSV and summary (to Drive folder "Danyel OZ Reports") |
+
+**Shorts schedule lives in a separate private sheet**, "Danyel OZ Shorts (private)", which the app creates on first use (its ID is kept in Script Properties as `SHORTS_SHEET_ID`). Nothing about Shorts goes in the public Song Database.
+
+**Script Properties** (Project Settings > Script Properties; never in the sheet or in chat):
+- `GITHUB_TOKEN`: fine-grained token for the X agent's repo with Issues and Actions (Read and write) and Contents (Read). Needed for X Posts.
+- `X_REPO`: optional, defaults to `dcvizcayno/danyeloz-embeds`. Change it when the agent moves to the private repo.
+- `GEMINI_API_KEY`: optional; Gemini writes the captions. Without it, captions come from templates. `GEMINI_MODEL` optional (defaults to `gemini-flash-latest`).
+
+**YouTube upload** needs the **YouTube Data API v3** service (Apps Script editor > Services +). Until Google approves the app, uploads stay private and Daniel makes them public in YouTube Studio.
 
 The sheet also gets a **Danyel OZ** menu (open the form as a sidebar, import from Apple).
 Saves use a lock that fails fast with a clear message, and log step timings under **Executions**.

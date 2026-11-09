@@ -1,0 +1,709 @@
+<!-- Danyel OZ admin: Shorts, X Posts and Analytics screens (behavior). Included at the end of Form.html. -->
+<script>
+(function () {
+  'use strict';
+  var SX = { data: null, files: [], filter: '', sel: {}, active: '', edit: null, dirty: false, tab: 'yt', angle: 'story', loaded: false, lite: null };
+  var XS = { loaded: false, data: null };
+  var AN = { loaded: false, data: null };
+
+  /* ---------- Small helpers ---------- */
+  function el(id) { return document.getElementById(id); }
+  /* Builds an element from text only (never HTML), so sheet text can't inject anything. */
+  function h(tag, props, kids) {
+    var e = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (k) {
+      var v = props[k];
+      if (v == null || v === false) return;
+      if (k === 'text') e.textContent = v;
+      else if (k === 'cls') e.className = v;
+      else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v);
+      else if (k === 'style') e.setAttribute('style', v);
+      else if (k in e && typeof v !== 'string') e[k] = v;
+      else e.setAttribute(k, v === true ? '' : v);
+    });
+    (kids || []).forEach(function (c) { if (c != null && c !== false) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); return node; }
+  function call(fn, args, ok, fail) {
+    var r = google.script.run.withSuccessHandler(ok).withFailureHandler(fail || function (e) { alert(e.message); });
+    r[fn].apply(r, args || []);
+  }
+  function say(id, text, kind) { var s = el(id); if (s) { s.textContent = text || ''; s.className = 'sx-status ' + (kind || ''); } }
+  function pill(status) { return h('span', { cls: 'sx-pill ' + String(status || 'Draft').split(' ')[0], text: status || 'Draft' }); }
+  function num(v) { return v == null || v === '' ? '–' : Number(v).toLocaleString('en-US'); }
+  function safeUrl(u) { return /^https:\/\//.test(String(u || '')) ? u : ''; }
+  function songKey(s) { return s.song_id ? 'id:' + s.song_id : 't:' + s.song_title; }
+  function sgToday() {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapore', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  }
+  function copyText(text, statusId) {
+    function fallback() {
+      var t = h('textarea', { style: 'position:fixed;left:-9999px;top:0' }); t.value = text; document.body.appendChild(t);
+      t.select(); var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(t);
+      say(statusId, ok ? 'Copied.' : 'Couldn’t copy here. Select the text and press Ctrl+C.', ok ? 'ok' : 'err');
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { say(statusId, 'Copied.', 'ok'); }, fallback);
+    } else fallback();
+  }
+  function viewTo(v) { var b = document.querySelector('[data-view="' + v + '"]'); if (b) b.click(); }
+
+  window.onAdminView = function (v) {
+    if (v === 'shorts' && !SX.loaded) loadShorts();
+    if (v === 'x' && !XS.loaded) loadX();
+    if (v === 'analytics' && !AN.loaded) loadAnalytics();
+  };
+
+  /* =================== Shorts =================== */
+  function loadShorts(then) {
+    SX.loaded = true;
+    call('getShortsData', [], function (d) {
+      SX.data = d;
+      SX.lite = null;
+      fillSongs(); fillAngles(); renderAddNote(); renderQueue(); renderStudio();
+      loadFiles();
+      if (then) then();
+    }, function (e) {
+      SX.loaded = false;
+      clear(el('sxList')).appendChild(h('div', { cls: 'list-empty', text: 'Couldn’t load Shorts: ' + e.message }));
+    });
+  }
+  function loadFiles(selectId) {
+    call('listShortFiles', [], function (files) {
+      SX.files = files;
+      var sel = clear(el('sxFile'));
+      sel.appendChild(h('option', { value: '', text: files.length ? 'Pick a video…' : 'No videos in the folder yet' }));
+      files.forEach(function (f) { sel.appendChild(h('option', { value: f.id, text: f.name + '  (' + f.sizeMb + ' MB)' })); });
+      if (selectId) sel.value = selectId;
+    }, function (e) { say('sxAddStatus', 'Couldn’t list the Drive folder: ' + e.message, 'err'); });
+  }
+  function fillSongs() {
+    var sel = clear(el('sxSong'));
+    sel.appendChild(h('option', { value: '', text: 'Pick a song (' + SX.data.songs.length + ')' }));
+    SX.data.songs.slice().sort(function (a, b) { return String(b.release_date).localeCompare(String(a.release_date)); })
+      .forEach(function (s) {
+        sel.appendChild(h('option', { value: songKey(s), text: s.song_title + '  (' + [s.release_date, s.release_type].filter(Boolean).join(' · ') + ')' + (s.hasStory ? '' : '  · no story yet') }));
+      });
+    if (SX.pendingSong) { sel.value = SX.pendingSong; SX.pendingSong = ''; }
+  }
+  function fillAngles() {
+    var sel = clear(el('sxAngle'));
+    Object.keys(SX.data.angles).forEach(function (k) { sel.appendChild(h('option', { value: k, text: SX.data.angles[k] })); });
+  }
+  function renderAddNote() {
+    var d = SX.data;
+    el('sxAiMode').textContent = d.ai ? 'Captions by Gemini' : 'Captions from templates';
+    var n = clear(el('sxAddNote'));
+    n.appendChild(document.createTextNode('Videos over ' + d.uploadLimitMb + ' MB: drop them in the '));
+    n.appendChild(h('a', { href: safeUrl(d.folderUrl), target: '_blank', rel: 'noopener', text: 'Danyel OZ Shorts folder' }));
+    n.appendChild(document.createTextNode(', then pick them here. The schedule lives in a '));
+    n.appendChild(h('a', { href: safeUrl(d.sheetUrl), target: '_blank', rel: 'noopener', text: 'private sheet' }));
+    n.appendChild(document.createTextNode(', not the public Song Database.' +
+      (d.ai ? '' : ' Captions come from each song’s story. Add GEMINI_API_KEY in Script Properties to have Gemini write them.')));
+  }
+  function selectedSong() {
+    var v = el('sxSong').value;
+    return SX.data.songs.filter(function (s) { return songKey(s) === v; })[0] || null;
+  }
+
+  el('sxUpload').addEventListener('change', function () {
+    var f = this.files[0], input = this;
+    if (!f || !SX.data) return;
+    if (!/^video\//.test(f.type)) { say('sxAddStatus', 'That file isn’t a video.', 'err'); input.value = ''; return; }
+    if (f.size > SX.data.uploadLimitMb * 1048576) {
+      say('sxAddStatus', 'This video is ' + Math.round(f.size / 1048576) + ' MB. Drop it in the Drive folder instead (link below), then pick it from the list.', 'err');
+      input.value = ''; return;
+    }
+    say('sxAddStatus', 'Uploading ' + f.name + ' to Drive…');
+    var r = new FileReader();
+    r.onload = function () {
+      call('uploadShortVideo', [{ name: f.name, mimeType: f.type, base64: String(r.result).split(',')[1] }], function (file) {
+        input.value = '';
+        say('sxAddStatus', 'Uploaded ' + file.name + '.', 'ok');
+        loadFiles(file.id);
+      }, function (e) { input.value = ''; say('sxAddStatus', e.message, 'err'); });
+    };
+    r.readAsDataURL(f);
+  });
+
+  el('sxAdd').addEventListener('click', function () {
+    var song = selectedSong();
+    if (!song) { say('sxAddStatus', 'Pick a song first.', 'err'); return; }
+    if (!el('sxFile').value) { say('sxAddStatus', 'Pick or upload the video first.', 'err'); return; }
+    var btn = this; btn.disabled = true;
+    say('sxAddStatus', SX.data.ai ? 'Adding and asking Gemini for captions…' : 'Adding and writing captions…');
+    call('addShort', [{
+      song_id: song.song_id, song_title: song.song_title, drive_file_id: el('sxFile').value,
+      scheduled_date: el('sxDate').value, scheduled_time: el('sxDate').value ? el('sxTime').value : '',
+      yt: el('sxYt').checked, tt: el('sxTt').checked, ig: el('sxIg').checked, angle: el('sxAngle').value
+    }], function (r) {
+      btn.disabled = false;
+      SX.data.shorts.push(r.short);
+      setActive(r.short.short_id, true);
+      say('sxAddStatus', r.warning || ('Added “' + r.short.song_title + '”. Check the captions on the right, then save.'), r.warning ? 'err' : 'ok');
+    }, function (e) { btn.disabled = false; say('sxAddStatus', e.message, 'err'); });
+  });
+
+  /* ---------- Queue ---------- */
+  document.querySelectorAll('[data-sxf]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      SX.filter = b.getAttribute('data-sxf');
+      document.querySelectorAll('[data-sxf]').forEach(function (x) { x.classList.toggle('on', x === b); });
+      renderQueue();
+    });
+  });
+  function shown() {
+    return SX.data.shorts.filter(function (s) { return !SX.filter || s.status === SX.filter; })
+      .sort(function (a, b) {
+        var x = (a.scheduled_date || '9999') + (a.scheduled_time || ''), y = (b.scheduled_date || '9999') + (b.scheduled_time || '');
+        return x === y ? String(b.created_at).localeCompare(String(a.created_at)) : x.localeCompare(y);
+      });
+  }
+  function renderQueue() {
+    var list = clear(el('sxList')), items = shown();
+    el('sxCount').textContent = '(' + SX.data.shorts.length + ')';
+    var n = Object.keys(SX.sel).filter(function (k) { return SX.sel[k]; }).length;
+    el('sxSelCount').textContent = n + ' selected';
+    if (!items.length) {
+      list.appendChild(h('div', { cls: 'sx-empty', text: SX.data.shorts.length ? 'Nothing here with this filter.' : 'No Shorts yet. Add your first one above.' }));
+      return;
+    }
+    items.forEach(function (s) {
+      var cb = h('input', { type: 'checkbox', 'aria-label': 'Select ' + s.song_title, checked: !!SX.sel[s.short_id],
+        onclick: function (e) { e.stopPropagation(); }, onchange: function () { SX.sel[s.short_id] = this.checked; renderQueue(); } });
+      var ch = ['yt', 'tt', 'ig'].filter(function (k) { return s[k]; }).map(function (k) { return { yt: 'YouTube', tt: 'TikTok', ig: 'Instagram' }[k]; });
+      list.appendChild(h('div', { cls: 'sx-item' + (s.short_id === SX.active ? ' active' : ''), onclick: function () { setActive(s.short_id); } }, [
+        cb,
+        h('div', { cls: 'b' }, [
+          h('div', { cls: 't' }, [h('strong', { text: s.song_title }), pill(s.status)]),
+          h('div', { cls: 'm' }, [h('span', { cls: 'sx-num', text: (s.scheduled_date ? s.scheduled_date + (s.scheduled_time ? ' · ' + s.scheduled_time : '') : 'No date yet') }),
+            document.createTextNode('  ·  ' + s.file_name + (s.size_mb ? ' (' + s.size_mb + ' MB)' : ''))]),
+          h('div', { cls: 'ch', text: ch.join(' · ') || 'No channel picked' })
+        ])
+      ]));
+    });
+  }
+  el('sxSelAll').addEventListener('click', function () {
+    var items = shown(), all = items.every(function (s) { return SX.sel[s.short_id]; });
+    items.forEach(function (s) { SX.sel[s.short_id] = !all; });
+    renderQueue();
+  });
+  function selectedIds() {
+    return shown().map(function (s) { return s.short_id; }).filter(function (id) { return SX.sel[id]; });
+  }
+  el('sxBStart').value = sgToday();
+  el('sxBApply').addEventListener('click', function () {
+    var ids = selectedIds();
+    if (!ids.length) { say('sxBStatus', 'Tick the Shorts you want to schedule first.', 'err'); return; }
+    say('sxBStatus', 'Scheduling…');
+    call('applyBatch', [ids, { start: el('sxBStart').value, cadence: el('sxBCad').value, time: el('sxBTime').value, ig: el('sxBIg').value }], function (r) {
+      say('sxBStatus', 'Scheduled ' + r.scheduled + (r.skipped ? ', skipped ' + r.skipped + ' already on YouTube' : '') + '.', 'ok');
+      SX.sel = {}; reloadShorts();
+    }, function (e) { say('sxBStatus', e.message, 'err'); });
+  });
+  el('sxBPublish').addEventListener('click', function () {
+    var ids = selectedIds();
+    if (!ids.length) { say('sxBStatus', 'Tick the Shorts you want to upload first.', 'err'); return; }
+    if (!SX.data.youtube) { say('sxBStatus', 'Turn on YouTube first (see the note in a Short’s YouTube card).', 'err'); return; }
+    if (!confirm('Upload ' + ids.length + ' Short' + (ids.length > 1 ? 's' : '') + ' to YouTube as private videos?')) return;
+    say('sxBStatus', 'Uploading to YouTube. This can take a minute per video…');
+    call('publishSelected', [ids], function (r) {
+      var parts = [];
+      if (r.uploaded.length) parts.push('Uploaded: ' + r.uploaded.join(', ') + '.');
+      if (r.skipped.length) parts.push('Skipped: ' + r.skipped.join(', ') + '.');
+      if (r.failed.length) parts.push('Failed: ' + r.failed.join('; '));
+      say('sxBStatus', parts.join(' ') || 'Nothing to upload.', r.failed.length ? 'err' : 'ok');
+      SX.sel = {}; reloadShorts();
+    }, function (e) { say('sxBStatus', e.message, 'err'); });
+  });
+  function reloadShorts() {
+    call('getShortsData', [], function (d) { SX.data = d; SX.lite = null; renderQueue(); if (!SX.dirty) setActive(SX.active, true); });
+  }
+
+  /* ---------- Studio (one Short) ---------- */
+  function setActive(id, force) {
+    if (!force && id !== SX.active && SX.dirty && !confirm('You have unsaved changes on this Short. Leave without saving?')) return;
+    SX.active = id;
+    var s = SX.data.shorts.filter(function (x) { return x.short_id === id; })[0];
+    SX.edit = s ? JSON.parse(JSON.stringify(s)) : null;
+    SX.dirty = false;
+    SX.angle = s && s.angle || 'story';
+    renderQueue(); renderStudio();
+  }
+  function markDirty() { SX.dirty = true; var b = el('sxSave'); if (b) b.textContent = 'Save changes •'; }
+
+  var LIMITS = { yt_title: 100, yt_description: 5000, tt_caption: 2200, ig_caption: 2200 };
+  function field(labelText, key, opts) {
+    opts = opts || {};
+    var e = SX.edit;
+    var input = opts.area ? h('textarea', { rows: opts.rows || 6 }) : h('input', {});
+    if (opts.tags) input.className = 'sx-tags';
+    input.value = e[key] || '';
+    var counter = h('span', { cls: 'sx-count' });
+    function upd() {
+      if (opts.tags) {
+        var n = String(input.value).split(/[\s,]+/).filter(Boolean).length;
+        counter.textContent = n + ' tags'; counter.classList.toggle('over', n > (opts.max || 30));
+      } else if (opts.total) {
+        var len = opts.total();
+        counter.textContent = len + ' / ' + opts.limit; counter.classList.toggle('over', len > opts.limit);
+      } else if (LIMITS[key]) {
+        counter.textContent = input.value.length + ' / ' + LIMITS[key]; counter.classList.toggle('over', input.value.length > LIMITS[key]);
+      }
+    }
+    input.addEventListener('input', function () { e[key] = input.value; markDirty(); upd(); renderPhoneCaption(); updAll(); });
+    upd();
+    field.updaters.push(upd);
+    return h('div', { cls: 'field' }, [h('label', {}, [document.createTextNode(labelText), counter]), input]);
+  }
+  field.updaters = [];
+  function updAll() { field.updaters.forEach(function (f) { f(); }); }
+
+  function platformText(tab) {
+    var e = SX.edit;
+    if (tab === 'yt') return e.yt_title + '\n\n' + e.yt_description + (e.yt_tags ? '\n\n' + e.yt_tags : '');
+    if (tab === 'tt') return e.tt_caption + (e.tt_tags ? '\n\n' + e.tt_tags : '');
+    return e.ig_caption + (e.ig_tags ? '\n\n' + e.ig_tags : '');
+  }
+
+  function renderStudio() {
+    var box = clear(el('sxStudio'));
+    field.updaters = [];
+    var e = SX.edit, d = SX.data;
+    if (!e) { box.appendChild(h('div', { cls: 'sx-empty', text: 'Pick a Short from the queue, or add one above.' })); return; }
+    var uploaded = !!e.yt_video_id;
+
+    // Header
+    var status = h('select', { 'aria-label': 'Status', onchange: function () { e.status = this.value; markDirty(); } });
+    d.statuses.forEach(function (st) { status.appendChild(h('option', { value: st, text: st })); });
+    status.value = e.status || 'Draft';
+    box.appendChild(h('div', { cls: 'sx-head' }, [
+      h('div', {}, [
+        h('h3', { text: e.song_title }),
+        h('div', { cls: 'meta' }, [
+          h('span', { cls: 'sx-num', text: (e.song_id ? 'Apple ID ' + e.song_id + ' · ' : '') }),
+          h('a', { href: 'https://drive.google.com/file/d/' + encodeURIComponent(e.drive_file_id) + '/view', target: '_blank', rel: 'noopener', text: e.file_name }),
+          document.createTextNode(e.size_mb ? ' · ' + e.size_mb + ' MB' : ''),
+          uploaded ? document.createTextNode(' · ') : null,
+          uploaded ? h('a', { href: 'https://studio.youtube.com/video/' + encodeURIComponent(e.yt_video_id) + '/edit', target: '_blank', rel: 'noopener', text: 'Open in YouTube Studio' }) : null
+        ])
+      ]),
+      h('div', { style: 'display:flex;gap:8px;align-items:center' }, [
+        status,
+        h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: 'Remove', title: 'Remove from the schedule (the video stays in Drive)', onclick: removeActive })
+      ])
+    ]));
+
+    // Platforms
+    var plat = h('div', { cls: 'sx-plat' });
+    [['yt', 'YouTube Shorts', d.youtube
+        ? (uploaded ? 'Uploaded as private. Make it public in YouTube Studio.' : 'Uploads as Private until Google approves the app. You make it public.')
+        : 'To upload from here, turn on YouTube: Apps Script editor > Services (+) > YouTube Data API v3 > Add. Until then, copy the text.'],
+     ['tt', 'TikTok', 'Copy and post in the TikTok app for now. Auto-posting needs TikTok to approve the app.'],
+     ['ig', 'Instagram Reels', 'Optional. Caption is ready if you turn it on. Post it in the Instagram app.']]
+      .forEach(function (p) {
+        var cb = h('input', { type: 'checkbox', checked: !!e[p[0]], onchange: function () { e[p[0]] = this.checked; this.closest('div').classList.toggle('on', this.checked); markDirty(); } });
+        plat.appendChild(h('div', { cls: e[p[0]] ? 'on' : '' }, [h('label', {}, [h('strong', { text: p[1] }), cb]), h('p', { text: p[2] })]));
+      });
+    box.appendChild(plat);
+
+    // Angles
+    var note = h('input', { placeholder: 'Optional note, e.g. shorter, mention the trip', 'aria-label': 'Note for new captions' });
+    var angles = h('div', { cls: 'sx-angles' }, [h('span', { cls: 'sx-note', style: 'font-weight:700', text: 'Angle' })]);
+    Object.keys(d.angles).forEach(function (k) {
+      angles.appendChild(h('button', { type: 'button', cls: 'ghost' + (k === SX.angle ? ' on' : ''), text: d.angles[k], onclick: function () {
+        SX.angle = k; angles.querySelectorAll('button[data-a]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-a') === k); });
+      }, 'data-a': k }));
+    });
+    angles.appendChild(note);
+    angles.appendChild(h('button', { type: 'button', cls: 'primary sx-btn-sm', text: 'Rewrite captions', onclick: function () {
+      if (SX.dirty && !confirm('Rewriting replaces the captions, including your unsaved edits. Go ahead?')) return;
+      var b = this; b.disabled = true; say('sxStudioStatus', d.ai ? 'Asking Gemini…' : 'Rewriting…');
+      call('generateCaptions', [e.short_id, SX.angle, note.value], function (r) {
+        b.disabled = false; replaceShort(r.short); setActive(r.short.short_id, true);
+        say('sxStudioStatus', r.warning || 'New captions are in. Save when you like them.', r.warning ? 'err' : 'ok');
+      }, function (err) { b.disabled = false; say('sxStudioStatus', err.message, 'err'); });
+    } }));
+    box.appendChild(angles);
+
+    // Editors and preview
+    var tabs = h('div', { cls: 'tabs' });
+    [['yt', 'YouTube'], ['tt', 'TikTok'], ['ig', 'Instagram' + (e.ig ? '' : ' (off)')]].forEach(function (t) {
+      tabs.appendChild(h('button', { type: 'button', cls: 'ghost' + (SX.tab === t[0] ? ' on' : ''), text: t[1], onclick: function () { SX.tab = t[0]; renderStudio(); } }));
+    });
+    var editors = h('div', { cls: 'f' }, [tabs]);
+    if (SX.tab === 'yt') {
+      editors.appendChild(field('Title', 'yt_title'));
+      editors.appendChild(field('Description', 'yt_description', { area: true, rows: 7 }));
+      editors.appendChild(field('Hashtags', 'yt_tags', { tags: true, max: 15 }));
+    } else if (SX.tab === 'tt') {
+      var ttTotal = function () { return (e.tt_caption || '').length + (e.tt_tags ? e.tt_tags.length + 2 : 0); };
+      editors.appendChild(field('Caption (hook first)', 'tt_caption', { area: true, rows: 3, total: ttTotal, limit: 2200 }));
+      editors.appendChild(field('Hashtags', 'tt_tags', { tags: true, max: 10 }));
+    } else {
+      var igTotal = function () { return (e.ig_caption || '').length + (e.ig_tags ? e.ig_tags.length + 2 : 0); };
+      editors.appendChild(field('Caption', 'ig_caption', { area: true, rows: 5, total: igTotal, limit: 2200 }));
+      editors.appendChild(field('Hashtags', 'ig_tags', { tags: true, max: 30 }));
+    }
+    var date = h('input', { type: 'date', value: e.scheduled_date || '', oninput: function () { e.scheduled_date = this.value; markDirty(); } });
+    var time = h('input', { type: 'time', value: e.scheduled_time || '', oninput: function () { e.scheduled_time = this.value; markDirty(); } });
+    editors.appendChild(h('div', { cls: 'row2' }, [
+      h('div', { cls: 'field' }, [h('label', { text: 'Date' }), date]),
+      h('div', { cls: 'field' }, [h('label', { text: 'Time (Manila)' }), time])
+    ]));
+    var copyLabel = { yt: 'Copy YouTube text', tt: 'Copy TikTok text', ig: 'Copy Instagram text' }[SX.tab];
+    var ytBtn = h('button', { type: 'button', cls: 'ok-btn', text: uploaded ? 'On YouTube (private)' : 'Upload to YouTube (private)',
+      disabled: uploaded || !e.yt || !d.youtube, onclick: uploadActive,
+      title: !d.youtube ? 'Turn on the YouTube Data API v3 service first' : (!e.yt ? 'Tick YouTube first' : '') });
+    editors.appendChild(h('div', { style: 'display:flex;flex-wrap:wrap;gap:8px;align-items:center' }, [
+      h('button', { type: 'button', cls: 'ghost', text: copyLabel, onclick: function () { copyText(platformText(SX.tab), 'sxStudioStatus'); } }),
+      h('button', { type: 'button', cls: 'primary', id: 'sxSave', text: 'Save changes', onclick: saveActive }),
+      ytBtn
+    ]));
+    editors.appendChild(h('div', { style: 'margin-top:8px' }, [h('span', { cls: 'sx-status', id: 'sxStudioStatus' })]));
+
+    var phone = h('div', { cls: 'sx-phone', 'aria-label': 'Preview' }, [
+      h('div', { cls: 'top' }, [h('span', { text: { yt: 'Shorts', tt: 'TikTok', ig: 'Reels' }[SX.tab] }), h('span', { text: '9:16' })]),
+      h('iframe', { src: 'https://drive.google.com/file/d/' + encodeURIComponent(e.drive_file_id) + '/preview', title: 'Video preview', allow: 'autoplay' }),
+      h('div', { cls: 'cap', id: 'sxCap' })
+    ]);
+    box.appendChild(h('div', { cls: 'sx-edit' }, [editors, h('div', { cls: 'p' }, [phone])]));
+    renderPhoneCaption();
+  }
+  function renderPhoneCaption() {
+    var cap = el('sxCap'), e = SX.edit; if (!cap || !e) return;
+    clear(cap);
+    var text = SX.tab === 'yt' ? e.yt_title : (SX.tab === 'tt' ? e.tt_caption : e.ig_caption);
+    var tags = (SX.tab === 'yt' ? e.yt_tags : (SX.tab === 'tt' ? e.tt_tags : e.ig_tags)) || '';
+    cap.appendChild(h('b', { text: '@danyeloz1554' }));
+    cap.appendChild(document.createTextNode(String(text || '').slice(0, 140)));
+    cap.appendChild(h('i', { text: tags.split(/\s+/).slice(0, 4).join(' ') }));
+  }
+  function replaceShort(s) {
+    SX.data.shorts = SX.data.shorts.map(function (x) { return x.short_id === s.short_id ? s : x; });
+  }
+  function saveActive() {
+    var e = SX.edit, b = el('sxSave'); b.disabled = true;
+    say('sxStudioStatus', 'Saving…');
+    var payload = { short_id: e.short_id };
+    ['scheduled_date', 'scheduled_time', 'yt', 'tt', 'ig', 'status', 'yt_title', 'yt_description', 'yt_tags', 'tt_caption', 'tt_tags', 'ig_caption', 'ig_tags']
+      .forEach(function (k) { payload[k] = e[k]; });
+    if (payload.scheduled_date && payload.status === 'Draft') payload.status = 'Scheduled';
+    call('saveShort', [payload], function (s) {
+      replaceShort(s); SX.dirty = false; setActive(s.short_id, true);
+      say('sxStudioStatus', 'Saved.', 'ok');
+    }, function (err) { b.disabled = false; say('sxStudioStatus', err.message, 'err'); });
+  }
+  function uploadActive() {
+    var e = SX.edit;
+    if (SX.dirty) { say('sxStudioStatus', 'Save your changes first, so YouTube gets the latest text.', 'err'); return; }
+    if (!confirm('Upload “' + e.song_title + '” to YouTube as a private video?')) return;
+    this.disabled = true;
+    say('sxStudioStatus', 'Uploading to YouTube. This can take a minute…');
+    call('uploadShortToYouTube', [e.short_id], function (r) {
+      replaceShort(r.short); setActive(r.short.short_id, true);
+      say('sxStudioStatus', 'Uploaded as private. Open it in YouTube Studio to make it public.', 'ok');
+    }, function (err) { say('sxStudioStatus', err.message, 'err'); renderStudio(); });
+  }
+  function removeActive() {
+    var e = SX.edit;
+    if (!confirm('Remove “' + e.song_title + '” (' + e.file_name + ') from the schedule? The video stays in your Drive folder.')) return;
+    call('deleteShort', [e.short_id], function () {
+      SX.data.shorts = SX.data.shorts.filter(function (x) { return x.short_id !== e.short_id; });
+      delete SX.sel[e.short_id];
+      SX.dirty = false; setActive('', true);
+    }, function (err) { say('sxStudioStatus', err.message, 'err'); });
+  }
+
+  /* ---------- Panel on the Songs screen ---------- */
+  window.renderSongShorts = function (song) {
+    var box = el('songShorts'); if (!box) return;
+    clear(box);
+    if (!song) return;
+    function draw(list) {
+      if (!current || current.row !== song.row) return;   // a different song was opened meanwhile
+      var mine = list.filter(function (s) { return (song.song_id && String(s.song_id) === String(song.song_id)) || s.song_title === song.song_title; });
+      var panel = h('div', { cls: 'sx-songpanel' }, [h('h4', {}, [h('span', { text: 'Shorts for this song' }), h('span', { cls: 'sx-num', text: String(mine.length) })])]);
+      mine.forEach(function (s) {
+        panel.appendChild(h('div', { cls: 'it' }, [
+          h('div', {}, [h('strong', { text: s.file_name }), h('small', { cls: 'sx-num', text: (s.scheduled_date ? s.scheduled_date + ' · ' + (s.scheduled_time || '') : 'not scheduled') })]),
+          pill(s.status)
+        ]));
+      });
+      panel.appendChild(h('button', { type: 'button', cls: 'add', text: '+ Schedule a Short for this song', onclick: function () { scheduleFor(song); } }));
+      box.appendChild(panel);
+    }
+    if (SX.data) return draw(SX.data.shorts);
+    if (SX.lite) return draw(SX.lite);
+    call('getShortsList', [], function (list) { SX.lite = list; draw(list); }, function () { /* panel is optional */ });
+  };
+  function scheduleFor(song) {
+    var key = songKey(song);
+    viewTo('shorts');
+    if (SX.data) { el('sxSong').value = key; el('sxSong').focus(); }
+    else SX.pendingSong = key;
+    window.scrollTo(0, 0);
+  }
+
+  /* =================== X Posts =================== */
+  function loadX() {
+    XS.loaded = true;
+    call('getXData', [], function (d) { XS.data = d; renderX(); }, function (e) {
+      XS.loaded = false;
+      clear(el('xBody')).appendChild(h('div', { cls: 'card' }, [h('div', { cls: 'list-empty', text: 'Couldn’t load X posts: ' + e.message })]));
+    });
+  }
+  function xLen(t) { return String(t || '').replace(/https?:\/\/\S+/g, new Array(24).join('x')).length; }
+  function tile(l, v, n, dim) {
+    return h('div', { cls: 'sx-tile' }, [h('div', { cls: 'l', text: l }), h('div', { cls: 'v' + (dim ? ' dim' : ''), text: v }), h('div', { cls: 'n', text: n })]);
+  }
+  function renderX() {
+    var d = XS.data, box = clear(el('xBody'));
+    var real = d.posts.filter(function (p) { return !p.test; });
+    var paused = d.workflow && d.workflow !== 'active';
+
+    if (!d.connected) {
+      box.appendChild(h('div', { cls: 'card', style: 'margin-bottom:18px' }, [
+        h('h2', { text: 'Connect the X agent' }),
+        h('p', { cls: 'sx-note', text: 'The X agent runs on GitHub. To see drafts and approve them here, give this app a GitHub key. The rotation and post history below already work without it.' }),
+        h('ol', { cls: 'sx-steps' }, [
+          h('li', {}, ['On GitHub: Settings > Developer settings > Fine-grained tokens > Generate new token.']),
+          h('li', {}, ['Repository: ', h('code', { text: d.repo }), '. Permissions: Issues (Read and write), Actions (Read and write), Contents (Read).']),
+          h('li', {}, ['In Apps Script: Project Settings > Script Properties > add ', h('code', { text: 'GITHUB_TOKEN' }), ' with the token.']),
+          h('li', {}, ['Reload this page.'])
+        ])
+      ]));
+    }
+    if (d.error) box.appendChild(h('div', { cls: 'sx-warn', style: 'margin-bottom:18px', text: d.error }));
+
+    box.appendChild(h('div', { cls: 'sx-tiles' }, [
+      tile('Waiting for you', d.connected ? (d.drafts ? d.drafts + ' draft' + (d.drafts > 1 ? 's' : '') : 'None') : '–', 'approve or revise', !d.connected),
+      tile('Next draft', !d.connected ? '–' : (paused ? 'Paused' : (d.drafts ? 'After this one' : '7:07 PM')), 'Manila, daily', !d.connected),
+      tile('Posts sent', String(real.length), 'real posts on X'),
+      tile('This round', d.rotation.postedThisRound + ' / ' + d.rotation.eligible, 'songs with a Bandcamp code'),
+      tile('Cost', '~$0.20', 'per post with a link')
+    ]));
+
+    // Draft + preview
+    var left = h('div', { cls: 'card', style: 'flex:7 1 560px' });
+    if (d.draft) {
+      var dr = d.draft;
+      var ta = h('textarea', { rows: 7, 'aria-label': 'Post text' }); ta.value = dr.text;
+      var count = h('span', { cls: 'sx-count' });
+      var prev = h('p', { text: dr.text });
+      var updCount = function () { var n = xLen(ta.value); count.textContent = n + ' / 280'; count.classList.toggle('over', n > 280); prev.textContent = ta.value; };
+      ta.addEventListener('input', updCount); updCount();
+      var noteIn = h('input', { placeholder: 'e.g. shorter, no question, mention the trip', 'aria-label': 'Note for a new version' });
+      var act = function (fn, args, msg) {
+        say('xStatus', 'Sending to GitHub…');
+        left.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+        call(fn, args, function () {
+          say('xStatus', msg, 'ok');
+          setTimeout(function () { XS.loaded = false; loadX(); }, 60000);
+        }, function (e) { left.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); say('xStatus', e.message, 'err'); });
+      };
+      left.appendChild(h('h2', {}, [document.createTextNode('Waiting for you '), h('span', { cls: 'mode', text: 'Approach: ' + (dr.hook || '?') + ' · Version ' + dr.version })]));
+      left.appendChild(h('div', { cls: 'sx-head' }, [h('div', {}, [h('h3', { text: dr.song }),
+        h('div', { cls: 'meta' }, [document.createTextNode('Drafted ' + String(dr.created).slice(0, 10) + ' · '),
+          h('a', { href: safeUrl(dr.url), target: '_blank', rel: 'noopener', text: 'GitHub Issue #' + dr.number })])])]));
+      if (dr.testMode) left.appendChild(h('div', { cls: 'sx-warn', style: 'margin-bottom:12px', text: 'This draft was written in test mode, before your X keys were added. Click Revise once to refresh it, then Post.' }));
+      left.appendChild(h('div', { cls: 'sx-edit' }, [
+        h('div', { cls: 'f' }, [
+          h('div', { cls: 'field' }, [h('label', {}, ['Post text (you can edit it)', count]), ta]),
+          h('div', { cls: 'field' }, [h('label', { text: 'Note for a new version (optional)' }), noteIn]),
+          h('div', { style: 'display:flex;flex-wrap:wrap;gap:8px' }, [
+            h('button', { type: 'button', cls: 'ghost', text: 'Revise', onclick: function () { act('xRevise', [dr.number, noteIn.value], 'Asked for a new version. It shows up here in a minute or two.'); } }),
+            h('button', { type: 'button', cls: 'ghost', text: 'Save my edits', onclick: function () {
+              say('xStatus', 'Saving…');
+              call('saveXText', [dr.number, ta.value], function () { say('xStatus', 'Saved to the draft on GitHub.', 'ok'); }, function (e) { say('xStatus', e.message, 'err'); });
+            } }),
+            h('button', { type: 'button', cls: 'ok-btn', text: 'Post to X', disabled: dr.testMode, onclick: function () {
+              if (xLen(ta.value) > 280) { say('xStatus', 'Too long for X. Trim it to 280.', 'err'); return; }
+              if (!confirm('Post this to X now?')) return;
+              act('xPost', [dr.number, ta.value], 'Sent. The agent posts it within a minute or two and logs it here.');
+            } })
+          ]),
+          h('p', { cls: 'sx-note', text: 'Same as ticking Post or Revise on the GitHub Issue, so you can approve from either place.' }),
+          h('span', { cls: 'sx-status', id: 'xStatus' })
+        ]),
+        h('div', { cls: 'p' }, [h('div', { cls: 'sx-xpost', style: 'width:100%' }, [
+          h('div', { cls: 'who' }, [h('div', { cls: 'av', text: 'OZ' }), h('div', {}, [h('strong', { text: 'Danyel OZ' }), h('div', { cls: 'sx-note', text: '@danyeloz1554' })])]),
+          prev
+        ])])
+      ]));
+    } else {
+      left.appendChild(h('h2', { text: 'Waiting for you' }));
+      left.appendChild(h('div', { cls: 'sx-empty' }, [
+        document.createTextNode(d.connected ? 'No draft waiting. The next one arrives at 7:07 PM.' : 'Connect GitHub (above) to see drafts here.'),
+        d.connected ? h('div', { style: 'margin-top:12px' }, [h('button', { type: 'button', cls: 'primary', text: 'Draft one now', onclick: function () {
+          this.disabled = true; say('xStatus', 'Asking the agent…');
+          call('xDraftNow', [], function () { say('xStatus', 'Requested. The draft shows up in about a minute.', 'ok'); setTimeout(function () { XS.loaded = false; loadX(); }, 60000); },
+            function (e) { say('xStatus', e.message, 'err'); });
+        } })]) : null,
+        h('div', {}, [h('span', { cls: 'sx-status', id: 'xStatus' })])
+      ]));
+    }
+
+    // Rotation + schedule
+    var rot = d.rotation;
+    var right = h('div', { style: 'flex:5 1 340px;display:grid;gap:18px' });
+    var rc = h('div', { cls: 'card' }, [
+      h('h2', {}, [document.createTextNode('Song rotation '), h('span', { cls: 'count', text: rot.postedThisRound + ' of ' + rot.eligible + ' this round' })]),
+      h('p', { cls: 'sx-note', style: 'margin:-6px 0 12px', text: 'Songs with a Bandcamp code take turns. Every song gets one before any repeats.' })
+    ]);
+    if (rot.noStory.length) {
+      rc.appendChild(h('div', { cls: 'sx-warn', style: 'margin-bottom:12px' }, [
+        h('b', { text: rot.noStory.length + ' songs have no story yet' }), document.createTextNode(', so their posts read generic: ' + rot.noStory.slice(0, 6).join(', ') + (rot.noStory.length > 6 ? '…' : '') + ' '),
+        h('a', { href: '#', text: 'Fill them in', onclick: function (ev) { ev.preventDefault(); viewTo('songs'); var b = document.querySelector('[data-filter="missing"]'); if (b) b.click(); } })
+      ]));
+    }
+    rc.appendChild(h('div', { cls: 'sx-note', style: 'font-weight:700;margin-bottom:6px', text: 'NOT POSTED YET THIS ROUND' }));
+    rot.notYet.forEach(function (s) {
+      rc.appendChild(h('div', { style: 'border:1px solid var(--line);border-radius:10px;padding:7px 10px;margin-bottom:6px;display:flex;justify-content:space-between;font-size:13.5px' }, [
+        h('span', { text: s.title }), h('span', { cls: 'sx-pill ' + (s.hasStory ? 'Uploaded' : 'Draft'), text: s.hasStory ? 'Has story' : 'No story' })
+      ]));
+    });
+    right.appendChild(rc);
+
+    var pause = h('input', { type: 'checkbox', checked: paused, disabled: !d.connected, 'aria-label': 'Pause daily drafts', onchange: function () {
+      var cb = this; cb.disabled = true;
+      call('setXDraftsPaused', [cb.checked], function (r) { cb.disabled = false; say('xSchedStatus', r.paused ? 'Daily drafts paused.' : 'Daily drafts are back on.', 'ok'); },
+        function (e) { cb.disabled = false; cb.checked = !cb.checked; say('xSchedStatus', e.message, 'err'); });
+    } });
+    right.appendChild(h('div', { cls: 'card' }, [
+      h('h2', { text: 'Schedule' }),
+      h('div', { cls: 'sx-sched' }, [
+        h('b', { text: 'Daily draft' }), h('span', { cls: 'sx-num', text: '7:07 PM Manila · skipped while one is waiting' }),
+        h('b', { text: 'Weekly report' }), h('span', {}, [h('span', { cls: 'sx-num', text: 'Monday 9:23 AM Manila' }),
+          d.report ? document.createTextNode(' · ') : null, d.report ? h('a', { href: safeUrl(d.report), target: '_blank', rel: 'noopener', text: 'latest' }) : null]),
+        h('b', { text: 'Pause drafts' }), h('span', {}, [pause, document.createTextNode(' for a break week')])
+      ]),
+      h('span', { cls: 'sx-status', id: 'xSchedStatus' })
+    ]));
+    box.appendChild(h('div', { cls: 'sx-row', style: 'margin-bottom:18px' }, [left, right]));
+
+    // Learning + history
+    var appr = h('div', { cls: 'sx-appr' });
+    d.approaches.forEach(function (a) {
+      appr.appendChild(h('div', {}, [h('div', { cls: 't' }, [h('span', { text: a.name }), h('span', { cls: 'sx-num', text: a.tries + ' / ' + d.minSamples })]),
+        h('small', { text: a.score == null ? 'No score yet' : 'Score ' + a.score + ' (engagement per 1,000 views)' })]));
+    });
+    var learning = h('div', { cls: 'card', style: 'flex:5 1 380px' }, [
+      h('h2', { text: 'What the agent is learning' }),
+      h('p', { cls: 'sx-note', style: 'margin:-6px 0 12px', text: 'Each approach gets ' + d.minSamples + ' tries. After that, most posts use the winners and 1 in ' + Math.round(1 / d.exploreRate) + ' tries something new.' }),
+      appr
+    ]);
+    var hist = h('div', { cls: 'card', style: 'flex:7 1 520px' }, [h('h2', { text: 'Posted' })]);
+    if (!real.length) hist.appendChild(h('div', { cls: 'sx-empty', text: 'No posts yet. Your first one is one click away, up top.' }));
+    else {
+      var tb = h('tbody');
+      real.forEach(function (p) {
+        tb.appendChild(h('tr', {}, [
+          h('td', {}, [p.url ? h('a', { href: safeUrl(p.url), target: '_blank', rel: 'noopener', text: p.song }) : document.createTextNode(p.song)]),
+          h('td', { cls: 'sx-num', text: String(p.posted_at).slice(0, 10) }), h('td', { text: p.hook }),
+          h('td', { cls: 'r', text: num(p.views) }), h('td', { cls: 'r', text: num(p.likes) }), h('td', { cls: 'r', text: num(p.replies) }), h('td', { cls: 'r', text: num(p.clicks) })
+        ]));
+      });
+      hist.appendChild(h('div', { cls: 'sx-scroll' }, [h('table', { cls: 'sx-table' }, [
+        h('thead', {}, [h('tr', {}, ['Song', 'Posted', 'Approach'].map(function (x) { return h('th', { text: x }); })
+          .concat(['Views', 'Likes', 'Replies', 'Clicks'].map(function (x) { return h('th', { cls: 'r', text: x }); })))]), tb])]));
+      hist.appendChild(h('p', { cls: 'sx-note', text: 'Numbers update every Monday with the weekly report.' }));
+    }
+    box.appendChild(h('div', { cls: 'sx-row' }, [learning, hist]));
+  }
+
+  /* =================== Analytics =================== */
+  function loadAnalytics() {
+    AN.loaded = true;
+    call('getAnalytics', [], function (d) { AN.data = d; renderAnalytics(); }, function (e) {
+      AN.loaded = false;
+      clear(el('aBody')).appendChild(h('div', { cls: 'card' }, [h('div', { cls: 'list-empty', text: 'Couldn’t load numbers: ' + e.message })]));
+    });
+  }
+  function renderAnalytics() {
+    var d = AN.data, t = d.totals, box = clear(el('aBody'));
+    var exp = function (fn, label) {
+      return h('button', { type: 'button', cls: fn === 'exportSummary' ? 'primary' : 'ghost', text: label, onclick: function () {
+        var b = this; b.disabled = true; say('aStatus', 'Making the file…');
+        call(fn, [], function (r) {
+          b.disabled = false;
+          var s = clear(el('aStatus')); s.className = 'sx-status ok';
+          s.appendChild(document.createTextNode('Saved to Drive: '));
+          s.appendChild(h('a', { href: safeUrl(r.url), target: '_blank', rel: 'noopener', text: r.name }));
+          if (r.text) { var p = el('aSummary'); if (p) p.textContent = r.text; }
+        }, function (e) { b.disabled = false; say('aStatus', e.message, 'err'); });
+      } });
+    };
+    box.appendChild(h('div', { cls: 'hrow', style: 'margin-bottom:16px' }, [
+      h('div', {}, [h('h2', { style: 'margin:0;font:500 28px Oswald,sans-serif;color:var(--purple)', text: 'How the Shorts and posts are doing' }),
+        h('p', { cls: 'sx-note', style: 'margin:4px 0 0', text: 'Real numbers only. A channel shows numbers once it’s connected and something has gone live.' })]),
+      h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:center' }, [
+        h('button', { type: 'button', cls: 'ghost', text: 'Refresh', onclick: function () { loadAnalytics(); } }),
+        exp('exportAnalyticsCsv', 'Export CSV'), exp('exportSummary', 'Export summary')
+      ])
+    ]));
+    box.appendChild(h('div', { style: 'margin:-6px 0 14px' }, [h('span', { cls: 'sx-status', id: 'aStatus' })]));
+
+    box.appendChild(h('div', { cls: 'sx-chan' }, [
+      h('div', { cls: d.youtube.connected ? '' : 'off' }, [h('div', { cls: 'h' }, [h('span', { text: 'YouTube Shorts' }),
+        h('span', { cls: 'sx-pill ' + (d.youtube.connected ? 'Uploaded' : 'off'), text: d.youtube.connected ? 'Connected' : 'Not connected' })]),
+        h('div', { cls: 'sx-note', text: d.youtube.connected ? d.youtube.channel + ' · numbers for Shorts uploaded from this app' :
+          (d.youtube.error || 'Turn on the YouTube Data API v3 service in the Apps Script editor (Services +).') })]),
+      h('div', { cls: d.x.connected ? '' : 'off' }, [h('div', { cls: 'h' }, [h('span', { text: 'X' }),
+        h('span', { cls: 'sx-pill ' + (d.x.connected ? 'Uploaded' : 'off'), text: d.x.connected ? 'Connected' : 'Not connected' })]),
+        h('div', { cls: 'sx-note', text: d.x.connected ? 'From the X agent’s log, updated every Monday.' : (d.x.error || 'Couldn’t read the X agent’s log.') })]),
+      h('div', { cls: 'off' }, [h('div', { cls: 'h' }, [h('span', { text: 'TikTok and Instagram' }), h('span', { cls: 'sx-pill off', text: 'By hand for now' })]),
+        h('div', { cls: 'sx-note', text: 'Their numbers stay in each app until those apps approve this one.' })])
+    ]));
+
+    var none = function (n) { return !n; };
+    box.appendChild(h('div', { cls: 'sx-tiles' }, [
+      tile('YouTube views', t.ytVideos ? num(t.ytViews) : '–', t.ytVideos + ' Shorts with numbers', none(t.ytVideos)),
+      tile('YouTube likes', t.ytVideos ? num(t.ytLikes) : '–', 'all app uploads', none(t.ytVideos)),
+      tile('YouTube comments', t.ytVideos ? num(t.ytComments) : '–', 'all app uploads', none(t.ytVideos)),
+      tile('X views', t.xPosts ? num(t.xViews) : '–', t.xPosts + ' real posts', none(t.xPosts)),
+      tile('X link clicks', t.xPosts ? num(t.xClicks) : '–', 'to Bandcamp', none(t.xPosts))
+    ]));
+
+    var shortsCard = h('div', { cls: 'card', style: 'flex:3 1 600px' }, [h('h2', { text: 'Each Short' })]);
+    if (!d.shorts.length) shortsCard.appendChild(h('div', { cls: 'sx-empty', text: 'No Shorts yet. They show up here once you add them in the Shorts screen.' }));
+    else {
+      var tb = h('tbody');
+      d.shorts.forEach(function (s) {
+        var st = s.stats;
+        tb.appendChild(h('tr', {}, [
+          h('td', {}, [s.yt_video_id ? h('a', { href: 'https://youtube.com/shorts/' + encodeURIComponent(s.yt_video_id), target: '_blank', rel: 'noopener', text: s.song_title }) : document.createTextNode(s.song_title)]),
+          h('td', { cls: 'sx-num', text: s.date || '–' }), h('td', {}, [pill(s.status)]),
+          h('td', { cls: 'r', text: st ? num(st.views) : '–' }), h('td', { cls: 'r', text: st ? num(st.likes) : '–' }), h('td', { cls: 'r', text: st ? num(st.comments) : '–' })
+        ]));
+      });
+      shortsCard.appendChild(h('div', { cls: 'sx-scroll' }, [h('table', { cls: 'sx-table' }, [
+        h('thead', {}, [h('tr', {}, ['Song', 'Date', 'Status'].map(function (x) { return h('th', { text: x }); })
+          .concat(['Views', 'Likes', 'Comments'].map(function (x) { return h('th', { cls: 'r', text: x }); })))]), tb])]));
+      shortsCard.appendChild(h('p', { cls: 'sx-note', text: 'Dashes mean not on YouTube yet. Average watch time needs the YouTube Analytics service, which can come later.' }));
+    }
+    var tags = h('div', { cls: 'card' }, [h('h2', { text: 'Hashtags that work' })]);
+    if (!d.hashtags.length) tags.appendChild(h('p', { cls: 'sx-note', text: 'Ranks hashtags by average YouTube views once Shorts are live. A tag needs 3 or more uses to count.' }));
+    d.hashtags.forEach(function (x) { tags.appendChild(h('span', { cls: 'sx-tag', text: x.tag + ' · ' + num(x.avg) + (x.n < 3 ? ' (' + x.n + ' use' + (x.n > 1 ? 's' : '') + ')' : '') })); });
+    var sum = h('div', { cls: 'sx-dark' }, [h('h2', { text: 'Summary' }), h('pre', { id: 'aSummary', text: 'Click “Export summary” for a plain-language summary you can keep or share.' })]);
+    box.appendChild(h('div', { cls: 'sx-row', style: 'margin-bottom:18px' }, [shortsCard, h('div', { style: 'flex:2 1 320px;display:grid;gap:18px' }, [tags, sum])]));
+
+    var xc = h('div', { cls: 'card' }, [h('h2', { text: 'X posts' })]);
+    var realX = d.xPosts.filter(function (p) { return !p.test; });
+    if (!realX.length) xc.appendChild(h('div', { cls: 'sx-empty', text: 'No real X posts yet.' }));
+    else {
+      var tb2 = h('tbody');
+      realX.forEach(function (p) {
+        tb2.appendChild(h('tr', {}, [h('td', { text: p.song }), h('td', { cls: 'sx-num', text: String(p.posted_at).slice(0, 10) }), h('td', { text: p.hook }),
+          h('td', { cls: 'r', text: num(p.views) }), h('td', { cls: 'r', text: num(p.likes) }), h('td', { cls: 'r', text: num(p.replies) }), h('td', { cls: 'r', text: num(p.clicks) })]));
+      });
+      xc.appendChild(h('div', { cls: 'sx-scroll' }, [h('table', { cls: 'sx-table' }, [
+        h('thead', {}, [h('tr', {}, ['Song', 'Posted', 'Approach'].map(function (x) { return h('th', { text: x }); })
+          .concat(['Views', 'Likes', 'Replies', 'Clicks'].map(function (x) { return h('th', { cls: 'r', text: x }); })))]), tb2])]));
+    }
+    box.appendChild(xc);
+  }
+})();
+</script>

@@ -190,6 +190,42 @@
   .epv .t b { display: block; font-size: 22px; font-weight: 500; text-transform: uppercase; line-height: 1; }
   .epv .t i { display: block; font-style: normal; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; opacity: .85; margin-top: 4px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Songs: completeness, missing filter, check-before-saving */
+  .cov { margin: 0 8px 10px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: #faf8ff; }
+  .cov .r { font-size: 12px; margin-bottom: 7px; }
+  .cov .r:last-child { margin-bottom: 0; }
+  .cov .r div:first-child { display: flex; justify-content: space-between; }
+  .cov .r b { font-weight: 600; } .cov .r span { color: #6b6480; font-variant-numeric: tabular-nums; }
+  .cov .bar2 { height: 5px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 3px; }
+  .cov .bar2 i { display: block; height: 100%; background: var(--purple); border-radius: 99px; }
+  .filters { display: flex; gap: 6px; margin: 0 8px 10px; }
+  .filters button { padding: 5px 11px; font-size: 12px; }
+  .filters .on { background: var(--purple); color: #fff; border-color: var(--purple); }
+  .song .ty.miss { background: #fff1d6; color: var(--warn); }
+  .song .ty.low { background: #f6e1e0; color: var(--err); }
+  .complete { font-size: 12.5px; color: #6b6480; margin: -6px 0 14px; }
+  .complete b { color: var(--ok); }
+  .complete .m { color: var(--warn); }
+  .confirm-opt { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; margin: 0; cursor: pointer; }
+  .confirm-opt input { width: auto; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(29, 21, 48, .5); display: flex; align-items: flex-start; justify-content: center;
+    padding: 70px 16px 20px; z-index: 50; overflow-y: auto; }
+  .modal-bg[hidden] { display: none; }
+  .modal { background: #fff; border-radius: 16px; width: 100%; max-width: 640px; box-shadow: 0 20px 50px rgba(20, 10, 40, .35); }
+  .modal .mh { padding: 20px 22px 12px; border-bottom: 1px solid var(--line); }
+  .modal .mh h3 { margin: 0; font-size: 20px; color: var(--purple); }
+  .modal .mh p { margin: 6px 0 0; font-size: 13px; color: #6b6480; }
+  .modal .mb { padding: 14px 22px; display: grid; gap: 10px; max-height: 55vh; overflow-y: auto; }
+  .modal .mf { padding: 12px 22px 18px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+  .chg { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: 13px; }
+  .chg .k { background: #faf8ff; padding: 7px 10px; font: 600 12px ui-monospace, Menlo, Consolas, monospace; color: var(--purple);
+    display: flex; justify-content: space-between; }
+  .chg .k span { font: 700 11px 'Open Sans', Arial, sans-serif; color: var(--ok); }
+  .chg .b, .chg .a { display: grid; grid-template-columns: 70px 1fr; }
+  .chg .b { background: #fdf0ef; } .chg .a { background: #e9f6ee; }
+  .chg .b > *, .chg .a > * { padding: 7px 10px; word-break: break-word; white-space: pre-wrap; }
+  .chg .b > b { color: var(--err); } .chg .a > b { color: var(--ok); }
 </style>
 </head>
 <body>
@@ -204,6 +240,9 @@
       <button type="button" data-view="features">Monthly Features</button>
       <button type="button" data-view="highlights">Music Highlights</button>
       <button type="button" data-view="explore">Explore Panels</button>
+      <button type="button" data-view="shorts">Shorts</button>
+      <button type="button" data-view="x">X Posts</button>
+      <button type="button" data-view="analytics">Analytics</button>
     </nav>
   </div>
 </header>
@@ -219,11 +258,17 @@
   <div class="grid">
     <aside class="card list-card">
       <h2>All songs <span class="count" id="count"></span></h2>
+      <div class="filters">
+        <button type="button" class="ghost on" data-filter="all">All</button>
+        <button type="button" class="ghost" data-filter="missing">Missing info <span id="missCount"></span></button>
+      </div>
+      <div class="cov" id="coverage"></div>
       <div class="songlist" id="songs"><div class="list-empty">Loading songs…</div></div>
     </aside>
 
     <form class="card" id="form" autocomplete="off" novalidate>
       <h2>Song details <span class="mode" id="mode">New song</span></h2>
+      <p class="complete" id="complete"></p>
 
       <div class="field">
         <label for="song_title">Song title *</label>
@@ -338,8 +383,11 @@
         <input id="song_id" inputmode="numeric" placeholder="Leave blank for new songs">
       </div>
 
+      <div id="songShorts"></div>
+
       <div class="actions">
         <button class="primary" id="btnSave" type="submit">Save song</button>
+        <label class="confirm-opt"><input type="checkbox" id="confirmSave" checked> Check changes before saving</label>
         <span id="status"></span>
       </div>
     </form>
@@ -419,7 +467,19 @@
     </div>
   </div>
 </section>
+<?!= include('ShortsViews'); ?>
 </main>
+
+<div class="modal-bg" id="confirmBg" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="mh"><h3 id="confirmTitle"></h3><p id="confirmSub"></p></div>
+    <div class="mb" id="confirmList"></div>
+    <div class="mf">
+      <button type="button" class="ghost" id="confirmBack">Back to editing</button>
+      <button type="button" class="primary" id="confirmGo">Save to sheet</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
@@ -568,7 +628,10 @@
   function renderList() {
     var q = $('search').value.trim().toLowerCase();
     var box = $('songs'); box.innerHTML = '';
-    var shown = songs.filter(function (s) { return !q || s.song_title.toLowerCase().indexOf(q) >= 0; });
+    renderCoverage();
+    var shown = songs.filter(function (s) {
+      return (!q || s.song_title.toLowerCase().indexOf(q) >= 0) && (listFilter !== 'missing' || missingFields(s).length);
+    });
     $('count').textContent = q ? '(' + shown.length + ' of ' + songs.length + ')' : '(' + songs.length + ')';
     if (!shown.length) {
       box.innerHTML = '<div class="list-empty">' + (songs.length ? 'No songs match “' + esc(q) + '”.' : 'No songs yet.') + '</div>';
@@ -581,6 +644,12 @@
       if (s.song_arts && isImage(s.song_arts)) art.style.backgroundImage = 'url("' + driveImage(s.song_arts).replace(/"/g, '%22') + '")';
       var t = document.createElement('span'); t.className = 't'; t.textContent = s.song_title;
       var ty = document.createElement('span'); ty.className = 'ty'; ty.textContent = s.release_type || 'Single';
+      if (listFilter === 'missing') {
+        var miss = missingFields(s), have = presentFields().length;
+        ty.textContent = (have - miss.length) + '/' + have;
+        ty.className = 'ty ' + (miss.length > 4 ? 'low' : 'miss');
+        b.title = label(s) + '\nMissing: ' + miss.join(', ');
+      }
       b.appendChild(art); b.appendChild(t); b.appendChild(ty);
       b.addEventListener('click', function () { fill(s); });
       box.appendChild(b);
@@ -597,12 +666,57 @@
   }
   $('search').addEventListener('input', renderList);
 
+  /* ---------- Completeness ---------- */
+  var listFilter = 'all';
+  function presentFields() { return FIELDS.filter(function (f) { return columns.indexOf(f) >= 0; }); }
+  function missingFields(s) {
+    return presentFields().filter(function (f) { return !String(s[f] == null ? '' : s[f]).trim(); });
+  }
+  function renderCoverage() {
+    var box = $('coverage'); box.innerHTML = '';
+    var keys = [['song_description', 'Story'], ['bandcamp_embed', 'Bandcamp code'], ['song_arts', 'Cover art']]
+      .filter(function (k) { return columns.indexOf(k[0]) >= 0; });
+    keys.forEach(function (k) {
+      var n = songs.filter(function (s) { return String(s[k[0]] || '').trim(); }).length;
+      var r = document.createElement('div'); r.className = 'r';
+      var top = document.createElement('div');
+      var b = document.createElement('b'); b.textContent = k[1];
+      var c = document.createElement('span'); c.textContent = n + ' / ' + songs.length;
+      top.appendChild(b); top.appendChild(c);
+      var bar = document.createElement('div'); bar.className = 'bar2';
+      var fillEl = document.createElement('i'); fillEl.style.width = (songs.length ? Math.round(n / songs.length * 100) : 0) + '%';
+      bar.appendChild(fillEl); r.appendChild(top); r.appendChild(bar); box.appendChild(r);
+    });
+    box.style.display = keys.length && songs.length ? '' : 'none';
+    $('missCount').textContent = '(' + songs.filter(function (s) { return missingFields(s).length; }).length + ')';
+  }
+  function renderComplete() {
+    var el = $('complete'); el.textContent = '';
+    if (!current) return;
+    var have = presentFields(), miss = missingFields(current);
+    var b = document.createElement('b'); b.textContent = (have.length - miss.length) + ' of ' + have.length + ' fields filled';
+    el.appendChild(b);
+    if (miss.length) {
+      var m = document.createElement('span'); m.className = 'm'; m.textContent = '  ·  Missing: ' + miss.join(', ');
+      el.appendChild(m);
+    }
+  }
+  document.querySelectorAll('[data-filter]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      listFilter = b.getAttribute('data-filter');
+      document.querySelectorAll('[data-filter]').forEach(function (x) { x.classList.toggle('on', x === b); });
+      renderList();
+    });
+  });
+
   /* ---------- Form ---------- */
   function fill(s, keepStatus) {
     current = s;
     FIELDS.forEach(function (f) { $(f).value = s ? (s[f] || '') : ''; });
     if (!s) { $('release_type').value = 'Single'; $('release_date').value = new Date().toISOString().slice(0, 10); }
     $('mode').textContent = s ? 'Editing row ' + s.row : 'New song';
+    renderComplete();
+    if (window.renderSongShorts) window.renderSongShorts(s);
     markActive(true);
     pickers.art.reset(); pickers.qr.reset();
     Object.keys(CHECKS).forEach(check);
@@ -662,6 +776,11 @@
     if (pickers.qr.mode === 'upload' && pickers.qr.upload) data.qrFile = pickers.qr.upload;
     if (pickers.art.mode === 'upload' && pickers.art.upload) data.artFile = pickers.art.upload;
 
+    if (current && $('confirmSave').checked) { confirmChanges(data, function () { doSave(data); }); return; }
+    doSave(data);
+  });
+
+  function doSave(data) {
     busy(true); setStatus('Saving…');
     google.script.run
       .withSuccessHandler(function (r) {
@@ -672,7 +791,48 @@
       })
       .withFailureHandler(function (err) { busy(false); setStatus(err.message, 'err'); })
       .saveSong(data);
-  });
+  }
+
+  /* Shows exactly what will change in the sheet row before writing it. */
+  function confirmChanges(data, go) {
+    var changes = FIELDS.filter(function (f) {
+      return columns.indexOf(f) >= 0 && String(data[f] || '').trim() !== String(current[f] || '').trim();
+    });
+    if (data.artFile) changes.push('song_arts (new upload)');
+    if (data.qrFile) changes.push('song_qr (new upload)');
+    if (!changes.length) { setStatus('Nothing changed, so there was nothing to save.', 'ok'); return; }
+    $('confirmTitle').textContent = 'Save ' + changes.length + ' change' + (changes.length > 1 ? 's' : '') + ' to “' + (current.song_title || 'this song') + '”?';
+    $('confirmSub').textContent = 'This writes to row ' + current.row + ' of the Song Database. Your website reads this row, so changes show there within a few minutes.';
+    var list = $('confirmList'); list.innerHTML = '';
+    var cut = function (v) { v = String(v || '').trim(); return v ? (v.length > 400 ? v.slice(0, 400) + '…' : v) : '(empty)'; };
+    changes.forEach(function (f) {
+      var key = f.split(' ')[0], upload = f.indexOf('upload') > 0;
+      var before = String(current[key] || '').trim(), after = upload ? 'A new image you picked' : String(data[key] || '').trim();
+      var box = document.createElement('div'); box.className = 'chg';
+      var k = document.createElement('div'); k.className = 'k'; k.textContent = key;
+      var tag = document.createElement('span'); tag.textContent = !before ? 'Added' : (!after ? 'Cleared' : 'Changed');
+      if (!after) tag.style.color = 'var(--err)';
+      k.appendChild(tag); box.appendChild(k);
+      [['b', 'Before', before], ['a', 'After', after]].forEach(function (x) {
+        var row = document.createElement('div'); row.className = x[0];
+        var l = document.createElement('b'); l.textContent = x[1];
+        var v = document.createElement('div'); v.textContent = cut(x[2]);
+        row.appendChild(l); row.appendChild(v); box.appendChild(row);
+      });
+      list.appendChild(box);
+    });
+    var bg = $('confirmBg'); bg.hidden = false;
+    $('confirmGo').onclick = function () { bg.hidden = true; go(); };
+    $('confirmBack').focus();
+  }
+  $('confirmBack').addEventListener('click', function () { $('confirmBg').hidden = true; setStatus('Not saved yet.', ''); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('confirmBg').hidden) $('confirmBack').click(); });
+  try {
+    if (localStorage.getItem('dozConfirmSave') === 'off') $('confirmSave').checked = false;
+    $('confirmSave').addEventListener('change', function () {
+      try { localStorage.setItem('dozConfirmSave', this.checked ? 'on' : 'off'); } catch (e) {}
+    });
+  } catch (e) {}
 
   /* ---------- Import from Apple ---------- */
   $('btnImport').addEventListener('click', function () {
@@ -724,6 +884,10 @@
       $('viewFeatures').hidden = v !== 'features';
       $('viewExplore').hidden = v !== 'explore';
       $('viewHighlights').hidden = v !== 'highlights';
+      ['shorts', 'x', 'analytics'].forEach(function (k) {
+        var el = $('view' + k.charAt(0).toUpperCase() + k.slice(1)); if (el) el.hidden = v !== k;
+      });
+      if (window.onAdminView) window.onAdminView(v);
       if (v === 'highlights' && !hLoaded) loadHighlights();
       if (v === 'features' && !fLoaded) loadFeatures();
       if (v === 'explore' && !eLoaded) loadPanels();
@@ -1185,5 +1349,6 @@
   fill(null);
   loadSongs();
 </script>
+<?!= include('ShortsApp'); ?>
 </body>
 </html>

@@ -1,0 +1,228 @@
+<!-- Danyel OZ admin: Shorts, X Posts and Analytics screens (layout). Included by Form.html. -->
+<style>
+  .sx-note { font-size: 12.5px; color: #6b6480; line-height: 1.5; }
+  .sx-note a { color: var(--purple); font-weight: 600; }
+  .sx-muted { color: #8a8399; }
+  .sx-num { font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .sx-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+  .sx-row > * { min-width: 0; }
+  .sx-pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+    background: #ece6fb; color: var(--purple); }
+  .sx-pill.Draft { background: #fff1d6; color: var(--warn); }
+  .sx-pill.Scheduled { background: #ece6fb; color: #4c1d95; }
+  .sx-pill.Ready { background: #e0f2fe; color: #075985; }
+  .sx-pill.Uploaded { background: #e9f6ee; color: var(--ok); }
+  .sx-pill.Published { background: #dff3e7; color: var(--ok); }
+  .sx-pill.off { background: #f1eff6; color: #6b6480; }
+  .sx-pill.bad { background: #f6e1e0; color: var(--err); }
+  .sx-status { font-size: 14px; font-weight: 600; }
+  .sx-status.ok { color: var(--ok); } .sx-status.err { color: var(--err); }
+  .sx-btn-sm { padding: 6px 12px; font-size: 12.5px; }
+  .ok-btn { background: var(--ok); color: #fff; }
+  .ok-btn:hover { background: #17633a; }
+
+  /* Add a Short */
+  .sx-add { display: grid; grid-template-columns: 2.2fr 2.4fr 1.6fr 1.3fr 1.2fr auto; gap: 12px; align-items: end; }
+  @media (max-width: 1150px) { .sx-add { grid-template-columns: 1fr 1fr 1fr; } }
+  @media (max-width: 620px) { .sx-add { grid-template-columns: 1fr; } }
+  .sx-add label { font-size: 12px; color: #6a5a92; }
+  .sx-pair { display: flex; gap: 6px; }
+  .sx-pair > * { min-width: 0; }
+  .sx-checks { display: flex; gap: 12px; align-items: center; min-height: 44px; flex-wrap: wrap; }
+  .sx-checks label { display: inline-flex; gap: 5px; align-items: center; margin: 0; font-size: 14px; color: var(--ink); cursor: pointer; }
+  .sx-checks input { width: auto; }
+  .sx-file { position: relative; overflow: hidden; flex: none; }
+  .sx-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+  /* Queue */
+  .sx-queue { flex: 5 1 380px; }
+  .sx-studio { flex: 7 1 560px; }
+  .sx-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px; }
+  .sx-tabs button { padding: 5px 11px; font-size: 12px; }
+  .sx-tabs .on { background: var(--purple); color: #fff; border-color: var(--purple); }
+  .sx-batch { background: var(--soft); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; display: grid; gap: 10px; }
+  .sx-batch .g { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 620px) { .sx-batch .g { grid-template-columns: 1fr 1fr; } }
+  .sx-batch label { font-size: 11.5px; color: #6a5a92; }
+  .sx-batch input, .sx-batch select { padding: 7px 8px; font-size: 13px; }
+  .sx-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; max-height: 760px; overflow-y: auto; padding-right: 4px; }
+  .sx-item { display: flex; gap: 10px; align-items: flex-start; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; cursor: pointer; background: #fff; }
+  .sx-item:hover { border-color: #b9a8e6; }
+  .sx-item.active { border-color: var(--purple); background: var(--soft); }
+  .sx-item input { width: auto; margin-top: 3px; }
+  .sx-item .b { flex: 1; min-width: 0; }
+  .sx-item .t { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .sx-item .t strong { min-width: 0; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sx-item .m { font-size: 12px; color: #6b6480; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sx-item .ch { font-size: 11.5px; font-weight: 700; color: #6a5a92; margin-top: 4px; }
+
+  /* Studio */
+  .sx-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 14px; }
+  .sx-head h3 { margin: 0; font-family: 'Oswald', sans-serif; font-weight: 500; font-size: 28px; color: var(--purple); line-height: 1.05; }
+  .sx-head .meta { font-size: 12px; color: #6b6480; margin-top: 6px; }
+  .sx-head .meta a { color: var(--purple); font-weight: 600; }
+  .sx-head select { width: auto; padding: 7px 10px; font-size: 13px; font-weight: 600; }
+  .sx-plat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+  @media (max-width: 620px) { .sx-plat { grid-template-columns: 1fr; } }
+  .sx-plat > div { border: 1.5px solid var(--line); border-radius: 12px; padding: 11px; }
+  .sx-plat > div.on { border-color: var(--purple); background: var(--soft); }
+  .sx-plat label { display: flex; justify-content: space-between; align-items: center; margin: 0; font-size: 14px; cursor: pointer; }
+  .sx-plat input { width: auto; }
+  .sx-plat p { margin: 6px 0 0; font-size: 11.5px; color: #6b6480; line-height: 1.45; }
+  .sx-angles { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: #faf8ff; border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin-bottom: 14px; }
+  .sx-angles button { padding: 6px 12px; font-size: 12.5px; }
+  .sx-angles .on { background: var(--purple); color: #fff; border-color: var(--purple); }
+  .sx-angles input { flex: 1 1 200px; padding: 7px 10px; font-size: 13px; }
+  .sx-edit { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+  .sx-edit .f { flex: 7 1 320px; min-width: 0; }
+  .sx-edit .p { flex: 4 1 220px; min-width: 0; display: flex; justify-content: center; }
+  .sx-count { float: right; font-weight: 400; color: #6b6480; font-variant-numeric: tabular-nums; }
+  .sx-count.over { color: var(--err); font-weight: 700; }
+  .sx-edit textarea { min-height: 140px; }
+  .sx-tags { font: 13px ui-monospace, Menlo, Consolas, monospace !important; color: #4c1d95 !important; }
+  .sx-phone { width: 100%; max-width: 260px; aspect-ratio: 9 / 16; background: #180c2e; border: 4px solid var(--purple); border-radius: 26px;
+    position: relative; overflow: hidden; color: #fff; }
+  .sx-phone iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .sx-phone .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px; background: linear-gradient(180deg, transparent, rgba(0,0,0,.85));
+    font-size: 12px; line-height: 1.4; pointer-events: none; }
+  .sx-phone .cap b { display: block; font-size: 12.5px; margin-bottom: 3px; }
+  .sx-phone .cap i { display: block; font-style: normal; color: #c9b6ff; font-size: 11px; margin-top: 4px; }
+  .sx-phone .top { position: absolute; top: 10px; left: 12px; right: 12px; display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 700; pointer-events: none; z-index: 1; }
+  .sx-empty { text-align: center; padding: 34px 14px; border: 1.5px dashed var(--line); border-radius: 12px; background: #faf8ff; color: #6b6480; font-size: 14px; }
+
+  /* Song screen panel */
+  .sx-songpanel { border: 2px solid var(--purple); border-radius: 12px; padding: 14px; margin: 18px 0 6px; }
+  .sx-songpanel h4 { margin: 0 0 10px; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--purple); display: flex; justify-content: space-between; }
+  .sx-songpanel .it { display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; font-size: 13px; }
+  .sx-songpanel .it small { display: block; color: #6b6480; }
+  .sx-songpanel button.add { width: 100%; border: 1.5px dashed var(--purple); background: #fff; color: var(--purple); }
+
+  /* Tiles and tables (X and Analytics) */
+  .sx-tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+  @media (max-width: 900px) { .sx-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .sx-tile { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .sx-tile .l { font-size: 11.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: #6a5a92; }
+  .sx-tile .v { font-size: 22px; font-weight: 600; margin-top: 6px; color: var(--purple); font-variant-numeric: tabular-nums; }
+  .sx-tile .v.dim { color: #c4b8dc; }
+  .sx-tile .n { font-size: 11.5px; color: #6b6480; margin-top: 3px; }
+  .sx-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .sx-table th { text-align: left; font-size: 11.5px; letter-spacing: .4px; text-transform: uppercase; color: #6a5a92; padding: 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .sx-table td { padding: 9px 8px; border-bottom: 1px solid #f1edf9; }
+  .sx-table td.r, .sx-table th.r { text-align: right; font-variant-numeric: tabular-nums; }
+  .sx-scroll { overflow-x: auto; }
+  .sx-chan { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+  @media (max-width: 760px) { .sx-chan { grid-template-columns: 1fr; } }
+  .sx-chan > div { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .sx-chan > div.off { border-style: dashed; }
+  .sx-chan .h { display: flex; justify-content: space-between; align-items: center; font-weight: 700; margin-bottom: 6px; }
+  .sx-tag { display: inline-block; font: 12px ui-monospace, Menlo, Consolas, monospace; padding: 5px 10px; border-radius: 999px; background: var(--soft); color: #4c1d95; margin: 0 6px 6px 0; }
+  .sx-dark { background: var(--purple); color: #fff; border-radius: 14px; padding: 16px; }
+  .sx-dark h2 { color: var(--lav); font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 10px; }
+  /* Seven tabs: let the header nav wrap on narrow screens instead of running off the side */
+  .views { flex-wrap: wrap; border-radius: 22px; }
+  .sx-dark pre { white-space: pre-wrap; font: 13.5px/1.6 'Open Sans', Arial, sans-serif; margin: 0; }
+
+  /* X draft */
+  .sx-xpost { border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: #fff; }
+  .sx-xpost .who { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .sx-xpost .av { width: 36px; height: 36px; border-radius: 50%; background: var(--purple); color: #fff; display: flex; align-items: center; justify-content: center;
+    font: 500 14px 'Oswald', sans-serif; }
+  .sx-xpost p { margin: 0; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .sx-warn { background: #fff7e6; border: 1px solid #f3d38a; border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--warn); line-height: 1.45; }
+  .sx-steps { margin: 8px 0 0; padding-left: 20px; font-size: 14px; line-height: 1.7; }
+  .sx-steps code { background: var(--soft); padding: 1px 6px; border-radius: 6px; font-size: 12.5px; }
+  .sx-appr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .sx-appr > div { border: 1px solid var(--line); border-radius: 12px; padding: 11px; }
+  .sx-appr .t { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; text-transform: capitalize; }
+  .sx-appr small { color: #6b6480; font-size: 12px; }
+  .sx-sched { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 13px; align-items: center; }
+  .sx-sched input { width: auto; }
+</style>
+
+<section id="viewShorts" hidden>
+  <div class="card" style="margin-bottom:20px">
+    <h2>Add a Short <span class="mode" id="sxAiMode"></span></h2>
+    <div class="sx-add">
+      <div>
+        <label for="sxSong">1 · Song</label>
+        <select id="sxSong"><option value="">Loading songs…</option></select>
+      </div>
+      <div>
+        <label for="sxFile">2 · Video (9:16) from the Drive folder</label>
+        <div class="sx-pair">
+          <select id="sxFile"><option value="">Loading videos…</option></select>
+          <button type="button" class="ghost sx-file" id="sxUploadBtn">Upload<input type="file" id="sxUpload" accept="video/*" aria-label="Upload a video"></button>
+        </div>
+      </div>
+      <div>
+        <label>3 · Date and time (Manila)</label>
+        <div class="sx-pair">
+          <input type="date" id="sxDate" aria-label="Date">
+          <input type="time" id="sxTime" value="19:30" aria-label="Time" style="max-width:110px">
+        </div>
+      </div>
+      <div>
+        <label>4 · Channels</label>
+        <div class="sx-checks">
+          <label><input type="checkbox" id="sxYt" checked> YouTube</label>
+          <label><input type="checkbox" id="sxTt" checked> TikTok</label>
+          <label><input type="checkbox" id="sxIg"> IG</label>
+        </div>
+      </div>
+      <div>
+        <label for="sxAngle">5 · Angle</label>
+        <select id="sxAngle"></select>
+      </div>
+      <div><button type="button" class="primary" id="sxAdd">Add &amp; write captions</button></div>
+    </div>
+    <p class="sx-note" id="sxAddNote" style="margin:10px 0 0"></p>
+    <div style="margin-top:6px"><span class="sx-status" id="sxAddStatus"></span></div>
+  </div>
+
+  <div class="sx-row">
+    <div class="card sx-queue">
+      <h2>Shorts queue <span class="count" id="sxCount"></span></h2>
+      <div class="sx-tabs" id="sxFilters">
+        <button type="button" class="ghost on" data-sxf="">All</button>
+        <button type="button" class="ghost" data-sxf="Draft">Draft</button>
+        <button type="button" class="ghost" data-sxf="Scheduled">Scheduled</button>
+        <button type="button" class="ghost" data-sxf="Ready to post">Ready</button>
+        <button type="button" class="ghost" data-sxf="Uploaded (private)">On YouTube</button>
+        <button type="button" class="ghost" data-sxf="Published">Published</button>
+      </div>
+      <div class="sx-batch">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <strong style="font-size:13px" id="sxSelCount">0 selected</strong>
+          <button type="button" class="ghost sx-btn-sm" id="sxSelAll">Select all shown</button>
+        </div>
+        <div class="g">
+          <div><label for="sxBStart">Start date</label><input type="date" id="sxBStart"></div>
+          <div><label for="sxBCad">Cadence</label>
+            <select id="sxBCad"><option value="daily">Every day</option><option value="2days" selected>Every 2 days</option>
+              <option value="mwf">Mon, Wed, Fri</option><option value="weekly">Once a week</option></select></div>
+          <div><label for="sxBTime">Time</label><input type="time" id="sxBTime" value="19:30"></div>
+          <div><label for="sxBIg">Instagram</label>
+            <select id="sxBIg"><option value="keep">Keep as set</option><option value="on">Turn on</option><option value="off">Turn off</option></select></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="primary sx-btn-sm" id="sxBApply">Schedule selected</button>
+          <button type="button" class="ghost sx-btn-sm" id="sxBPublish">Upload selected to YouTube (private)</button>
+        </div>
+        <span class="sx-status" id="sxBStatus"></span>
+      </div>
+      <div class="sx-list" id="sxList"><div class="list-empty">Loading…</div></div>
+    </div>
+
+    <div class="card sx-studio" id="sxStudio">
+      <div class="sx-empty">Pick a Short from the queue, or add one above.</div>
+    </div>
+  </div>
+</section>
+
+<section id="viewX" hidden>
+  <div id="xBody"><div class="card"><div class="list-empty">Loading X posts…</div></div></div>
+</section>
+
+<section id="viewAnalytics" hidden>
+  <div id="aBody"><div class="card"><div class="list-empty">Loading numbers…</div></div></div>
+</section>
