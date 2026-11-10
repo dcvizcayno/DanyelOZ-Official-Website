@@ -84,14 +84,20 @@ function themeNames_() {
 
 function sameName_(a, b) { return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase(); }
 
-/* Called by saveSong in Code.gs: once themes exist, Theme 1 is required and both must be real themes. */
+function isSingle_(type) { return /^\s*single\s*$/i.test(String(type || 'Single')); }   // a blank type counts as a single
+
+/* Called by saveSong in Code.gs: once themes exist, a single needs Theme 1, and any theme given must be a real one.
+   EPs and albums don't need a theme. */
 function checkSongThemes_(data, idx) {
   if (idx.song_theme_1 == null) return;
   const names = themeNames_();
   if (!names.length) return;
   let t1 = String(data.song_theme_1 || '').trim(), t2 = String(data.song_theme_2 || '').trim();
   if (!t1 && t2) { t1 = t2; t2 = ''; }
-  if (!t1) throw new Error('Pick a theme for this song. Theme 1 is required.');
+  if (!t1) {
+    if (data.release_type !== undefined && !isSingle_(data.release_type)) { data.song_theme_1 = ''; data.song_theme_2 = ''; return; }
+    throw new Error('Pick a theme for this song. Theme 1 is required.');
+  }
   const match = function (t) {
     const m = names.filter(function (n) { return sameName_(n, t); })[0];
     if (!m) throw new Error('"' + t + '" is not one of your themes. Pick it from the list.');
@@ -115,7 +121,7 @@ function getSinglesAdmin() {
     .map(function (t) {
       return {
         theme: t.theme, tagline: t.tagline, visible: !/^(false|no|0|hide|hidden)$/i.test(t.visible),
-        count: songs.filter(function (s) { return sameName_(s.song_theme_1, t.theme) || sameName_(s.song_theme_2, t.theme); }).length
+        count: songs.filter(function (s) { return isSingle_(s.release_type) && (sameName_(s.song_theme_1, t.theme) || sameName_(s.song_theme_2, t.theme)); }).length
       };
     });
   const byId = {}, byTitle = {};
@@ -162,7 +168,7 @@ function saveFeatured(list) {
     const s = songs.filter(function (r) { return x.song_id && String(r.song_id) === String(x.song_id); })[0] ||
               songs.filter(function (r) { return norm_(r.song_title) === norm_(x.song_title); })[0];
     if (!s) throw new Error('Slot ' + (i + 1) + ': "' + (x.song_title || x.song_id) + '" is no longer in your Song Database.');
-    if (!/^\s*single\s*$/i.test(s.release_type || 'Single')) throw new Error('Slot ' + (i + 1) + ': "' + s.song_title + '" is an ' + s.release_type + '. Featured Singles takes singles only.');
+    if (!isSingle_(s.release_type)) throw new Error('Slot ' + (i + 1) + ': "' + s.song_title + '" is an ' + s.release_type + '. Featured Singles takes singles only.');
     if (!hasBandcamp_(s)) throw new Error('Slot ' + (i + 1) + ': "' + s.song_title + '" has no Bandcamp code, so fans could not play it. Add the code first.');
     const key = String(s.song_id || '') + '|' + norm_(s.song_title);
     if (seen[key]) throw new Error('"' + s.song_title + '" is in two slots. Each single can appear once.');

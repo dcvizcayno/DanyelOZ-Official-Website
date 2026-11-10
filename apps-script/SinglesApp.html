@@ -61,7 +61,8 @@
   };
   window.themeMissing = function () {
     var sel = el('song_theme_1');
-    return !!(sel && sel.offsetParent !== null && THEMES.names.length && !sel.value);
+    var type = el('release_type');
+    return !!(sel && sel.offsetParent !== null && THEMES.names.length && !sel.value && (!type || isSingle({ release_type: type.value })));
   };
   loadThemeNames();
 
@@ -226,7 +227,8 @@
     var box = clear(el('sgTList')), names = SG.data.themes.map(function (t) { return t.theme; });
     if (!names.length) { box.appendChild(h('div', { cls: 'list-empty', text: 'Create your themes first (above), then give songs their themes here.' })); updDirty(); return; }
     var q = el('sgSearch').value.trim().toLowerCase();
-    var list = SG.data.songs.filter(function (s) {
+    var singles = SG.data.songs.filter(isSingle);
+    var list = singles.filter(function (s) {
       var d = SG.dirty[s.row];
       var t1 = d ? d.theme1 : s.theme1;
       if (q && s.song_title.toLowerCase().indexOf(q) < 0) return false;
@@ -234,8 +236,8 @@
       if (SG.filter === 'bc') return s.bandcamp;
       return true;
     }).sort(function (a, b) { return (b.bandcamp - a.bandcamp) || String(b.release_date).localeCompare(String(a.release_date)); });
-    el('sgSCount').textContent = '(' + SG.data.songs.filter(function (s) { return s.theme1; }).length + ' of ' + SG.data.songs.length + ' have a theme)';
-    if (!list.length) box.appendChild(h('div', { cls: 'list-empty', text: SG.filter === 'none' ? 'Every song has a theme. Nice.' : 'No songs match.' }));
+    el('sgSCount').textContent = '(' + singles.filter(function (s) { return s.theme1; }).length + ' of ' + singles.length + ' singles have a theme)';
+    if (!list.length) box.appendChild(h('div', { cls: 'list-empty', text: SG.filter === 'none' ? 'Every single has a theme. Nice.' : 'No singles match.' }));
     list.slice(0, 300).forEach(function (s) {
       var d = SG.dirty[s.row] || { theme1: s.theme1, theme2: s.theme2 };
       function pick(which, empty) {
