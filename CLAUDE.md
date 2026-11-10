@@ -1,6 +1,6 @@
 # Danyel OZ: project handbook
 
-_Last updated: November 10, 2026. One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
+_Last updated: November 10, 2026 (Albums page added). One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
 
 **Copies of this file** (keep them identical; update all three together):
 1. `CLAUDE.md` in private repo **dcvizcayno/DanyelOZ-Official-Website** (Claude Code reads it automatically)
@@ -57,6 +57,8 @@ Shared as **Anyone with the link: Viewer** so the widgets can read it. That mean
 | `music_highlights` (1521214689) | Music Highlights | Music Highlights |
 | `featured_singles` (read by name) | Singles Page | Featured Singles |
 | `themes` (read by name) | Singles Page | Explore by Theme |
+| `albums` (read by name) | Albums Page | Albums page |
+| `album_collections` (read by name) | Albums Page | Albums page |
 
 **Song columns (Sheet1):** `song_id` (Apple collection ID), `song_title`, `release_date` (yyyy-mm-dd), `release_type` (Single, EP, Album),
 `song_genre` ("Acoustic" puts a song on the Live page), `song_description` (first paragraph = intro line; blank line between paragraphs),
@@ -67,6 +69,7 @@ Shared as **Anyone with the link: Viewer** so the widgets can read it. That mean
 **Other tabs:** `features`: month (YYYY-MM), slot 1 to 3, song_id, yt_video_link, title, description.
 `explore`: order, visible, title, script, sub, text, link, image, focus.
 `featured_singles`: position 1 to 10, song_id, song_title (only songs with a Bandcamp code). `themes`: slot 1 to 5, theme, tagline, visible.
+`albums`: song_id, song_title, kind (unsorted, main, installment, ep, single), part_of, show, collection, position, accent, hook, tracks, bonus, store_url, featured. It never changes a song's `release_type`. `album_collections`: slot, name, tagline, alias (another stage name), visible; up to 8.
 `music_highlights`: month, slot, actLabel, title, subtitle, catalogTag, accentHex, bandcamp_embed, coverImageUrl, and four platform links. Its "Row" and "Actions" columns are unused and left alone.
 
 **Coverage (Nov 9, 2026):** 215 songs. `song_description` 38, `bandcamp_embed` 50, `song_arts` 53.
@@ -78,8 +81,8 @@ Some releases are under a different stage name (for example the EP "Money"); the
 
 ## 4. Data entry app (private)
 
-Apps Script bound to the Song Database. Files: `Code.gs`, `Shorts.gs`, `XPosts.gs`, `Singles.gs` (scripts) and `Form`, `ShortsViews`, `ShortsApp`, `SinglesViews`, `SinglesApp` (HTML). `Form` pulls in the other four HTML files, so all nine must be in the project.
-**Status:** the Shorts, X Posts, Analytics and Singles Page screens are on branch `admin-shorts-x`; merge it to `main` once they are live in Apps Script.
+Apps Script bound to the Song Database. Files: `Code.gs`, `Shorts.gs`, `XPosts.gs`, `Singles.gs`, `Albums.gs` (scripts) and `Form`, `ShortsViews`, `ShortsApp`, `SinglesViews`, `SinglesApp`, `AlbumsViews`, `AlbumsApp` (HTML). `Form` pulls in the other six HTML files, so all twelve must be in the project.
+**Status:** the Shorts, X Posts, Analytics, Singles Page and Albums Page screens are on branch `admin-shorts-x`; merge it to `main` once they are live in Apps Script.
 Deployed as a web app, **Execute as: Me**, **Who has access: Only myself**. After any code change: **Deploy > Manage deployments > pencil > New version > Deploy** (the link stays the same).
 
 | Screen | What it does |
@@ -91,6 +94,7 @@ Deployed as a web app, **Execute as: Me**, **Who has access: Only myself**. Afte
 | Shorts | Pick a song and a video from the Drive folder "Danyel OZ Shorts" (or upload up to 30 MB), captions for YouTube, TikTok and Instagram from the song's story, batch scheduling, upload to YouTube as **private** (up to 50 MB). TikTok and Instagram: copy and post by hand |
 | X Posts | The X agent's waiting draft: edit, Revise (with a note), Post, Draft one now, Pause drafts. Same as ticking boxes on the GitHub Issue |
 | Singles Page | **Featured singles**: 10 slots, Bandcamp songs only, drag or arrows to reorder, fill empty slots with the newest singles. **Themes**: up to 5 (name, short line, show or hide); a rename or removal carries over to every song. **Theme your songs**: give many songs Theme 1 and 2 at once |
+| Albums Page | **Now spinning** (pick the hero album or leave it automatic), **Coming next** (automatic), **Checks** (missing story or Bandcamp, unsorted). **Album library**: every row marked Album; say what it really is (main, installment of which album, became an EP, really a single) and switch it on or off for the page. **Collections**: up to 8, name, short line, other stage name; drag albums to order or move them. **Album editor**: color, hook, tracks, bonus, store link. First use seeds the 10 albums already on the page |
 | Analytics | YouTube numbers for Shorts uploaded from the app, X numbers from the agent's log, hashtag ranking, Export CSV and summary (to Drive folder "Danyel OZ Reports") |
 
 **Shorts schedule lives in a separate private sheet**, "Danyel OZ Shorts (private)", which the app creates on first use (its ID is kept in Script Properties as `SHORTS_SHEET_ID`). Nothing about Shorts goes in the public Song Database.
@@ -116,6 +120,7 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 |---|---|
 | Home | `player.html` + `song-info.html` (Listen Now), `upcoming-player.html` + `upcoming-details.html` (Upcoming Release), `featured-videos.html`, `music-highlights.html`, `explore-music.html` |
 | Released | `explore-releases.html`, `release-shelf.html?type=Single|EP|Album|Holiday`; Singles page: `featured-singles.html` (10 picks, details left, player right, 01 to 10 strip), `explore-themes.html` (theme tiles, play button opens a small player, Read more, Share) |
+| Albums | `albums.html`: Now spinning hero, collection rows of covers, a sleeve in the album's color opens under its row (Bandcamp album player, story, Buy or Store, Share, installments listed), Coming next with countdown and pre-order. Falls back to albums with Bandcamp and a story if the tabs are empty |
 | Behind the Scenes | `tiny-desk.html`, `in-progress.html` |
 | Connect | `follow-along.html`, `letter.html` (Cognito), plus the Cognito contact form embed |
 | Live | `acoustic-takes.html` (songs whose genre contains "Acoustic"), plus the Songkick widget |

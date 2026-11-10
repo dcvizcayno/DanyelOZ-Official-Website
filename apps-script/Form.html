@@ -244,6 +244,7 @@
       <button type="button" data-view="x">X Posts</button>
       <button type="button" data-view="analytics">Analytics</button>
       <button type="button" data-view="singles">Singles Page</button>
+      <button type="button" data-view="albums">Albums Page</button>
     </nav>
   </div>
 </header>
@@ -481,6 +482,7 @@
 </section>
 <?!= include('ShortsViews'); ?>
 <?!= include('SinglesViews'); ?>
+<?!= include('AlbumsViews'); ?>
 </main>
 
 <div class="modal-bg" id="confirmBg" hidden>
@@ -899,7 +901,7 @@
       $('viewFeatures').hidden = v !== 'features';
       $('viewExplore').hidden = v !== 'explore';
       $('viewHighlights').hidden = v !== 'highlights';
-      ['shorts', 'x', 'analytics', 'singles'].forEach(function (k) {
+      ['shorts', 'x', 'analytics', 'singles', 'albums'].forEach(function (k) {
         var el = $('view' + k.charAt(0).toUpperCase() + k.slice(1)); if (el) el.hidden = v !== k;
       });
       if (window.onAdminView) window.onAdminView(v);
@@ -1366,5 +1368,6 @@
 </script>
 <?!= include('ShortsApp'); ?>
 <?!= include('SinglesApp'); ?>
+<?!= include('AlbumsApp'); ?>
 </body>
 </html>
