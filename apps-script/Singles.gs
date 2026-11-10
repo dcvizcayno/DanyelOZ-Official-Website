@@ -162,6 +162,7 @@ function saveFeatured(list) {
     const s = songs.filter(function (r) { return x.song_id && String(r.song_id) === String(x.song_id); })[0] ||
               songs.filter(function (r) { return norm_(r.song_title) === norm_(x.song_title); })[0];
     if (!s) throw new Error('Slot ' + (i + 1) + ': "' + (x.song_title || x.song_id) + '" is no longer in your Song Database.');
+    if (!/^\s*single\s*$/i.test(s.release_type || 'Single')) throw new Error('Slot ' + (i + 1) + ': "' + s.song_title + '" is an ' + s.release_type + '. Featured Singles takes singles only.');
     if (!hasBandcamp_(s)) throw new Error('Slot ' + (i + 1) + ': "' + s.song_title + '" has no Bandcamp code, so fans could not play it. Add the code first.');
     const key = String(s.song_id || '') + '|' + norm_(s.song_title);
     if (seen[key]) throw new Error('"' + s.song_title + '" is in two slots. Each single can appear once.');

@@ -27,6 +27,7 @@
     r[fn].apply(r, args || []);
   }
   function same(a, b) { return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase(); }
+  function isSingle(s) { return /^\s*single\s*$/i.test(s.release_type || 'Single'); }   // a blank type counts as a single
   function songKey(s) { return (s.song_id ? 'id:' + s.song_id : 't:' + s.song_title); }
 
   /* ================= Theme pickers on the Songs screen ================= */
@@ -89,7 +90,7 @@
     });
   }
   function bcSongs() {
-    return SG.data.songs.filter(function (s) { return s.bandcamp; })
+    return SG.data.songs.filter(function (s) { return s.bandcamp && isSingle(s); })
       .sort(function (a, b) { return String(b.release_date).localeCompare(String(a.release_date)); });
   }
   function findSong(x) {
@@ -120,6 +121,7 @@
       });
       var meta = null, warn = false;
       if (x && !s) { warn = true; sel.appendChild(h('option', { value: 'gone', text: x.song_title + ' (no longer in the sheet)' })); sel.value = 'gone'; meta = h('div', { cls: 'sg-meta' }, [h('b', { text: 'This song is no longer in your Song Database. Pick another.' })]); }
+      else if (s && !isSingle(s)) { warn = true; sel.appendChild(h('option', { value: 'notsingle', text: s.song_title + ' (' + s.release_type + ', not a single)' })); sel.value = 'notsingle'; meta = h('div', { cls: 'sg-meta' }, [h('b', { text: 'This is an ' + s.release_type + ', not a single. Pick a single.' })]); }
       else if (s && !s.bandcamp) { warn = true; sel.appendChild(h('option', { value: 'nobc', text: s.song_title + ' (no Bandcamp code)' })); sel.value = 'nobc'; meta = h('div', { cls: 'sg-meta' }, [h('b', { text: 'No Bandcamp code anymore. Add it in Songs, or pick another.' })]); }
       else if (s) {
         sel.value = songKey(s);
@@ -149,7 +151,7 @@
   }
   el('sgFillF').addEventListener('click', function () {
     var have = {}; SG.slots.forEach(function (x) { var s = findSong(x); if (s) have[songKey(s)] = 1; });
-    var pool = bcSongs().filter(function (s) { return !have[songKey(s)] && (s.release_type || 'Single') === 'Single'; });
+    var pool = bcSongs().filter(function (s) { return !have[songKey(s)]; });
     var n = 0;
     SG.slots = SG.slots.map(function (x) { if (x) return x; var p = pool.shift(); if (!p) return null; n++; return { song_id: p.song_id, song_title: p.song_title }; });
     SG.fDirty = SG.fDirty || n > 0; renderSlots();
