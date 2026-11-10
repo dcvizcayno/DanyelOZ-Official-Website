@@ -120,7 +120,7 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 |---|---|
 | Home | `player.html` + `song-info.html` (Listen Now), `upcoming-player.html` + `upcoming-details.html` (Upcoming Release), `featured-videos.html`, `music-highlights.html`, `explore-music.html` |
 | Released | `explore-releases.html`, `release-shelf.html?type=Single|EP|Album|Holiday`; Singles page: `featured-singles.html` (10 picks, details left, player right, 01 to 10 strip), `explore-themes.html` (theme tiles, play button opens a small player, Read more, Share) |
-| Albums | `albums.html`: Now spinning hero, collection rows of covers, a sleeve in the album's color opens under its row (Bandcamp album player, story, Buy or Store, Share, installments listed), Coming next with countdown and pre-order. Falls back to albums with Bandcamp and a story if the tabs are empty |
+| Albums | `albums.html`: Coming next banner on top (countdown, pre-order; hidden when nothing is coming; `NEXT_ON_TOP = false` moves it to the bottom), Now spinning hero, collection rows of covers, a sleeve in the album's color opens under its row (Bandcamp album player, story, Buy or Store, Share, installments listed). Falls back to albums with Bandcamp and a story if the tabs are empty. `albums.html?only=next` is just the banner for other pages; with nothing coming it shows the latest album |
 | Behind the Scenes | `tiny-desk.html`, `in-progress.html` |
 | Connect | `follow-along.html`, `letter.html` (Cognito), plus the Cognito contact form embed |
 | Live | `acoustic-takes.html` (songs whose genre contains "Acoustic"), plus the Songkick widget |
