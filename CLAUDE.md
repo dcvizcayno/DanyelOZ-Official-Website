@@ -1,6 +1,6 @@
 # Danyel OZ: project handbook
 
-_Last updated: November 9, 2026. One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
+_Last updated: November 10, 2026. One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
 
 **Copies of this file** (keep them identical; update all three together):
 1. `CLAUDE.md` in private repo **dcvizcayno/DanyelOZ-Official-Website** (Claude Code reads it automatically)
@@ -55,14 +55,18 @@ Shared as **Anyone with the link: Viewer** so the widgets can read it. That mean
 | `features` (546510737) | Monthly Features | Featured Videos |
 | `explore` (1777896887) | Explore Panels | Explore the Music |
 | `music_highlights` (1521214689) | Music Highlights | Music Highlights |
+| `featured_singles` (read by name) | Singles Page | Featured Singles |
+| `themes` (read by name) | Singles Page | Explore by Theme |
 
 **Song columns (Sheet1):** `song_id` (Apple collection ID), `song_title`, `release_date` (yyyy-mm-dd), `release_type` (Single, EP, Album),
 `song_genre` ("Acoustic" puts a song on the Live page), `song_description` (first paragraph = intro line; blank line between paragraphs),
 `song_ISRC`, `song_qr`, `song_upc` (stored as text), `record_label`, `yt_video_link`, `spotify_link`, `appl_music_link`, `amazon_link`,
-`bandcamp_embed` (raw Bandcamp iframe code), `song_arts` (Google Drive share link, file shared "Anyone with the link").
+`bandcamp_embed` (raw Bandcamp iframe code), `song_arts` (Google Drive share link, file shared "Anyone with the link"),
+`song_theme_1` and `song_theme_2` (added at the end by the Singles Page screen; Theme 1 is required once themes exist).
 
 **Other tabs:** `features`: month (YYYY-MM), slot 1 to 3, song_id, yt_video_link, title, description.
 `explore`: order, visible, title, script, sub, text, link, image, focus.
+`featured_singles`: position 1 to 10, song_id, song_title (only songs with a Bandcamp code). `themes`: slot 1 to 5, theme, tagline, visible.
 `music_highlights`: month, slot, actLabel, title, subtitle, catalogTag, accentHex, bandcamp_embed, coverImageUrl, and four platform links. Its "Row" and "Actions" columns are unused and left alone.
 
 **Coverage (Nov 9, 2026):** 215 songs. `song_description` 38, `bandcamp_embed` 50, `song_arts` 53.
@@ -74,7 +78,8 @@ Some releases are under a different stage name (for example the EP "Money"); the
 
 ## 4. Data entry app (private)
 
-Apps Script bound to the Song Database. Files: `Code.gs`, `Shorts.gs`, `XPosts.gs` (scripts) and `Form`, `ShortsViews`, `ShortsApp` (HTML). `Form` pulls in the other two HTML files, so all six must be in the project.
+Apps Script bound to the Song Database. Files: `Code.gs`, `Shorts.gs`, `XPosts.gs`, `Singles.gs` (scripts) and `Form`, `ShortsViews`, `ShortsApp`, `SinglesViews`, `SinglesApp` (HTML). `Form` pulls in the other four HTML files, so all nine must be in the project.
+**Status:** the Shorts, X Posts, Analytics and Singles Page screens are on branch `admin-shorts-x`; merge it to `main` once they are live in Apps Script.
 Deployed as a web app, **Execute as: Me**, **Who has access: Only myself**. After any code change: **Deploy > Manage deployments > pencil > New version > Deploy** (the link stays the same).
 
 | Screen | What it does |
@@ -85,6 +90,7 @@ Deployed as a web app, **Execute as: Me**, **Who has access: Only myself**. Afte
 | Explore Panels | The Explore the Music tiles: text, link, image upload ("Danyel OZ Site Images"), order, show or hide |
 | Shorts | Pick a song and a video from the Drive folder "Danyel OZ Shorts" (or upload up to 30 MB), captions for YouTube, TikTok and Instagram from the song's story, batch scheduling, upload to YouTube as **private** (up to 50 MB). TikTok and Instagram: copy and post by hand |
 | X Posts | The X agent's waiting draft: edit, Revise (with a note), Post, Draft one now, Pause drafts. Same as ticking boxes on the GitHub Issue |
+| Singles Page | **Featured singles**: 10 slots, Bandcamp songs only, drag or arrows to reorder, fill empty slots with the newest singles. **Themes**: up to 5 (name, short line, show or hide); a rename or removal carries over to every song. **Theme your songs**: give many songs Theme 1 and 2 at once |
 | Analytics | YouTube numbers for Shorts uploaded from the app, X numbers from the agent's log, hashtag ranking, Export CSV and summary (to Drive folder "Danyel OZ Reports") |
 
 **Shorts schedule lives in a separate private sheet**, "Danyel OZ Shorts (private)", which the app creates on first use (its ID is kept in Script Properties as `SHORTS_SHEET_ID`). Nothing about Shorts goes in the public Song Database.
@@ -109,7 +115,7 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 | Page | Widgets |
 |---|---|
 | Home | `player.html` + `song-info.html` (Listen Now), `upcoming-player.html` + `upcoming-details.html` (Upcoming Release), `featured-videos.html`, `music-highlights.html`, `explore-music.html` |
-| Released | `explore-releases.html`, `release-shelf.html?type=Single|EP|Album|Holiday` |
+| Released | `explore-releases.html`, `release-shelf.html?type=Single|EP|Album|Holiday`; Singles page: `featured-singles.html` (10 picks, details left, player right, 01 to 10 strip), `explore-themes.html` (theme tiles, play button opens a small player, Read more, Share) |
 | Behind the Scenes | `tiny-desk.html`, `in-progress.html` |
 | Connect | `follow-along.html`, `letter.html` (Cognito), plus the Cognito contact form embed |
 | Live | `acoustic-takes.html` (songs whose genre contains "Acoustic"), plus the Songkick widget |
