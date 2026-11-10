@@ -138,6 +138,7 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 - Read the sheet by **header name**, never column position (gviz CSV with `&gid=`).
 - Build the page with text and DOM elements, never by pasting sheet text in as HTML. Accept only `https://` links and check each platform's domain. Colors only as `#RRGGBB`. From Bandcamp code use only the `https://bandcamp.com/EmbeddedPlayer/...` address, never the pasted HTML.
 - Always have a fallback: backup data, a cover, or a friendly message. Never an empty box.
+- **Share menus** (Featured Singles, Explore by Theme, Albums) add "Want more? Check my Official Site" and the home link after the song link on X, WhatsApp, Threads, Telegram and More apps. Facebook only takes a link, so it shares the song link alone. `SITE_LINE` in each widget's Settings.
 - Fit the box: Google Sites shrinks embeds on phones, so players and layouts size to the box (swipe rows, fit-to-box players).
 
 **Tests:** logic was tested with Node mocks of SpreadsheetApp, layouts with Playwright using mocked sheet and Apple data, at desktop and phone sizes, plus planted bad data. Test the same way after changes.
@@ -152,6 +153,7 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 - **Weekly report every Monday at 9:23 AM Manila** (`x-metrics.yml`): views, likes, replies, reposts, link clicks. It updates `playbook.json`, tries each approach (question, story, invite, behind) at least 3 times, then mostly uses the winners and experiments 20% of the time.
 - **Account:** @danyeloz1554, X app in **Default Project (Pay Per Use)**. Key check (`x-check.yml`) passed. About **$0.20 per post** with a link.
 - **Voice rules** live in `x-agent/config.json` and match section 1.
+- **Site line (Nov 10, 2026):** every post (daily drafts and release posts) ends with "Want more? Check my Official Site https://www.danyeloz.info/home", to lead new fans to the site. Set in `config.json` (`site_line`, `site_url`; `site_line: ""` turns it off). The story line shortens first so the post stays within 280.
 - **Keys:** GitHub Secrets `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET`. Without all four it runs in test mode. Optional `ANTHROPIC_API_KEY` makes Claude write in Daniel's voice instead of templates.
 - **Status:** first real post went out Nov 9, 2026 (NOTE TO SELF).
 
