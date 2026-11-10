@@ -72,7 +72,8 @@ Shared as **Anyone with the link: Viewer** so the widgets can read it. That mean
 `albums`: song_id, song_title, kind (unsorted, main, installment, ep, single), part_of, show, collection, position, accent, hook, tracks, bonus, store_url, featured. It never changes a song's `release_type`. `album_collections`: slot, name, tagline, alias (another stage name), visible; up to 8.
 `music_highlights`: month, slot, actLabel, title, subtitle, catalogTag, accentHex, bandcamp_embed, coverImageUrl, and four platform links. Its "Row" and "Actions" columns are unused and left alone.
 
-**Coverage (Nov 9, 2026):** 215 songs. `song_description` 38, `bandcamp_embed` 50, `song_arts` 53.
+**Coverage (Nov 11, 2026, after the store backfill):** 273 releases. `song_id` 267, `song_upc` 267 (all stored as text), `appl_music_link` 266, `song_ISRC` 215 (single-track releases; EPs and albums left blank), `song_description` 44, `bandcamp_embed` 56, `song_arts` 58 (about 215 more once `CoverBackfill.gs` runs).
+**Store backfill (Nov 11, 2026):** one-time fill from Deezer (artist IDs 229950385 Danyel OZ, 289172811 M4RCU$ H33R0) plus Apple lookups by UPC. Blank cells only; 58 releases that were missing were added as new rows. Where the sheet and the stores disagreed (17 release types, 1 date, Bleeding Heart), the sheet value was kept. Backup CSV and review list were sent to Daniel. Covers: `tools/CoverBackfill.gs` (run once from the Apps Script editor; resumable).
 Some releases are under a different stage name (for example the EP "Money"); they belong in the database too.
 
 **Apple Music:** artist ID `1706653995`. Always add `sort=recent` to catalog lookups; without it Apple returns the 200 oldest releases and misses new ones.
