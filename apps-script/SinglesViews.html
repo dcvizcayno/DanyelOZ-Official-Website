@@ -1,0 +1,98 @@
+<!-- Danyel OZ admin: Singles Page screen (layout). Included by Form.html. -->
+<style>
+  .sg-intro { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+  .sg-intro p { margin: 0; font-size: 13.5px; color: #6b6480; line-height: 1.5; max-width: 760px; }
+  .sg-intro a { color: var(--purple); font-weight: 600; }
+  .sg-slots { display: grid; gap: 8px; }
+  .sg-slot { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: center; border: 1.5px solid var(--line);
+    border-radius: 12px; padding: 8px 10px; background: #fff; }
+  .sg-slot.drag { opacity: .45; }
+  .sg-slot.over { border-color: var(--purple); background: var(--soft); }
+  .sg-slot.warn { border-color: #f3d38a; background: #fffaf0; }
+  .sg-num { font: 500 22px 'Oswald', sans-serif; color: var(--purple); text-align: center; cursor: grab; user-select: none; }
+  .sg-num small { display: block; font-size: 9px; letter-spacing: 1px; color: #a49cb8; }
+  .sg-slot select { padding: 8px 10px; font-size: 14px; }
+  .sg-meta { font-size: 11.5px; color: #6b6480; margin-top: 3px; }
+  .sg-meta b { color: var(--warn); font-weight: 600; }
+  .sg-tools { display: flex; gap: 4px; }
+  .sg-tools button { width: 32px; height: 32px; padding: 0; font-size: 14px; line-height: 1; }
+  .sg-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
+  .sg-theme { display: grid; grid-template-columns: 30px minmax(0, 1.5fr) minmax(0, 1.4fr) auto auto; gap: 8px; align-items: center;
+    border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; }
+  @media (max-width: 700px) { .sg-theme { grid-template-columns: 30px 1fr auto; } .sg-theme .tl { grid-column: 2 / -1; } }
+  .sg-theme .n { font: 500 18px 'Oswald', sans-serif; color: var(--purple); text-align: center; }
+  .sg-theme input[type=text] { padding: 8px 10px; font-size: 14px; }
+  .sg-theme .name { text-transform: uppercase; font-weight: 600; letter-spacing: .5px; }
+  .sg-theme label { display: inline-flex; gap: 5px; align-items: center; margin: 0; font-size: 12.5px; white-space: nowrap; }
+  .sg-theme label input { width: auto; }
+  .sg-count { font-size: 11.5px; color: #6b6480; white-space: nowrap; }
+  .sg-filter { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .sg-filter input { flex: 1 1 220px; padding: 8px 10px; font-size: 14px; }
+  .sg-filter button { padding: 6px 12px; font-size: 12.5px; }
+  .sg-filter .on { background: var(--purple); color: #fff; border-color: var(--purple); }
+  .sg-tlist { max-height: 560px; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px; }
+  .sg-trow { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: center;
+    padding: 8px 12px; border-bottom: 1px solid #f1edf9; }
+  .sg-trow:last-child { border-bottom: 0; }
+  .sg-trow.dirty { background: #fffaf0; }
+  .sg-trow select { padding: 6px 8px; font-size: 13px; }
+  .sg-trow .t { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sg-trow .t small { display: block; font-weight: 400; font-size: 11.5px; color: #6b6480; }
+  .sg-pill { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-left: 6px; vertical-align: 1px; }
+  .sg-pill.bc { background: #e9f6ee; color: var(--ok); } .sg-pill.no { background: #f1eff6; color: #6b6480; }
+  @media (max-width: 700px) { .sg-trow { grid-template-columns: 1fr 1fr; } .sg-trow .t { grid-column: 1 / -1; } }
+</style>
+
+<section id="viewSingles" hidden>
+  <div class="card" style="margin-bottom:20px">
+    <div class="sg-intro">
+      <div>
+        <h2 style="margin-bottom:6px">Singles Page</h2>
+        <p>Pick the 10 Featured Singles and up to 5 themes for <b>Explore by Theme</b>. Your website reads these straight from your sheet.
+          See them: <a href="https://dcvizcayno.github.io/danyeloz-embeds/featured-singles.html" target="_blank" rel="noopener">Featured Singles</a> ·
+          <a href="https://dcvizcayno.github.io/danyeloz-embeds/explore-themes.html" target="_blank" rel="noopener">Explore by Theme</a></p>
+      </div>
+      <button type="button" class="ghost" id="sgReload">Reload</button>
+    </div>
+  </div>
+
+  <div class="sx-row" style="margin-bottom:20px">
+    <div class="card" style="flex:6 1 460px">
+      <h2>Featured singles <span class="count" id="sgFCount"></span></h2>
+      <p class="sx-note" style="margin:-6px 0 12px">Only songs with a Bandcamp code are listed, so fans can play the whole song. Drag a number, or use the arrows, to change the order.</p>
+      <div class="sg-slots" id="sgSlots"><div class="list-empty">Loading…</div></div>
+      <div class="sg-bar">
+        <button type="button" class="primary" id="sgSaveF">Save featured singles</button>
+        <button type="button" class="ghost" id="sgFillF">Fill empty slots with newest singles</button>
+        <span class="sx-status" id="sgFStatus"></span>
+      </div>
+    </div>
+
+    <div class="card" style="flex:5 1 400px">
+      <h2>Themes <span class="count" id="sgTCount"></span></h2>
+      <p class="sx-note" style="margin:-6px 0 12px">Up to 5. The order here is the order on the page. Renaming a theme renames it on every song that uses it.</p>
+      <div id="sgThemes"><div class="list-empty">Loading…</div></div>
+      <div class="sg-bar">
+        <button type="button" class="primary" id="sgSaveT">Save themes</button>
+        <button type="button" class="ghost" id="sgAddT">+ Add theme</button>
+        <span class="sx-status" id="sgTStatus"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Theme your songs <span class="count" id="sgSCount"></span></h2>
+    <p class="sx-note" style="margin:-6px 0 12px">A quick way to give many songs their themes at once. Theme 1 is required, Theme 2 is optional. You can also set them on each song in the Songs screen.</p>
+    <div class="sg-filter">
+      <input id="sgSearch" placeholder="Search songs" aria-label="Search songs">
+      <button type="button" class="ghost on" data-sgf="none">No theme yet</button>
+      <button type="button" class="ghost" data-sgf="bc">With Bandcamp</button>
+      <button type="button" class="ghost" data-sgf="all">All songs</button>
+    </div>
+    <div class="sg-tlist" id="sgTList"><div class="list-empty">Loading…</div></div>
+    <div class="sg-bar">
+      <button type="button" class="primary" id="sgSaveS">Save themes for <span id="sgDirty">0</span> songs</button>
+      <span class="sx-status" id="sgSStatus"></span>
+    </div>
+  </div>
+</section>

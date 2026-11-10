@@ -16,7 +16,8 @@ const APPLE_ARTIST_ID = '1706653995';           // Danyel OZ on Apple Music
 const COLUMNS = ['song_id', 'song_title', 'release_date', 'release_type',
                  'song_genre', 'song_description', 'song_ISRC', 'song_qr'];
 const OPTIONAL = ['song_upc', 'record_label', 'yt_video_link', 'spotify_link',
-                  'appl_music_link', 'amazon_link', 'bandcamp_embed', 'song_arts'];
+                  'appl_music_link', 'amazon_link', 'bandcamp_embed', 'song_arts',
+                  'song_theme_1', 'song_theme_2'];   // themes: added by the Singles Page screen
 const ALL_FIELDS = COLUMNS.concat(OPTIONAL);
 const TEXT_ONLY = ['song_ISRC', 'song_upc'];    // kept as text so leading zeros and long numbers survive
 
@@ -28,7 +29,7 @@ function doGet() {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
-/* Builds the page from Form plus the Shorts, X and Analytics screens (ShortsViews and ShortsApp files). */
+/* Builds the page from Form plus the extra screens (ShortsViews/ShortsApp and SinglesViews/SinglesApp files). */
 function page_() {
   return HtmlService.createTemplateFromFile('Form').evaluate();
 }
@@ -214,6 +215,7 @@ function saveSong(data) {
     t.step('find tab + headers');
     const title = String(data.song_title || '').trim();
     if (!title) throw new Error('Song title is required.');
+    if (typeof checkSongThemes_ === 'function') checkSongThemes_(data, idx);   // Singles.gs: Theme 1 required once themes exist
 
     const warnings = [];
     if (data.qrFile && data.qrFile.base64) {

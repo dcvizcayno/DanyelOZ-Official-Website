@@ -243,6 +243,7 @@
       <button type="button" data-view="shorts">Shorts</button>
       <button type="button" data-view="x">X Posts</button>
       <button type="button" data-view="analytics">Analytics</button>
+      <button type="button" data-view="singles">Singles Page</button>
     </nav>
   </div>
 </header>
@@ -296,6 +297,17 @@
           <label for="record_label">Record label</label>
           <input id="record_label" list="labels" placeholder="e.g. Danyel OZ, LLC">
           <datalist id="labels"></datalist>
+        </div>
+      </div>
+
+      <div class="row2" data-col="song_theme_1">
+        <div class="field">
+          <label for="song_theme_1">Theme 1 <span class="hint">required · shows the song under Explore by Theme</span></label>
+          <select id="song_theme_1"><option value="">Pick a theme…</option></select>
+        </div>
+        <div class="field">
+          <label for="song_theme_2">Theme 2 <span class="hint">optional</span></label>
+          <select id="song_theme_2"><option value="">None</option></select>
         </div>
       </div>
 
@@ -468,6 +480,7 @@
   </div>
 </section>
 <?!= include('ShortsViews'); ?>
+<?!= include('SinglesViews'); ?>
 </main>
 
 <div class="modal-bg" id="confirmBg" hidden>
@@ -485,7 +498,7 @@
 <script>
   var FIELDS = ['song_id', 'song_title', 'release_date', 'release_type', 'song_genre', 'song_description',
                 'song_ISRC', 'song_qr', 'song_upc', 'record_label', 'yt_video_link', 'spotify_link',
-                'appl_music_link', 'amazon_link', 'bandcamp_embed', 'song_arts'];
+                'appl_music_link', 'amazon_link', 'bandcamp_embed', 'song_arts', 'song_theme_1', 'song_theme_2'];
   var songs = [];          // rows from the sheet
   var columns = [];        // columns that exist in the sheet
   var current = null;      // the song being edited (null = new)
@@ -716,6 +729,7 @@
     if (!s) { $('release_type').value = 'Single'; $('release_date').value = new Date().toISOString().slice(0, 10); }
     $('mode').textContent = s ? 'Editing row ' + s.row : 'New song';
     renderComplete();
+    if (window.syncThemeSelects) window.syncThemeSelects(s);
     if (window.renderSongShorts) window.renderSongShorts(s);
     markActive(true);
     pickers.art.reset(); pickers.qr.reset();
@@ -768,6 +782,7 @@
     var bad = Object.keys(CHECKS).filter(function (id) { return $(id).offsetParent !== null && !check(id); });
     if (bad.length) { setStatus('Please fix the highlighted field' + (bad.length > 1 ? 's' : '') + '.', 'err'); $(bad[0]).focus(); return; }
     if (pickers.art.loading() || pickers.qr.loading()) { setStatus('An image is still loading. Try again in a second.', 'err'); return; }
+    if (window.themeMissing && window.themeMissing()) { setStatus('Pick a theme for this song. Theme 1 is required.', 'err'); $('song_theme_1').focus(); return; }
 
     var data = {};
     FIELDS.forEach(function (f) { data[f] = $(f).value; });
@@ -884,7 +899,7 @@
       $('viewFeatures').hidden = v !== 'features';
       $('viewExplore').hidden = v !== 'explore';
       $('viewHighlights').hidden = v !== 'highlights';
-      ['shorts', 'x', 'analytics'].forEach(function (k) {
+      ['shorts', 'x', 'analytics', 'singles'].forEach(function (k) {
         var el = $('view' + k.charAt(0).toUpperCase() + k.slice(1)); if (el) el.hidden = v !== k;
       });
       if (window.onAdminView) window.onAdminView(v);
@@ -1350,5 +1365,6 @@
   loadSongs();
 </script>
 <?!= include('ShortsApp'); ?>
+<?!= include('SinglesApp'); ?>
 </body>
 </html>

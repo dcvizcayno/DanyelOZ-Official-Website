@@ -1,0 +1,277 @@
+<!-- Danyel OZ admin: Singles Page screen (behavior), plus the theme pickers on the Songs screen. Included at the end of Form.html. -->
+<script>
+(function () {
+  'use strict';
+  var SG = { data: null, slots: [], themes: [], dirty: {}, filter: 'none', loaded: false };
+  var THEMES = { names: [], columns: false, loaded: false };
+
+  function el(id) { return document.getElementById(id); }
+  function h(tag, props, kids) {
+    var e = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (k) {
+      var v = props[k];
+      if (v == null || v === false) return;
+      if (k === 'text') e.textContent = v;
+      else if (k === 'cls') e.className = v;
+      else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v);
+      else if (k in e && typeof v !== 'string') e[k] = v;
+      else e.setAttribute(k, v === true ? '' : v);
+    });
+    (kids || []).forEach(function (c) { if (c != null && c !== false) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function clear(n) { while (n.firstChild) n.removeChild(n.firstChild); return n; }
+  function say(id, text, kind) { var s = el(id); if (s) { s.textContent = text || ''; s.className = 'sx-status ' + (kind || ''); } }
+  function call(fn, args, ok, fail) {
+    var r = google.script.run.withSuccessHandler(ok).withFailureHandler(fail || function (e) { alert(e.message); });
+    r[fn].apply(r, args || []);
+  }
+  function same(a, b) { return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase(); }
+  function songKey(s) { return (s.song_id ? 'id:' + s.song_id : 't:' + s.song_title); }
+
+  /* ================= Theme pickers on the Songs screen ================= */
+  function loadThemeNames(then) {
+    call('getThemeNames', [], function (r) {
+      THEMES.names = r.names || []; THEMES.columns = !!r.columns; THEMES.loaded = true;
+      fillThemeSelect(el('song_theme_1'), 'Pick a theme…');
+      fillThemeSelect(el('song_theme_2'), 'None');
+      if (typeof current !== 'undefined') window.syncThemeSelects(current);
+      if (then) then();
+    }, function () { /* the pickers are optional */ });
+  }
+  function fillThemeSelect(sel, empty) {
+    if (!sel) return;
+    var keep = sel.value;
+    clear(sel).appendChild(h('option', { value: '', text: THEMES.names.length ? empty : 'Create themes in Singles Page first' }));
+    THEMES.names.forEach(function (n) { sel.appendChild(h('option', { value: n, text: n })); });
+    sel.value = keep;
+  }
+  window.syncThemeSelects = function (s) {
+    ['song_theme_1', 'song_theme_2'].forEach(function (f) {
+      var sel = el(f); if (!sel) return;
+      var v = s ? String(s[f] || '').trim() : '';
+      if (v && !THEMES.names.some(function (n) { return n === v; })) {
+        var match = THEMES.names.filter(function (n) { return same(n, v); })[0];
+        if (match) v = match;
+        else sel.appendChild(h('option', { value: v, text: v + ' (no longer a theme)' }));
+      }
+      sel.value = v;
+    });
+  };
+  window.themeMissing = function () {
+    var sel = el('song_theme_1');
+    return !!(sel && sel.offsetParent !== null && THEMES.names.length && !sel.value);
+  };
+  loadThemeNames();
+
+  /* ================= Singles Page screen ================= */
+  var prevView = window.onAdminView;
+  window.onAdminView = function (v) {
+    if (prevView) prevView(v);
+    if (v === 'singles' && !SG.loaded) loadSingles();
+  };
+  el('sgReload').addEventListener('click', function () {
+    if ((Object.keys(SG.dirty).length || SG.fDirty || SG.tDirty) && !confirm('Reload and lose your unsaved changes?')) return;
+    loadSingles();
+  });
+
+  function loadSingles() {
+    SG.loaded = true;
+    call('getSinglesAdmin', [], function (d) {
+      SG.data = d; SG.dirty = {}; SG.fDirty = false; SG.tDirty = false;
+      SG.slots = [];
+      for (var i = 0; i < d.max.featured; i++) SG.slots.push(d.featured[i] || null);
+      SG.themes = d.themes.map(function (t) { return { theme: t.theme, tagline: t.tagline, visible: t.visible, was: t.theme, count: t.count }; });
+      renderSlots(); renderThemes(); renderSongThemes();
+    }, function (e) {
+      SG.loaded = false;
+      clear(el('sgSlots')).appendChild(h('div', { cls: 'list-empty', text: 'Couldn’t load: ' + e.message }));
+    });
+  }
+  function bcSongs() {
+    return SG.data.songs.filter(function (s) { return s.bandcamp; })
+      .sort(function (a, b) { return String(b.release_date).localeCompare(String(a.release_date)); });
+  }
+  function findSong(x) {
+    if (!x) return null;
+    return SG.data.songs.filter(function (s) { return x.song_id && String(s.song_id) === String(x.song_id); })[0] ||
+           SG.data.songs.filter(function (s) { return same(s.song_title, x.song_title); })[0] || null;
+  }
+
+  /* ---------- Featured singles ---------- */
+  var dragFrom = -1;
+  function renderSlots() {
+    var box = clear(el('sgSlots')), pool = bcSongs();
+    var used = SG.slots.filter(Boolean).length;
+    el('sgFCount').textContent = '(' + used + ' / ' + SG.data.max.featured + ')';
+    SG.slots.forEach(function (x, i) {
+      var s = findSong(x);
+      var sel = h('select', { 'aria-label': 'Featured single ' + (i + 1), onchange: function () {
+        var v = this.value, pick = pool.filter(function (p) { return songKey(p) === v; })[0];
+        if (pick && SG.slots.some(function (o, j) { return j !== i && o && songKey(findSong(o) || o) === v; })) {
+          alert('“' + pick.song_title + '” is already in another slot.'); this.value = x ? songKey(s || x) : ''; return;
+        }
+        SG.slots[i] = pick ? { song_id: pick.song_id, song_title: pick.song_title } : null;
+        SG.fDirty = true; renderSlots();
+      } });
+      sel.appendChild(h('option', { value: '', text: 'Empty slot' }));
+      pool.forEach(function (p) {
+        sel.appendChild(h('option', { value: songKey(p), text: p.song_title + '  (' + [p.release_date, p.release_type].filter(Boolean).join(' · ') + ')' }));
+      });
+      var meta = null, warn = false;
+      if (x && !s) { warn = true; sel.appendChild(h('option', { value: 'gone', text: x.song_title + ' (no longer in the sheet)' })); sel.value = 'gone'; meta = h('div', { cls: 'sg-meta' }, [h('b', { text: 'This song is no longer in your Song Database. Pick another.' })]); }
+      else if (s && !s.bandcamp) { warn = true; sel.appendChild(h('option', { value: 'nobc', text: s.song_title + ' (no Bandcamp code)' })); sel.value = 'nobc'; meta = h('div', { cls: 'sg-meta' }, [h('b', { text: 'No Bandcamp code anymore. Add it in Songs, or pick another.' })]); }
+      else if (s) {
+        sel.value = songKey(s);
+        meta = h('div', { cls: 'sg-meta', text: (s.story ? 'Has its story' : 'No story yet, so the page shows just the title') + (s.theme1 ? ' · ' + [s.theme1, s.theme2].filter(Boolean).join(', ') : '') });
+      }
+      var row = h('div', { cls: 'sg-slot' + (warn ? ' warn' : ''), draggable: 'true' }, [
+        h('div', { cls: 'sg-num', title: 'Drag to move' }, [String(i + 1).padStart(2, '0'), h('small', { text: 'DRAG' })]),
+        h('div', {}, [sel, meta]),
+        h('div', { cls: 'sg-tools' }, [
+          h('button', { type: 'button', cls: 'ghost', text: '▲', title: 'Move up', 'aria-label': 'Move up', disabled: i === 0, onclick: function () { move(i, i - 1); } }),
+          h('button', { type: 'button', cls: 'ghost', text: '▼', title: 'Move down', 'aria-label': 'Move down', disabled: i === SG.slots.length - 1, onclick: function () { move(i, i + 1); } }),
+          h('button', { type: 'button', cls: 'ghost', text: '✕', title: 'Empty this slot', 'aria-label': 'Empty this slot', disabled: !x, onclick: function () { SG.slots[i] = null; SG.fDirty = true; renderSlots(); } })
+        ])
+      ]);
+      row.addEventListener('dragstart', function (e) { dragFrom = i; row.classList.add('drag'); try { e.dataTransfer.setData('text/plain', String(i)); } catch (er) {} });
+      row.addEventListener('dragend', function () { row.classList.remove('drag'); });
+      row.addEventListener('dragover', function (e) { e.preventDefault(); row.classList.add('over'); });
+      row.addEventListener('dragleave', function () { row.classList.remove('over'); });
+      row.addEventListener('drop', function (e) { e.preventDefault(); row.classList.remove('over'); if (dragFrom >= 0 && dragFrom !== i) move(dragFrom, i); dragFrom = -1; });
+      box.appendChild(row);
+    });
+  }
+  function move(from, to) {
+    if (to < 0 || to >= SG.slots.length) return;
+    var x = SG.slots.splice(from, 1)[0]; SG.slots.splice(to, 0, x);
+    SG.fDirty = true; renderSlots();
+  }
+  el('sgFillF').addEventListener('click', function () {
+    var have = {}; SG.slots.forEach(function (x) { var s = findSong(x); if (s) have[songKey(s)] = 1; });
+    var pool = bcSongs().filter(function (s) { return !have[songKey(s)] && (s.release_type || 'Single') === 'Single'; });
+    var n = 0;
+    SG.slots = SG.slots.map(function (x) { if (x) return x; var p = pool.shift(); if (!p) return null; n++; return { song_id: p.song_id, song_title: p.song_title }; });
+    SG.fDirty = SG.fDirty || n > 0; renderSlots();
+    say('sgFStatus', n ? 'Filled ' + n + ' slot' + (n > 1 ? 's' : '') + ' with your newest singles. Save when it looks right.' : 'No empty slots, or no more singles with a Bandcamp code.', n ? 'ok' : '');
+  });
+  el('sgSaveF').addEventListener('click', function () {
+    var list = SG.slots.filter(Boolean).map(function (x) { var s = findSong(x) || x; return { song_id: s.song_id, song_title: s.song_title }; });
+    var b = this; b.disabled = true; say('sgFStatus', 'Saving…');
+    call('saveFeatured', [list], function (r) {
+      b.disabled = false; SG.fDirty = false;
+      SG.slots = list.concat(new Array(SG.data.max.featured - list.length).fill(null)); renderSlots();
+      say('sgFStatus', 'Saved ' + r.saved + ' featured single' + (r.saved === 1 ? '' : 's') + '. Your Singles page shows them within a minute.', 'ok');
+    }, function (e) { b.disabled = false; say('sgFStatus', e.message, 'err'); });
+  });
+
+  /* ---------- Themes ---------- */
+  function renderThemes() {
+    var box = clear(el('sgThemes'));
+    el('sgTCount').textContent = '(' + SG.themes.filter(function (t) { return t.theme; }).length + ' / ' + SG.data.max.themes + ')';
+    if (!SG.themes.length) box.appendChild(h('div', { cls: 'sx-empty', style: 'margin-bottom:8px', text: 'No themes yet. Add one, for example HOPE AND DREAMS or LATE-NIGHT THOUGHTS.' }));
+    SG.themes.forEach(function (t, i) {
+      var name = h('input', { type: 'text', cls: 'name', maxlength: String(SG.data.max.name), placeholder: 'Theme name', 'aria-label': 'Theme ' + (i + 1) + ' name', value: t.theme,
+        oninput: function () { t.theme = this.value; SG.tDirty = true; } });
+      var tag = h('input', { type: 'text', cls: 'tl', maxlength: String(SG.data.max.tagline), placeholder: 'One short line (optional)', 'aria-label': 'Theme ' + (i + 1) + ' line', value: t.tagline,
+        oninput: function () { t.tagline = this.value; SG.tDirty = true; } });
+      var show = h('input', { type: 'checkbox', checked: t.visible !== false, onchange: function () { t.visible = this.checked; SG.tDirty = true; } });
+      box.appendChild(h('div', { cls: 'sg-theme' }, [
+        h('div', { cls: 'n', text: String(i + 1) }), name, tag,
+        h('label', {}, [show, 'Show']),
+        h('div', { style: 'display:flex;gap:6px;align-items:center' }, [
+          h('span', { cls: 'sg-count', text: t.was ? (t.count + ' song' + (t.count === 1 ? '' : 's')) : 'new' }),
+          h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: '✕', title: 'Remove theme', 'aria-label': 'Remove theme', onclick: function () {
+            if (t.was && t.count && !confirm('Remove “' + t.was + '”? ' + t.count + ' song' + (t.count === 1 ? '' : 's') + ' will lose this theme when you save.')) return;
+            if (t.was) { t.theme = ''; t.removed = true; } else SG.themes.splice(i, 1);
+            SG.tDirty = true; renderThemes();
+          } })
+        ])
+      ]));
+      if (t.removed) box.lastChild.style.display = 'none';
+    });
+    el('sgAddT').disabled = SG.themes.filter(function (t) { return !t.removed; }).length >= SG.data.max.themes;
+  }
+  el('sgAddT').addEventListener('click', function () {
+    if (SG.themes.filter(function (t) { return !t.removed; }).length >= SG.data.max.themes) return;
+    SG.themes.push({ theme: '', tagline: '', visible: true, was: '', count: 0 });
+    SG.tDirty = true; renderThemes();
+    var inputs = el('sgThemes').querySelectorAll('input.name'); if (inputs.length) inputs[inputs.length - 1].focus();
+  });
+  el('sgSaveT').addEventListener('click', function () {
+    var renamed = SG.themes.filter(function (t) { return t.was && !t.removed && String(t.theme).trim() && !same(t.was, t.theme); });
+    if (renamed.length && !confirm('Rename ' + renamed.map(function (t) { return '“' + t.was + '” to “' + t.theme.trim() + '”'; }).join(', ') + '? Every song with the old name gets the new one.')) return;
+    var b = this; b.disabled = true; say('sgTStatus', 'Saving…');
+    call('saveThemes', [SG.themes.map(function (t) { return { theme: t.removed ? '' : t.theme, tagline: t.tagline, visible: t.visible !== false, was: t.was }; })], function (r) {
+      b.disabled = false;
+      say('sgTStatus', 'Saved ' + r.saved + ' theme' + (r.saved === 1 ? '' : 's') + (r.songsUpdated ? ', and updated ' + r.songsUpdated + ' song' + (r.songsUpdated === 1 ? '' : 's') : '') + '.', 'ok');
+      loadThemeNames();
+      if (typeof loadSongs === 'function' && r.songsUpdated) loadSongs();
+      loadSingles();
+    }, function (e) { b.disabled = false; say('sgTStatus', e.message, 'err'); });
+  });
+
+  /* ---------- Theme your songs ---------- */
+  document.querySelectorAll('[data-sgf]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      SG.filter = b.getAttribute('data-sgf');
+      document.querySelectorAll('[data-sgf]').forEach(function (x) { x.classList.toggle('on', x === b); });
+      renderSongThemes();
+    });
+  });
+  el('sgSearch').addEventListener('input', function () { renderSongThemes(); });
+  function renderSongThemes() {
+    var box = clear(el('sgTList')), names = SG.data.themes.map(function (t) { return t.theme; });
+    if (!names.length) { box.appendChild(h('div', { cls: 'list-empty', text: 'Create your themes first (above), then give songs their themes here.' })); updDirty(); return; }
+    var q = el('sgSearch').value.trim().toLowerCase();
+    var list = SG.data.songs.filter(function (s) {
+      var d = SG.dirty[s.row];
+      var t1 = d ? d.theme1 : s.theme1;
+      if (q && s.song_title.toLowerCase().indexOf(q) < 0) return false;
+      if (SG.filter === 'none') return !s.theme1 || !!d;
+      if (SG.filter === 'bc') return s.bandcamp;
+      return true;
+    }).sort(function (a, b) { return (b.bandcamp - a.bandcamp) || String(b.release_date).localeCompare(String(a.release_date)); });
+    el('sgSCount').textContent = '(' + SG.data.songs.filter(function (s) { return s.theme1; }).length + ' of ' + SG.data.songs.length + ' have a theme)';
+    if (!list.length) box.appendChild(h('div', { cls: 'list-empty', text: SG.filter === 'none' ? 'Every song has a theme. Nice.' : 'No songs match.' }));
+    list.slice(0, 300).forEach(function (s) {
+      var d = SG.dirty[s.row] || { theme1: s.theme1, theme2: s.theme2 };
+      function pick(which, empty) {
+        var sel = h('select', { 'aria-label': (which === 'theme1' ? 'Theme 1' : 'Theme 2') + ' for ' + s.song_title, onchange: function () {
+          var nd = SG.dirty[s.row] || { row: s.row, song_title: s.song_title, theme1: s.theme1, theme2: s.theme2 };
+          nd[which] = this.value; nd.row = s.row; nd.song_title = s.song_title;
+          if (nd.theme1 === s.theme1 && nd.theme2 === s.theme2) delete SG.dirty[s.row]; else SG.dirty[s.row] = nd;
+          rowEl.classList.toggle('dirty', !!SG.dirty[s.row]); updDirty();
+        } });
+        sel.appendChild(h('option', { value: '', text: empty }));
+        names.forEach(function (n) { sel.appendChild(h('option', { value: n, text: n })); });
+        sel.value = names.filter(function (n) { return same(n, d[which]); })[0] || '';
+        return sel;
+      }
+      var rowEl = h('div', { cls: 'sg-trow' + (SG.dirty[s.row] ? ' dirty' : '') }, [
+        h('div', { cls: 't', title: s.song_title }, [document.createTextNode(s.song_title),
+          h('span', { cls: 'sg-pill ' + (s.bandcamp ? 'bc' : 'no'), text: s.bandcamp ? 'Bandcamp' : 'no player' }),
+          h('small', { text: [s.release_date, s.release_type].filter(Boolean).join(' · ') })]),
+        pick('theme1', 'Theme 1…'), pick('theme2', 'Theme 2 (optional)')
+      ]);
+      box.appendChild(rowEl);
+    });
+    updDirty();
+  }
+  function updDirty() {
+    var n = Object.keys(SG.dirty).length;
+    el('sgDirty').textContent = n; el('sgSaveS').disabled = !n;
+  }
+  el('sgSaveS').addEventListener('click', function () {
+    var list = Object.keys(SG.dirty).map(function (k) { return SG.dirty[k]; });
+    var missing = list.filter(function (x) { return !x.theme1 && !x.theme2; });
+    if (missing.length) { say('sgSStatus', 'Theme 1 is required. Pick one for “' + missing[0].song_title + '”.', 'err'); return; }
+    var b = this; b.disabled = true; say('sgSStatus', 'Saving…');
+    call('saveSongThemes', [list], function (r) {
+      say('sgSStatus', 'Saved themes for ' + r.saved + ' song' + (r.saved === 1 ? '' : 's') + '.', 'ok');
+      if (typeof loadSongs === 'function') loadSongs();
+      loadSingles();
+    }, function (e) { b.disabled = false; say('sgSStatus', e.message, 'err'); });
+  });
+})();
+</script>
