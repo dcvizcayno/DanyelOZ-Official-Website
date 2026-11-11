@@ -1,0 +1,65 @@
+# Danyel OZ Shorts Maker. Started by the admin app's Shorts Maker screen, never on a schedule.
+#   plan: download the long 9:16 video from Drive, time the lyrics, split the song into parts
+#   cut:  cut the approved parts and upload them to the "Danyel OZ Shorts" Drive folder
+# The admin app sends a Drive access token that expires within an hour. It is masked in the logs.
+# Keep this workflow in the PRIVATE repo: run details are visible to anyone who can see the repo.
+name: Shorts Maker
+run-name: "Shorts ${{ inputs.mode }} ${{ inputs.job_id }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:        { description: "Job id from the admin app", required: true }
+      mode:          { description: "plan or cut", required: true, type: choice, options: [plan, cut] }
+      file_id:       { description: "Drive file id of the long video", required: true }
+      job_file_id:   { description: "Drive file id of the job file", required: true }
+      out_folder_id: { description: "Drive folder for the parts", required: false, default: "" }
+      settings:      { description: "JSON settings", required: false, default: "{}" }
+      token:         { description: "Short-lived Drive token (masked)", required: true }
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shorts-maker
+  cancel-in-progress: false
+
+jobs:
+  make:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Hide the Drive token
+        run: echo "::add-mask::$(jq -r '.inputs.token' "$GITHUB_EVENT_PATH")"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: shorts-maker/requirements.txt
+
+      - name: Install ffmpeg and fonts
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core > /dev/null
+
+      - name: Install Python packages
+        run: pip install -q -r shorts-maker/requirements.txt
+
+      - name: Keep the Whisper model between runs
+        if: inputs.mode == 'plan'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: whisper-small-v1
+
+      - name: Run
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          MODE: ${{ inputs.mode }}
+          FILE_ID: ${{ inputs.file_id }}
+          JOB_FILE_ID: ${{ inputs.job_file_id }}
+          OUT_FOLDER_ID: ${{ inputs.out_folder_id }}
+          SETTINGS: ${{ inputs.settings }}
+          DRIVE_TOKEN: ${{ inputs.token }}
+        run: python shorts-maker/maker.py
