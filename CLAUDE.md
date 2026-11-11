@@ -36,6 +36,7 @@ Goal of the site: get the songs out there and give fans one central place to go.
 | Widget list | `README.md` and `index.html` in danyeloz-embeds |
 | Data entry app (Apps Script) | Private repo **dcvizcayno/DanyelOZ-Official-Website**, folder `apps-script/` |
 | X post agent | `x-agent/`, `data/x-posts.json`, `x-dashboard.html`, `.github/workflows/x-*.yml` in danyeloz-embeds (moving to the private repo, see Pending) |
+| Shorts Maker editor | Private repo: `shorts-maker/maker.py` and `.github/workflows/shorts-maker.yml` (must be on `main`; GitHub only starts workflows from there) |
 | X dashboard | https://dcvizcayno.github.io/danyeloz-embeds/x-dashboard.html |
 | YouTube video relay (separate Apps Script) | Project doc `claude/danyel-oz-apps-script.gs`; feeds the YouTube grid with channel stats and public uploads |
 | Contact and letters | Cognito Forms (`cognitoforms.com/DanyelOZ/...`), embedded on Connect |
@@ -82,8 +83,8 @@ Some releases are under a different stage name (for example the EP "Money"); the
 
 ## 4. Data entry app (private)
 
-Apps Script bound to the Song Database. Files: `Code.gs`, `Shorts.gs`, `XPosts.gs`, `Singles.gs`, `Albums.gs` (scripts) and `Form`, `ShortsViews`, `ShortsApp`, `SinglesViews`, `SinglesApp`, `AlbumsViews`, `AlbumsApp` (HTML). `Form` pulls in the other six HTML files, so all twelve must be in the project.
-**Status:** the Shorts, X Posts, Analytics, Singles Page and Albums Page screens are on branch `admin-shorts-x`; merge it to `main` once they are live in Apps Script.
+Apps Script bound to the Song Database. Files: `Code.gs`, `Shorts.gs`, `XPosts.gs`, `Singles.gs`, `Albums.gs`, `ShortsMaker.gs` (scripts) and `Form`, `ShortsViews`, `ShortsApp`, `SinglesViews`, `SinglesApp`, `AlbumsViews`, `AlbumsApp`, `ShortsMakerViews`, `ShortsMakerApp` (HTML). `Form` pulls in the other eight HTML files, so all fifteen must be in the project.
+**Status:** the Shorts, Shorts Maker, X Posts, Analytics, Singles Page and Albums Page screens are on branch `admin-shorts-x`; merge it to `main` once they are live in Apps Script.
 Deployed as a web app, **Execute as: Me**, **Who has access: Only myself**. After any code change: **Deploy > Manage deployments > pencil > New version > Deploy** (the link stays the same).
 
 | Screen | What it does |
@@ -93,6 +94,7 @@ Deployed as a web app, **Execute as: Me**, **Who has access: Only myself**. Afte
 | Music Highlights | Up to 3 cards per month, pick a song to fill Bandcamp, cover and links, color picker |
 | Explore Panels | The Explore the Music tiles: text, link, image upload ("Danyel OZ Site Images"), order, show or hide |
 | Shorts | Pick a song and a video from the Drive folder "Danyel OZ Shorts" (or upload up to 30 MB), captions for YouTube, TikTok and Instagram from the song's story, batch scheduling, upload to YouTube as **private** (up to 50 MB). TikTok and Instagram: copy and post by hand |
+| Shorts Maker | **New series**: pick a song and its long 9:16 lyric video from "Danyel OZ Shorts"; **Plan series** starts the editor (GitHub Actions), which times every sung line with Whisper and splits the song into parts in story order, each 59 s or less (or 90 s), cut only between lines. Nudge a part's end one line at a time, split or join parts; a part over the limit blocks the cut. **Cut and schedule**: ffmpeg cuts each part (fades, optional 2 s end card "Part 2 tomorrow / danyeloz.info"), uploads it to the Drive folder, and each part becomes a normal Shorts row (columns `series_id`, `part`) with "Part k of n" captions and one date per part. Then per part: edit captions, Upload to YouTube (private), Copy TikTok or Instagram caption, Open clip. **Series queue** lists every series and part. Series live in the `series` tab of the private Shorts sheet; job files in Drive "Danyel OZ Shorts/Shorts Maker jobs" |
 | X Posts | The X agent's waiting draft: edit, Revise (with a note), Post, Draft one now, Pause drafts. Same as ticking boxes on the GitHub Issue |
 | Singles Page | **Featured singles**: 10 slots, Bandcamp songs only, drag or arrows to reorder, fill empty slots with the newest singles. **Themes**: up to 5 (name, short line, show or hide); a rename or removal carries over to every song. **Theme your songs**: give many songs Theme 1 and 2 at once |
 | Albums Page | **Now spinning** (pick the hero album or leave it automatic), **Coming next** (automatic), **Checks** (missing story or Bandcamp, unsorted). **Album library**: every row marked Album; say what it really is (main, installment of which album, became an EP, really a single) and switch it on or off for the page. **Collections**: up to 8, name, short line, other stage name; drag albums to order or move them. **Album editor**: color, hook, tracks, bonus, store link. First use seeds the 10 albums already on the page |
@@ -101,9 +103,12 @@ Deployed as a web app, **Execute as: Me**, **Who has access: Only myself**. Afte
 **Shorts schedule lives in a separate private sheet**, "Danyel OZ Shorts (private)", which the app creates on first use (its ID is kept in Script Properties as `SHORTS_SHEET_ID`). Nothing about Shorts goes in the public Song Database.
 
 **Script Properties** (Project Settings > Script Properties; never in the sheet or in chat):
-- `GITHUB_TOKEN`: fine-grained token for the X agent's repo with Issues and Actions (Read and write) and Contents (Read). Needed for X Posts.
+- `GITHUB_TOKEN`: fine-grained token for the X agent's repo with Issues and Actions (Read and write) and Contents (Read). Needed for X Posts. For the Shorts Maker it also needs **Actions: Read and write on DanyelOZ-Official-Website** (add that repo to the token).
+- `SHORTS_REPO`: optional, defaults to `dcvizcayno/DanyelOZ-Official-Website`. Keep it a private repo: run details are visible to anyone who can see the repo.
 - `X_REPO`: optional, defaults to `dcvizcayno/danyeloz-embeds`. Change it when the agent moves to the private repo.
 - `GEMINI_API_KEY`: optional; Gemini writes the captions. Without it, captions come from templates. `GEMINI_MODEL` optional (defaults to `gemini-flash-latest`).
+
+**Shorts Maker and Drive:** each run gets the app's own Drive access token (`ScriptApp.getOAuthToken()`), which expires within an hour and is masked in the run log. No service account, nothing shared publicly. Whisper model `small`, cached between runs. Each 59 s part is about 25 to 30 MB, under the 50 MB YouTube upload limit.
 
 **YouTube upload** needs the **YouTube Data API v3** service (Apps Script editor > Services +). Until Google approves the app, uploads stay private and Daniel makes them public in YouTube Studio.
 
@@ -185,7 +190,7 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 4. **Move the X agent to the private repo** (DanyelOZ-Official-Website): `x-agent/`, `data/x-posts.json`, `x-dashboard.html` and the four `x-*.yml` workflows. Daniel re-adds the 4 X secrets there. Also remove the committed `x-agent/__pycache__/` and add a `.gitignore`.
 5. **Regenerate the keys of the app in the Ads project** (DanyelOZ_Official_Websites). They were pasted in chat. Unused, so regenerating is safe.
 6. **Song Database gaps.** 12 of the 50 X-eligible songs have no description, so their posts read generic: fill those first. Then add Bandcamp codes for the rest, and add releases under other stage names.
-7. **Shorts inventory, then automation.** Build a "Shorts" tab (song_title, TikTok link, YouTube link, where the original file lives). Backfill gaps by hand from original files, not watermarked TikTok downloads. Then automate with the same Post or Revise approval. YouTube and TikTok only post publicly after an app audit, so apply early. Open question: where do the original files live (Mac, Google Drive, or only on the platforms)?
+7. **Shorts.** Shorts Maker built Nov 12, 2026 (first real run still to come; Whisper timing on sung vocals is the part to watch). TikTok and Instagram posting still by hand until their app reviews. Earlier idea: **Shorts inventory.** Build a "Shorts" tab (song_title, TikTok link, YouTube link, where the original file lives). Backfill gaps by hand from original files, not watermarked TikTok downloads. Then automate with the same Post or Revise approval. YouTube and TikTok only post publicly after an app audit, so apply early. Open question: where do the original files live (Mac, Google Drive, or only on the platforms)?
 8. **Optional:** add `ANTHROPIC_API_KEY` as a GitHub secret for posts in Daniel's own voice.
 
 **Smaller items from the site QA (Nov 3)**
