@@ -1,0 +1,327 @@
+<!-- Danyel OZ admin: Shorts Maker screen (behavior). Included at the end of Form.html. -->
+<script>
+(function () {
+  'use strict';
+  var MK = { data: null, cur: null, poll: null, loaded: false, visible: false };
+  var LEAD = 2.5, TAIL = 3.0, CUT_BEFORE = 0.35;   // same as ShortsMaker.gs and maker.py
+
+  function el(id) { return document.getElementById(id); }
+  function h(tag, props, kids) {
+    var e = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (k) {
+      var v = props[k];
+      if (v == null || v === false) return;
+      if (k === 'text') e.textContent = v;
+      else if (k === 'cls') e.className = v;
+      else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v);
+      else if (k in e && typeof v !== 'string') e[k] = v;
+      else e.setAttribute(k, v === true ? '' : v);
+    });
+    (kids || []).forEach(function (c) { if (c != null && c !== false) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function clear(n) { while (n.firstChild) n.removeChild(n.firstChild); return n; }
+  function say(id, text, kind) { var s = el(id); if (s) { s.textContent = text || ''; s.className = 'sx-status ' + (kind || ''); } }
+  function call(fn, args, ok, fail) {
+    var r = google.script.run.withSuccessHandler(ok).withFailureHandler(fail || function (e) { alert(e.message); });
+    r[fn].apply(r, args || []);
+  }
+  function norm(s) { return String(s || '').toLowerCase().replace(/[’']/g, "'").replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+  function mmss(x) { x = Math.max(0, Math.round(x)); return Math.floor(x / 60) + ':' + ('0' + (x % 60)).slice(-2); }
+  function thumb(u) {
+    var m = /drive\.google\.com/.test(u || '') && (String(u).match(/\/d\/([\w-]+)/) || String(u).match(/[?&]id=([\w-]+)/));
+    return m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w200' : (/^https:\/\//.test(u || '') ? u : '');
+  }
+  function tomorrow() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapore' }).format(new Date(Date.now() + 86400000)); }
+
+  /* Same timing rule as the server, so nudges show the right lengths at once. */
+  function cutPoint(p, n) { return n.s <= p.e ? n.s : Math.max(p.e + 0.05, n.s - CUT_BEFORE); }
+  function times(lines, bounds, dur) {
+    return bounds.map(function (a, k) {
+      var b = k + 1 < bounds.length ? bounds[k + 1] - 1 : lines.length - 1;
+      var s = k === 0 ? Math.max(0, lines[a].s - LEAD) : cutPoint(lines[a - 1], lines[a]);
+      var e = k === bounds.length - 1 ? Math.min(dur, lines[b].e + TAIL) : cutPoint(lines[b], lines[b + 1]);
+      return { start: s, end: e, len: e - s, first: a, last: b };
+    });
+  }
+
+  var prevView = window.onAdminView;
+  window.onAdminView = function (v) {
+    if (prevView) prevView(v);
+    MK.visible = v === 'maker';
+    if (MK.visible && !MK.loaded) load();
+    if (!MK.visible) stopPoll();
+  };
+
+  function load() {
+    MK.loaded = true;
+    clear(el('mkSong')).appendChild(h('option', { text: 'Loading…' }));
+    call('getMakerData', [], function (d) {
+      MK.data = d;
+      el('mkFolder').href = d.folderUrl;
+      fillSongs(); fillVideos(); renderQueue();
+      if (!d.hasToken) say('mkPlanStatus', 'Add GITHUB_TOKEN in Script Properties first.', 'err');
+      var running = d.series.filter(function (s) { return s.status === 'Planning' || s.status === 'Cutting' || s.status === 'Planned'; })[0];
+      if (running && !MK.cur) openSeries(running.series_id);
+    }, function (e) { MK.loaded = false; alert(e.message); });
+  }
+
+  /* ---------- 1 and 2: pick the song and the video ---------- */
+  function fillSongs() {
+    var q = norm(el('mkSongSearch').value);
+    var sel = clear(el('mkSong'));
+    var songs = MK.data.songs.slice().sort(function (a, b) { return String(b.release_date).localeCompare(String(a.release_date)); })
+      .filter(function (s) { return !q || norm(s.song_title).indexOf(q) >= 0; });
+    sel.appendChild(h('option', { value: '', text: songs.length ? 'Pick a song' : 'No song matches' }));
+    songs.forEach(function (s) {
+      sel.appendChild(h('option', { value: String(s.song_id || '') + '|' + s.song_title, text: s.song_title + ' · ' + (s.release_type || '') + ' · ' + (s.release_date || '') }));
+    });
+    songInfo();
+  }
+  function pickedSong() {
+    var v = el('mkSong').value; if (!v) return null;
+    var title = v.slice(v.indexOf('|') + 1);
+    return MK.data.songs.filter(function (s) { return s.song_title === title; })[0] || null;
+  }
+  function songInfo() {
+    var box = clear(el('mkSongInfo')), s = pickedSong();
+    if (!s) return;
+    var img = thumb(s.cover);
+    box.appendChild(h('div', { cls: 'mk-song' }, [
+      img ? h('img', { src: img, alt: '' }) : h('div', { cls: 'mk-cover', 'aria-hidden': 'true' }),
+      h('div', {}, [
+        h('b', { text: s.song_title }),
+        h('div', { cls: 'mk-chips' }, [
+          h('span', { cls: 'mk-chip' + (s.hasStory ? '' : ' no'), text: s.hasStory ? 'Story ✓' : 'No story: captions will be plain' }),
+          h('span', { cls: 'mk-chip' + (s.hasBandcamp ? '' : ' no'), text: s.hasBandcamp ? 'Bandcamp link ✓' : 'No Bandcamp code' }),
+          h('span', { cls: 'mk-chip' + (s.hasVideo ? '' : ' no'), text: s.hasVideo ? 'Full video on YouTube ✓' : 'No YouTube link' })
+        ])
+      ])
+    ]));
+    // pick the video whose name matches the song
+    var t = norm(s.song_title), best = MK.data.videos.filter(function (f) { return norm(f.name).indexOf(t) >= 0; })[0];
+    if (best) el('mkVideo').value = best.id;
+  }
+  function fillVideos() {
+    var sel = clear(el('mkVideo'));
+    sel.appendChild(h('option', { value: '', text: MK.data.videos.length ? 'Pick the long video' : 'No videos in the folder yet' }));
+    MK.data.videos.forEach(function (f) { sel.appendChild(h('option', { value: f.id, text: f.name + ' · ' + f.sizeMb + ' MB' })); });
+  }
+  el('mkSongSearch').addEventListener('input', fillSongs);
+  el('mkSong').addEventListener('change', songInfo);
+
+  el('mkPlan').addEventListener('click', function () {
+    var s = pickedSong();
+    if (!s) return say('mkPlanStatus', 'Pick a song first.', 'err');
+    if (!el('mkVideo').value) return say('mkPlanStatus', 'Pick the long video first.', 'err');
+    var max = document.querySelector('input[name="mkLen"]:checked').value === '90' ? 90 : 59;
+    el('mkPlan').disabled = true; say('mkPlanStatus', 'Starting the editor…');
+    call('planSeries', [{ song_id: s.song_id, song_title: s.song_title, file_id: el('mkVideo').value, max: max, endcard: el('mkCard').checked }],
+      function (v) { el('mkPlan').disabled = false; say('mkPlanStatus', ''); show(v); refreshQueue(); },
+      function (e) { el('mkPlan').disabled = false; say('mkPlanStatus', e.message, 'err'); });
+  });
+
+  /* ---------- tabs ---------- */
+  document.querySelectorAll('[data-mk]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var v = b.getAttribute('data-mk');
+      document.querySelectorAll('[data-mk]').forEach(function (x) { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', String(x === b)); });
+      el('mkNew').hidden = v !== 'new'; el('mkQueue').hidden = v !== 'queue';
+      if (v === 'queue') refreshQueue();
+    });
+  });
+
+  /* ---------- the current series ---------- */
+  function openSeries(id) { call('getSeries', [id], show); }
+  function stopPoll() { if (MK.poll) { clearTimeout(MK.poll); MK.poll = null; } }
+  function show(v) {
+    MK.cur = v; stopPoll();
+    var box = clear(el('mkSeries'));
+    var card = h('div', { cls: 'card' });
+    box.appendChild(card);
+    card.appendChild(h('h2', { text: v.song_title + ' · ' + v.status }));
+    if (v.status === 'Planning' || v.status === 'Cutting') {
+      card.appendChild(h('p', {}, [h('span', { cls: 'mk-spin', 'aria-hidden': 'true' }),
+        (v.status === 'Planning' ? 'Planning the parts. ' : 'Cutting the parts. ') + (v.message || 'Working…') + ' This page checks again every 15 seconds.']));
+      if (v.run_url) card.appendChild(h('a', { href: v.run_url, target: '_blank', rel: 'noopener', text: 'Watch the run on GitHub' }));
+      if (MK.visible) MK.poll = setTimeout(function () { openSeries(v.series_id); }, 15000);
+      return;
+    }
+    if (v.status === 'Failed') {
+      card.appendChild(h('p', { cls: 'sx-status err', text: v.message || 'The editor stopped.' }));
+      if (v.run_url) card.appendChild(h('p', {}, [h('a', { href: v.run_url, target: '_blank', rel: 'noopener', text: 'Open the run on GitHub' })]));
+      card.appendChild(h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: 'Try again', onclick: function () {
+        call('replanSeries', [v.series_id, v.max], show);
+      } }));
+      return;
+    }
+    if (v.status === 'Planned') return showPlan(card, v);
+    if (v.status === 'Ready') return showReady(card, v);
+  }
+
+  function showPlan(card, v) {
+    var t = times(v.lines, v.bounds, v.duration);
+    var lim = v.effective_max;
+    card.appendChild(h('p', { cls: 'sx-note', text: v.lines.length + ' sung lines found in ' + mmss(v.duration) + '. ' + t.length + ' parts of ' +
+      Math.floor(lim) + ' seconds or less' + (v.endcard ? ' (plus the 2 second end card)' : '') + '. Nothing is cut until you click the button below.' }));
+    if (v.warning) card.appendChild(h('p', { cls: 'sx-status err', text: v.warning }));
+    var bar = h('div', { cls: 'mk-bar', role: 'img', 'aria-label': 'Song timeline split into ' + t.length + ' parts' });
+    t.forEach(function (p, k) {
+      bar.appendChild(h('div', { cls: (p.len > lim + 0.01 ? 'over' : (k % 2 ? 'b' : 'a')), style: 'flex:' + Math.max(1, p.len) + ' 1 0',
+        text: 'Part ' + (k + 1) + ' · ' + mmss(p.start) + '–' + mmss(p.end) }));
+    });
+    card.appendChild(bar);
+    var grid = h('div', { cls: 'mk-parts' });
+    t.forEach(function (p, k) {
+      var over = p.len > lim + 0.01;
+      var lines = h('div', { cls: 'mk-lines' });
+      for (var i = p.first; i <= p.last; i++) lines.appendChild(h('div', {}, [h('span', { text: mmss(v.lines[i].s) }), v.lines[i].t]));
+      var tools = h('div', { cls: 'mk-tools' });
+      if (k < t.length - 1) {
+        tools.appendChild(document.createTextNode('End'));
+        tools.appendChild(h('button', { type: 'button', cls: 'ghost', text: '− line', 'aria-label': 'Part ' + (k + 1) + ': end one line earlier',
+          disabled: p.last <= p.first, onclick: function () { moveCut(k + 1, -1); } }));
+        tools.appendChild(h('button', { type: 'button', cls: 'ghost', text: '+ line', 'aria-label': 'Part ' + (k + 1) + ': end one line later',
+          disabled: t[k + 1].last <= t[k + 1].first, onclick: function () { moveCut(k + 1, 1); } }));
+        tools.appendChild(h('button', { type: 'button', cls: 'ghost', text: 'Join with next', onclick: function () { join(k); } }));
+      }
+      if (p.last > p.first) tools.appendChild(h('button', { type: 'button', cls: 'ghost', text: 'Split in two', onclick: function () { split(k); } }));
+      grid.appendChild(h('article', { cls: 'mk-part' + (over ? ' over' : '') }, [
+        h('h3', { text: 'Part ' + (k + 1) + ' of ' + t.length }),
+        h('div', { cls: 'len', text: mmss(p.start) + ' to ' + mmss(p.end) + ' · ' + Math.round(p.len) + ' seconds' + (over ? ' · too long, move a line to the next part' : '') }),
+        lines,
+        h('div', { cls: 'sx-note', text: 'Ends on: “' + v.lines[p.last].t + '”' }),
+        tools
+      ]));
+    });
+    card.appendChild(grid);
+    card.appendChild(h('p', { cls: 'sx-note', text: 'Lines move whole, so a part never starts or stops mid-word. Part 1 always starts at the first line and the last part always ends after the last line, so the story stays complete.' }));
+
+    var anyOver = t.some(function (p) { return p.len > lim + 0.01; });
+    var start = h('input', { type: 'date', id: 'mkStart', value: tomorrow() });
+    var cad = h('select', { id: 'mkCad' }, [h('option', { value: '1', text: 'One part a day' }), h('option', { value: '2', text: 'One part every 2 days' }), h('option', { value: '0', text: 'All parts the same day' })]);
+    var time = h('input', { type: 'time', id: 'mkTime', value: '19:00' });
+    var yt = h('input', { type: 'checkbox', checked: true }), tt = h('input', { type: 'checkbox', checked: true }), ig = h('input', { type: 'checkbox' });
+    var go = h('button', { type: 'button', cls: 'primary', text: 'Cut ' + t.length + ' parts and schedule', disabled: anyOver });
+    var st = h('span', { cls: 'sx-status', id: 'mkCutStatus', text: anyOver ? 'Fix the red part first.' : '' });
+    go.addEventListener('click', function () {
+      go.disabled = true; st.textContent = 'Starting the editor…';
+      call('cutSeries', [v.series_id, { start_date: start.value, cadence: Number(cad.value), time: time.value, yt: yt.checked, tt: tt.checked, ig: ig.checked }],
+        function (x) { show(x); refreshQueue(); }, function (e) { go.disabled = false; st.textContent = e.message; st.className = 'sx-status err'; });
+    });
+    card.appendChild(h('div', { cls: 'mk-sched' }, [
+      h('div', {}, [h('label', { for: 'mkStart', text: 'First part' }), start]),
+      h('div', {}, [h('label', { for: 'mkCad', text: 'Then' }), cad]),
+      h('div', {}, [h('label', { for: 'mkTime', text: 'At (Manila)' }), time]),
+      h('div', { cls: 'plat' }, [h('label', {}, [yt, 'YouTube']), h('label', {}, [tt, 'TikTok']), h('label', {}, [ig, 'Instagram'])]),
+      h('div', {}, [go, st])
+    ]));
+    card.appendChild(h('p', { cls: 'sx-note', style: 'margin-top:10px', text: 'YouTube: the app uploads each part as private (Google keeps it private until the app is approved). TikTok and Instagram: copy the caption and post the clip by hand for now.' }));
+    var again = h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: v.max === 90 ? 'Plan again with 59 second parts' : 'Plan again with 90 second parts' });
+    again.addEventListener('click', function () { call('replanSeries', [v.series_id, v.max === 90 ? 59 : 90], show); });
+    card.appendChild(again);
+  }
+
+  function saveBounds(b) { call('saveSeriesBounds', [MK.cur.series_id, b], show); }
+  function moveCut(k, d) {   // boundary k = first line of part k
+    var b = MK.cur.bounds.slice(); b[k] += d;
+    if (b[k] <= b[k - 1] || (k + 1 < b.length ? b[k] >= b[k + 1] : b[k] >= MK.cur.lines.length)) return;
+    saveBounds(b);
+  }
+  function join(k) { var b = MK.cur.bounds.slice(); b.splice(k + 1, 1); saveBounds(b); }
+  function split(k) {
+    var t = times(MK.cur.lines, MK.cur.bounds, MK.cur.duration)[k];
+    var mid = Math.floor((t.first + t.last + 1) / 2);
+    if (mid <= t.first) return;
+    var b = MK.cur.bounds.slice(); b.splice(k + 1, 0, mid); saveBounds(b);
+  }
+
+  /* ---------- finished: captions and posting, part by part ---------- */
+  function showReady(card, v) {
+    card.appendChild(h('p', { cls: 'sx-note', text: v.parts.length + ' parts are in your Drive folder and on the Shorts schedule. Check each caption, then post. They also show in the Shorts list.' }));
+    var grid = h('div', { cls: 'mk-done' });
+    v.parts.forEach(function (s) {
+      var ytT = h('input', { value: s.yt_title, maxlength: '100', 'aria-label': 'YouTube title' });
+      var ttC = h('textarea', { 'aria-label': 'TikTok caption' }); ttC.value = s.tt_caption + (s.tt_tags ? '\n' + s.tt_tags : '');
+      var igC = h('textarea', { 'aria-label': 'Instagram caption' }); igC.value = s.ig_caption + (s.ig_tags ? '\n\n' + s.ig_tags : '');
+      var st = h('span', { cls: 'sx-status' });
+      var save = h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: 'Save captions' });
+      save.addEventListener('click', function () {
+        var tt = splitTags(ttC.value), ig = splitTags(igC.value);
+        call('saveShort', [{ short_id: s.short_id, yt_title: ytT.value, tt_caption: tt.text, tt_tags: tt.tags, ig_caption: ig.text, ig_tags: ig.tags }],
+          function () { st.textContent = 'Saved'; st.className = 'sx-status ok'; }, function (e) { st.textContent = e.message; st.className = 'sx-status err'; });
+      });
+      var up = h('button', { type: 'button', cls: 'primary sx-btn-sm', text: s.yt_video_id ? 'On YouTube (private)' : 'Upload to YouTube', disabled: !!s.yt_video_id || !s.yt });
+      up.addEventListener('click', function () {
+        up.disabled = true; st.textContent = 'Uploading…'; st.className = 'sx-status';
+        call('uploadShortToYouTube', [s.short_id], function (r) {
+          st.textContent = 'Uploaded as private. '; st.className = 'sx-status ok';
+          st.appendChild(h('a', { href: r.studio, target: '_blank', rel: 'noopener', text: 'Open in YouTube Studio' }));
+          up.textContent = 'On YouTube (private)';
+        }, function (e) { up.disabled = false; st.textContent = e.message; st.className = 'sx-status err'; });
+      });
+      var copy = function (ta, label) {
+        return h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: 'Copy ' + label, onclick: function () {
+          var done = function () { st.textContent = label + ' caption copied'; st.className = 'sx-status ok'; };
+          if (navigator.clipboard) navigator.clipboard.writeText(ta.value).then(done, function () { ta.select(); });
+          else { ta.select(); }
+        } });
+      };
+      grid.appendChild(h('article', { cls: 'mk-part' }, [
+        h('h3', { text: 'Part ' + s.part + ' · ' + s.scheduled_date + ' ' + s.scheduled_time }),
+        h('label', { text: 'YouTube title' }), ytT,
+        h('label', { text: 'TikTok' }), ttC,
+        h('label', { text: 'Instagram' }), igC,
+        h('div', { cls: 'mk-tools' }, [save, up, copy(ttC, 'TikTok'), copy(igC, 'Instagram'),
+          h('a', { href: 'https://drive.google.com/file/d/' + s.drive_file_id + '/view', target: '_blank', rel: 'noopener', text: 'Open clip' })]),
+        st
+      ]));
+    });
+    card.appendChild(grid);
+  }
+  function splitTags(v) {
+    var tags = (String(v).match(/#[\p{L}\p{N}_]+/gu) || []);
+    var text = String(v).replace(/#[\p{L}\p{N}_]+/gu, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+    return { text: text, tags: tags.join(' ') };
+  }
+
+  /* ---------- queue ---------- */
+  function refreshQueue() { call('getMakerData', [], function (d) { MK.data = d; renderQueue(); }); }
+  function pill(text, kind) { return h('span', { cls: 'mk-pill ' + (kind || ''), text: text }); }
+  function renderQueue() {
+    var box = clear(el('mkQueueList'));
+    var list = MK.data.series;
+    var tab = document.querySelector('[data-mk="queue"]');
+    var busy = list.filter(function (s) { return s.status === 'Planning' || s.status === 'Cutting'; }).length;
+    tab.textContent = 'Series queue' + (busy ? ' (' + busy + ' running)' : '');
+    if (!list.length) { box.appendChild(h('div', { cls: 'sx-empty', text: 'No series yet. Make one in New series.' })); return; }
+    list.forEach(function (s) {
+      var kind = s.status === 'Ready' ? 'ok' : s.status === 'Failed' ? 'bad' : 'wait';
+      var head = h('div', { style: 'display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:14px 0 8px' }, [
+        h('div', {}, [h('b', { text: s.song_title }), ' ', pill(s.status, kind), h('div', { cls: 'sx-note', text: s.source_name + ' · started ' + s.created_at.replace('T', ' ') })]),
+        h('div', { cls: 'mk-tools' }, [
+          h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: 'Open', onclick: function () { openSeries(s.series_id); el('mkSeries').scrollIntoView({ behavior: 'smooth' }); } }),
+          h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: 'Remove from list', onclick: function () {
+            if (!confirm('Remove "' + s.song_title + '" from the series list? Its clips and Shorts stay where they are.')) return;
+            call('deleteSeries', [s.series_id], refreshQueue);
+          } })
+        ])
+      ]);
+      box.appendChild(head);
+      if (!s.parts.length) return;
+      var tb = h('tbody');
+      s.parts.forEach(function (p) {
+        tb.appendChild(h('tr', {}, [
+          h('td', { text: 'Part ' + p.part }), h('td', { text: p.scheduled_date + ' ' + p.scheduled_time }),
+          h('td', {}, [p.yt ? (p.yt_video_id ? pill('Uploaded (private)', 'ok') : pill('Waiting for you', 'wait')) : pill('Skip')]),
+          h('td', {}, [p.tt ? pill('Post by hand', 'wait') : pill('Skip')]),
+          h('td', {}, [p.ig ? pill('Post by hand', 'wait') : pill('Skip')]),
+          h('td', {}, [pill(p.status, p.status === 'Published' ? 'ok' : '')])
+        ]));
+      });
+      box.appendChild(h('div', { style: 'overflow-x:auto' }, [h('table', { cls: 'mk-q' }, [
+        h('thead', {}, [h('tr', {}, ['PART', 'WHEN', 'YOUTUBE', 'TIKTOK', 'INSTAGRAM', 'STATUS'].map(function (x) { return h('th', { scope: 'col', text: x }); }))]), tb])]));
+    });
+  }
+})();
+</script>

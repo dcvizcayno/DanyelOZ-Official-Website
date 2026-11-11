@@ -241,6 +241,7 @@
       <button type="button" data-view="highlights">Music Highlights</button>
       <button type="button" data-view="explore">Explore Panels</button>
       <button type="button" data-view="shorts">Shorts</button>
+      <button type="button" data-view="maker">Shorts Maker</button>
       <button type="button" data-view="x">X Posts</button>
       <button type="button" data-view="analytics">Analytics</button>
       <button type="button" data-view="singles">Singles Page</button>
@@ -483,6 +484,7 @@
 <?!= include('ShortsViews'); ?>
 <?!= include('SinglesViews'); ?>
 <?!= include('AlbumsViews'); ?>
+<?!= include('ShortsMakerViews'); ?>
 </main>
 
 <div class="modal-bg" id="confirmBg" hidden>
@@ -901,7 +903,7 @@
       $('viewFeatures').hidden = v !== 'features';
       $('viewExplore').hidden = v !== 'explore';
       $('viewHighlights').hidden = v !== 'highlights';
-      ['shorts', 'x', 'analytics', 'singles', 'albums'].forEach(function (k) {
+      ['shorts', 'maker', 'x', 'analytics', 'singles', 'albums'].forEach(function (k) {
         var el = $('view' + k.charAt(0).toUpperCase() + k.slice(1)); if (el) el.hidden = v !== k;
       });
       if (window.onAdminView) window.onAdminView(v);
@@ -1369,5 +1371,6 @@
 <?!= include('ShortsApp'); ?>
 <?!= include('SinglesApp'); ?>
 <?!= include('AlbumsApp'); ?>
+<?!= include('ShortsMakerApp'); ?>
 </body>
 </html>

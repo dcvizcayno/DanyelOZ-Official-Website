@@ -23,7 +23,7 @@ const SHORTS_TAB = 'shorts';
 const SHORT_COLUMNS = ['short_id', 'song_id', 'song_title', 'drive_file_id', 'file_name', 'size_mb',
   'scheduled_date', 'scheduled_time', 'yt', 'tt', 'ig', 'status', 'angle',
   'yt_title', 'yt_description', 'yt_tags', 'tt_caption', 'tt_tags', 'ig_caption', 'ig_tags',
-  'yt_video_id', 'created_at', 'updated_at'];
+  'yt_video_id', 'created_at', 'updated_at', 'series_id', 'part'];
 const SHORT_EDITABLE = ['scheduled_date', 'scheduled_time', 'yt', 'tt', 'ig', 'status',
   'yt_title', 'yt_description', 'yt_tags', 'tt_caption', 'tt_tags', 'ig_caption', 'ig_tags'];
 const SHORT_STATUSES = ['Draft', 'Scheduled', 'Ready to post', 'Uploaded (private)', 'Published'];
