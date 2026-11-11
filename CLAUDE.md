@@ -72,8 +72,8 @@ Shared as **Anyone with the link: Viewer** so the widgets can read it. That mean
 `albums`: song_id, song_title, kind (unsorted, main, installment, ep, single), part_of, show, collection, position, accent, hook, tracks, bonus, store_url, featured. It never changes a song's `release_type`. `album_collections`: slot, name, tagline, alias (another stage name), visible; up to 8.
 `music_highlights`: month, slot, actLabel, title, subtitle, catalogTag, accentHex, bandcamp_embed, coverImageUrl, and four platform links. Its "Row" and "Actions" columns are unused and left alone.
 
-**Coverage (Nov 11, 2026, after the store backfill):** 273 releases. `song_id` 267, `song_upc` 267 (all stored as text), `appl_music_link` 266, `song_ISRC` 215 (single-track releases; EPs and albums left blank), `song_description` 44, `bandcamp_embed` 56, `song_arts` 58 (about 215 more once `CoverBackfill.gs` runs).
-**Store backfill (Nov 11, 2026):** one-time fill from Deezer (artist IDs 229950385 Danyel OZ, 289172811 M4RCU$ H33R0) plus Apple lookups by UPC. Blank cells only; 58 releases that were missing were added as new rows. Where the sheet and the stores disagreed (17 release types, 1 date, Bleeding Heart), the sheet value was kept. Backup CSV and review list were sent to Daniel. Covers: `tools/CoverBackfill.gs` (run once from the Apps Script editor; resumable).
+**Coverage (Nov 11, 2026, after the store backfill):** 273 releases. `song_id` 267, `song_upc` 267 (all stored as text), `appl_music_link` 266, `song_ISRC` 215 (single-track releases; EPs and albums left blank), `song_description` 44, `bandcamp_embed` 56, `song_arts` 273 (all; covers backfilled Nov 11).
+**Store backfill (Nov 11, 2026):** one-time fill from Deezer (artist IDs 229950385 Danyel OZ, 289172811 M4RCU$ H33R0) plus Apple lookups by UPC. Blank cells only; 58 releases that were missing were added as new rows. Where the sheet and the stores disagreed (17 release types, 1 date, Bleeding Heart), the sheet value was kept. Backup CSV and review list were sent to Daniel. Covers: `tools/CoverBackfill.gs` ran Nov 11 and filled every row.
 Some releases are under a different stage name (for example the EP "Money"); they belong in the database too.
 
 **Apple Music:** artist ID `1706653995`. Always add `sort=recent` to catalog lookups; without it Apple returns the 200 oldest releases and misses new ones.
@@ -184,7 +184,7 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 3. **Tiny Desk video.** `tiny-desk.html` has `VIDEO = ''`. Send the YouTube link when ready.
 4. **Move the X agent to the private repo** (DanyelOZ-Official-Website): `x-agent/`, `data/x-posts.json`, `x-dashboard.html` and the four `x-*.yml` workflows. Daniel re-adds the 4 X secrets there. Also remove the committed `x-agent/__pycache__/` and add a `.gitignore`.
 5. **Regenerate the keys of the app in the Ads project** (DanyelOZ_Official_Websites). They were pasted in chat. Unused, so regenerating is safe.
-6. **Song Database gaps.** 12 of the 50 X-eligible songs have no description, so their posts read generic: fill those first. Then add Bandcamp codes and `song_arts` for the rest, and add releases under other stage names.
+6. **Song Database gaps.** 12 of the 50 X-eligible songs have no description, so their posts read generic: fill those first. Then add Bandcamp codes for the rest, and add releases under other stage names.
 7. **Shorts inventory, then automation.** Build a "Shorts" tab (song_title, TikTok link, YouTube link, where the original file lives). Backfill gaps by hand from original files, not watermarked TikTok downloads. Then automate with the same Post or Revise approval. YouTube and TikTok only post publicly after an app audit, so apply early. Open question: where do the original files live (Mac, Google Drive, or only on the platforms)?
 8. **Optional:** add `ANTHROPIC_API_KEY` as a GitHub secret for posts in Daniel's own voice.
 
