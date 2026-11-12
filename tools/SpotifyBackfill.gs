@@ -25,6 +25,7 @@ function resetSpotifyProgress() {   // start both runs from the top again
 }
 
 const SPOTIFY_TIME_LIMIT = 4 * 60 * 1000;   // stop well before Google's 6-minute limit
+const SPOTIFY_GAP_MS = 800;                 // about 75 lookups a minute
 
 function spotifyRun_(write) {
   const start = Date.now(), deadline = start + SPOTIFY_TIME_LIMIT;
@@ -76,7 +77,6 @@ function spotifyRun_(write) {
     if (write) sh.getRange(r + 1, cLink + 1).setValue(url);
     found++;
     if (!write && found <= 15) console.log('Would fill: ' + title + '  ->  ' + url);
-    Utilities.sleep(150);   // stay under Spotify's rate limit
   }
   if (write) SpreadsheetApp.flush();
   if (stopAt) props.setProperty(KEY, String(stopAt)); else props.deleteProperty(KEY);
@@ -110,6 +110,7 @@ function spotifyToken_() {
 function spotifySearch_(token, query, type, deadline) {
   const url = 'https://api.spotify.com/v1/search?type=' + type + '&limit=5&q=' + encodeURIComponent(query);
   for (let tries = 0; tries < 3; tries++) {
+    Utilities.sleep(SPOTIFY_GAP_MS);   // a steady, polite pace: Spotify blocks apps that ask too fast
     const res = UrlFetchApp.fetch(url, { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true });
     const code = res.getResponseCode();
     if (code === 200) {
@@ -119,13 +120,14 @@ function spotifySearch_(token, query, type, deadline) {
     if (code === 429) {
       const wait = Number(res.getHeaders()['Retry-After'] || res.getHeaders()['retry-after']) || 5;
       if (wait > 20 || Date.now() + wait * 1000 > deadline) {   // a long wait: stop cleanly instead of hanging
-        const e = new Error('Spotify asked to pause for about ' + Math.ceil(wait / 60) + ' minute' + (wait > 60 ? 's' : '') + '.');
+        const when = Utilities.formatDate(new Date(Date.now() + wait * 1000), 'Asia/Manila', "EEE MMM d 'at' h:mm a");
+        const span = wait >= 5400 ? 'about ' + Math.round(wait / 3600) + ' hours' : 'about ' + Math.max(1, Math.ceil(wait / 60)) + ' minutes';
+        const e = new Error('Spotify asked this app to pause for ' + span + ', until ' + when + ' (Manila time).');
         e.spotifyWait = true; throw e;
       }
       Utilities.sleep(wait * 1000); continue;
     }
     if (code === 401 || code === 403) throw new Error('Spotify refused the search (HTTP ' + code + '). The app owner may need Premium, or the keys are wrong.');
-    Utilities.sleep(800);
   }
   return [];
 }
