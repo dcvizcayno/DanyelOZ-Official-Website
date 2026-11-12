@@ -390,3 +390,10 @@ function deleteSeries(id) {
     return { removed: s.series_id };
   } finally { lock.releaseLock(); }
 }
+
+/* Run this once from the Apps Script editor to give the app YouTube permission
+   (needed before "Upload to YouTube" works). The log names the channel it connected to. */
+function authorizeYouTube() {
+  const ch = YouTube.Channels.list('snippet', { mine: true });
+  Logger.log('YouTube connected: ' + ((ch.items || [])[0] || { snippet: { title: 'no channel found' } }).snippet.title);
+}
