@@ -35,6 +35,7 @@
   .al-chip i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
   .al-chip em { font-style: normal; font-size: 11px; font-weight: 700; color: var(--warn); }
   .al-drop { border-style: dashed; }
+  .al-empty { margin: 0 0 12px; padding: 12px 14px; border: 1px dashed #e3122a; border-radius: 10px; background: #fff5f6; font-size: 14px; line-height: 1.5; }
   .al-edit { flex: 2 1 360px; min-width: 0; border: 2px solid var(--purple); border-radius: 14px; padding: 16px; background: #fdfcff; position: sticky; top: 12px; }
   .al-edit .hd { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
   .al-edit .hd img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; }
@@ -82,7 +83,7 @@
 
   <div class="card">
     <h2><span data-al-words="Collections and albums|Collections and EPs">Collections and albums</span> <span class="count" id="alColCount"></span></h2>
-    <p class="sx-note" style="margin:-6px 0 12px"><span data-al-words="Albums|EPs">Albums</span> switched on in the library appear here. Click one to edit it. Drag albums to reorder them or to move them to another collection.</p>
+    <p class="sx-note" style="margin:-6px 0 12px"><span data-al-words="Albums|EPs">Albums</span> switched on in the library appear here. Click one to edit it. <span data-al-words="Drag albums|Drag EPs">Drag albums</span> to reorder them or to move them to another collection.</p>
     <div class="al-cols">
       <div style="flex:3 1 520px;min-width:0">
         <div id="alCols"><div class="list-empty">Loading…</div></div>

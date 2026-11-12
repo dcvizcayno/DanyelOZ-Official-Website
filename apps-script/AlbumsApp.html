@@ -209,6 +209,10 @@
     var box = clear(el('alCols'));
     el('alColCount').textContent = '(' + AL.cols.filter(function (c) { return !c.removed; }).length + ' collections)';
     var groups = AL.cols.filter(function (c) { return !c.removed; }).concat(AL.order[NONE].length ? [{ name: NONE, fixed: true }] : []);
+    var anyOn = Object.keys(AL.order).some(function (col) { return AL.order[col].length; });
+    if (!anyOn) box.appendChild(h('p', { cls: 'al-empty', text: w(
+      'Nothing to drag yet. Switch on the albums you want in the Album library above (tick Showing), then click Save library. They appear here as little cover chips you can drag into a collection.',
+      'Nothing to drag yet. In the EP library above, mark the real EPs as “A real EP”, tick Showing, then click Save library. They appear here as little cover chips you can drag into a collection.') }));
     groups.forEach(function (c, i) {
       var head;
       if (c.fixed) {
