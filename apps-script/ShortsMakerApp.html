@@ -121,6 +121,13 @@
       function (e) { el('mkPlan').disabled = false; say('mkPlanStatus', e.message, 'err'); });
   });
 
+  /* Browsers slow down timers in tabs you aren't looking at, so check again as soon as you come back. */
+  function backCheck() {
+    if (document.visibilityState === 'visible' && MK.visible && MK.cur && (MK.cur.status === 'Planning' || MK.cur.status === 'Cutting')) openSeries(MK.cur.series_id);
+  }
+  document.addEventListener('visibilitychange', backCheck);
+  window.addEventListener('focus', backCheck);
+
   /* ---------- tabs ---------- */
   document.querySelectorAll('[data-mk]').forEach(function (b) {
     b.addEventListener('click', function () {
@@ -143,7 +150,10 @@
     if (v.status === 'Planning' || v.status === 'Cutting') {
       card.appendChild(h('p', {}, [h('span', { cls: 'mk-spin', 'aria-hidden': 'true' }),
         (v.status === 'Planning' ? 'Planning the parts. ' : 'Cutting the parts. ') + (v.message || 'Working…') + ' This page checks again every 15 seconds.']));
-      if (v.run_url) card.appendChild(h('a', { href: v.run_url, target: '_blank', rel: 'noopener', text: 'Watch the run on GitHub' }));
+      card.appendChild(h('div', { cls: 'mk-tools' }, [
+        h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: 'Check now', onclick: function () { openSeries(v.series_id); } }),
+        v.run_url ? h('a', { href: v.run_url, target: '_blank', rel: 'noopener', text: 'Watch the run on GitHub' }) : null
+      ]));
       if (MK.visible) MK.poll = setTimeout(function () { openSeries(v.series_id); }, 15000);
       return;
     }
