@@ -230,6 +230,7 @@ Private repo only (they describe how the project runs; nothing secret in them).
 | `.claude/agents/widget-tester.md` | Mocked-data browser tests of a widget, desktop and phone |
 | `.claude/agents/data-auditor.md` | Read-only audit of Song Database gaps and data health |
 | `.claude/agents/voice-editor.md` | Checking copy against the voice rules |
+| `.claude/agents/sheets-engineer.md` | Turning a plain request into a sheet change or Apps Script code (schema, backfills, API bridges); reports before anything permanent |
 | `.claude/agents/app-reviewer.md` | Safety review of an app or Shorts Maker change before handover |
 | `docs/SETUP.md` | Every one-time setup: Apps Script, Script Properties, GitHub token, YouTube permission, X secrets, Shorts Maker, Sites embeds |
 | `docs/TROUBLESHOOTING.md` | Errors seen so far and their fixes |
