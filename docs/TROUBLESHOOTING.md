@@ -62,3 +62,8 @@ Tests must run with `env -u GITHUB_TOKEN -u GH_TOKEN` so nothing reaches the rea
 
 **Copyright claim on your own song**
 Usually your own DistroKid Content ID. Ask DistroKid to allowlist @danyeloz1554; a dispute letter is the fallback.
+
+## Spotify
+
+**"Exceeded maximum execution time" on previewSpotify, then "Spotify asked to pause for about 23 hours"**
+The first version of `tools/SpotifyBackfill.gs` asked Spotify too fast (several lookups a second, with retries), and Spotify paused the app for about a day (Nov 12, 2026). Fixed: one lookup every 0.8 s, a 4-minute stop that saves its place, and a clean stop on long waits that says when to try again. Wait out the pause; don't make a second app to get around it.

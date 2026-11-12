@@ -224,6 +224,8 @@ Private repo only (they describe how the project runs; nothing secret in them).
 | `.claude/skills/release-day/` | The every-2-weeks release checklist |
 | `.claude/skills/song-database/` | Reading and safely changing the Song Database; filling store details from Deezer and Apple |
 | `.claude/skills/sheets-integration/` | Turning requests into exact sheet ranges and batch writes, JSON payloads and `doPost` webhooks (secured), data cleanup |
+| `.claude/skills/systematic-debugging/` | Before fixing anything that broke: find the real cause first (borrowed from obra/superpowers, MIT) |
+| `.claude/skills/verify-before-done/` | Before saying anything is done: fresh proof first, and say which parts only Daniel can check (borrowed from obra/superpowers, MIT) |
 | `.claude/skills/widget-work/` | Building or changing a website widget, theme, safety rules, tests |
 | `.claude/skills/admin-app/` | Changing, testing and handing over the Apps Script app |
 | `.claude/skills/shorts-maker/` | Running or fixing the Shorts Maker |
