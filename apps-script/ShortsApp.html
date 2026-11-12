@@ -80,14 +80,20 @@
     }, function (e) { say('sxAddStatus', 'Couldn’t list the Drive folder: ' + e.message, 'err'); });
   }
   function fillSongs() {
-    var sel = clear(el('sxSong'));
-    sel.appendChild(h('option', { value: '', text: 'Pick a song (' + SX.data.songs.length + ')' }));
-    SX.data.songs.slice().sort(function (a, b) { return String(b.release_date).localeCompare(String(a.release_date)); })
-      .forEach(function (s) {
+    var sel = el('sxSong'), keep = sel.value;
+    var q = String(el('sxSongSearch').value || '').toLowerCase().replace(/[’']/g, "'").trim();
+    var list = SX.data.songs.slice().sort(function (a, b) { return String(b.release_date).localeCompare(String(a.release_date)); })
+      .filter(function (s) { return !q || String(s.song_title).toLowerCase().replace(/[’']/g, "'").indexOf(q) >= 0; });
+    clear(sel);
+    sel.appendChild(h('option', { value: '', text: q ? (list.length ? list.length + ' match' + (list.length === 1 ? '' : 'es') : 'No song matches') : 'Pick a song (' + SX.data.songs.length + ')' }));
+    list.forEach(function (s) {
         sel.appendChild(h('option', { value: songKey(s), text: s.song_title + '  (' + [s.release_date, s.release_type].filter(Boolean).join(' · ') + ')' + (s.hasStory ? '' : '  · no story yet') }));
       });
+    if (keep && list.some(function (s) { return songKey(s) === keep; })) sel.value = keep;
+    else if (q && list.length === 1) sel.value = songKey(list[0]);   // one match: pick it
     if (SX.pendingSong) { sel.value = SX.pendingSong; SX.pendingSong = ''; }
   }
+  el('sxSongSearch').addEventListener('input', function () { if (SX.data) fillSongs(); });
   function fillAngles() {
     var sel = clear(el('sxAngle'));
     Object.keys(SX.data.angles).forEach(function (k) { sel.appendChild(h('option', { value: k, text: SX.data.angles[k] })); });
@@ -442,7 +448,7 @@
   function scheduleFor(song) {
     var key = songKey(song);
     viewTo('shorts');
-    if (SX.data) { el('sxSong').value = key; el('sxSong').focus(); }
+    if (SX.data) { el('sxSongSearch').value = ''; fillSongs(); el('sxSong').value = key; el('sxSong').focus(); }
     else SX.pendingSong = key;
     window.scrollTo(0, 0);
   }
