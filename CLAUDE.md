@@ -1,6 +1,6 @@
 # Danyel OZ: project handbook
 
-_Last updated: November 10, 2026 (Albums page added). One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
+_Last updated: November 12, 2026 (Shorts Maker, skills and agents added). One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
 
 **Copies of this file** (keep them identical; update all three together):
 1. `CLAUDE.md` in private repo **dcvizcayno/DanyelOZ-Official-Website** (Claude Code reads it automatically)
@@ -209,3 +209,27 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 - **Widgets on GitHub Pages:** edit in danyeloz-embeds and the site updates within about 10 minutes, no pasting.
 - **The data entry app stays private** ("Only myself"), so one link controls the whole site's content.
 - **Home theme (Nov 10, 2026): red, white and black**, matching Explore the Music. Fonts: Anton (titles), Oswald (labels, buttons), Great Vibes (script lines). Reds `#e3122a` (tags, hover) and `#b0101f` (emphasis text). Upcoming card: red-washed with the blurred cover behind it. Latest card: black with a red glow. Story panels: white, black titles, red for the first story line and labels. Streaming buttons: white outline, spaced capitals, red on hover. Bandcamp players are asked for a black background and red links. Music Highlights: site red on every card (`USE_ACCENTS = true` brings back each act's sheet color).
+
+---
+
+## 10. Working with Claude: skills, agents, docs
+
+Private repo only (they describe how the project runs; nothing secret in them).
+
+| File | Use it for |
+|---|---|
+| `.claude/skills/release-day/` | The every-2-weeks release checklist |
+| `.claude/skills/song-database/` | Reading and safely changing the Song Database; filling store details from Deezer and Apple |
+| `.claude/skills/widget-work/` | Building or changing a website widget, theme, safety rules, tests |
+| `.claude/skills/admin-app/` | Changing, testing and handing over the Apps Script app |
+| `.claude/skills/shorts-maker/` | Running or fixing the Shorts Maker |
+| `.claude/skills/x-agent/` | Operating or changing the X post agent |
+| `.claude/agents/widget-tester.md` | Mocked-data browser tests of a widget, desktop and phone |
+| `.claude/agents/data-auditor.md` | Read-only audit of Song Database gaps and data health |
+| `.claude/agents/voice-editor.md` | Checking copy against the voice rules |
+| `.claude/agents/app-reviewer.md` | Safety review of an app or Shorts Maker change before handover |
+| `docs/SETUP.md` | Every one-time setup: Apps Script, Script Properties, GitHub token, YouTube permission, X secrets, Shorts Maker, Sites embeds |
+| `docs/TROUBLESHOOTING.md` | Errors seen so far and their fixes |
+
+Daniel's local copy of this repo: `~/DanyelOZ_Official WebSite` on his Mac.
+
