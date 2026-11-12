@@ -1,10 +1,17 @@
-<!-- Danyel OZ admin: Albums Page screen (behavior). Included at the end of Form.html. -->
+<!-- Danyel OZ admin: Albums Page and EPs Page screens (behavior). One screen, two pages. Included at the end of Form.html. -->
 <script>
 (function () {
   'use strict';
-  var AL = { data: null, dirty: {}, filter: 'all', sel: '', cols: [], order: {}, colsDirty: false, loaded: false };
-  var NONE = '';   // albums switched on but not in a collection yet
-  var KIND_NAMES = { unsorted: 'Not sorted yet', main: 'Main album', installment: 'Installment (waterfall release)', ep: 'Became an EP (under 10 songs)', single: 'Really a single' };
+  var AL = { data: null, dirty: {}, filter: 'all', sel: '', cols: [], order: {}, colsDirty: false, loaded: false, page: 'album' };
+  var NONE = '';   // releases switched on but not in a collection yet
+  var KIND_NAMES = {
+    album: { unsorted: 'Not sorted yet', main: 'Main album', installment: 'Installment (waterfall release)', ep: 'Became an EP (shows on the EPs page)', single: 'Really a single' },
+    ep: { unsorted: 'Not sorted yet', ep: 'A real EP', installment: 'Part of an album (waterfall release)', single: 'Really a single' }
+  };
+  function isEp() { return AL.page === 'ep'; }
+  function w(album, ep) { return isEp() ? ep : album; }   // the right word for the page
+  /* Can this release show as a card on this page? */
+  function canShow(x) { return x.kind !== 'single' && (isEp() ? x.kind !== 'installment' : x.kind !== 'ep'); }
 
   function el(id) { return document.getElementById(id); }
   function h(tag, props, kids) {
@@ -40,26 +47,41 @@
   var prevView = window.onAdminView;
   window.onAdminView = function (v) {
     if (prevView) prevView(v);
-    if (v === 'albums' && !AL.loaded) loadAlbums();
+    if (v !== 'albums' && v !== 'eps') return;
+    el('viewAlbums').hidden = false;   // the EPs Page uses this same screen
+    var page = v === 'eps' ? 'ep' : 'album';
+    if (page !== AL.page) { AL.page = page; AL.loaded = false; AL.sel = ''; AL.filter = 'all';
+      document.querySelectorAll('[data-alf]').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-alf') === 'all'); }); }
+    setWords();
+    if (!AL.loaded) loadAlbums();
   };
+  function setWords() {
+    document.querySelectorAll('[data-al-words]').forEach(function (n) {
+      var t = n.getAttribute('data-al-words').split('|'); n.textContent = isEp() ? t[1] : t[0];
+    });
+    el('alSearch').placeholder = w('Search albums', 'Search EPs');
+  }
 
   function loadAlbums() {
     AL.loaded = true;
-    call('getAlbumsAdmin', [], function (d) {
+    var page = AL.page;
+    clear(el('alLib')).appendChild(h('div', { cls: 'list-empty', text: 'Loading…' }));
+    call('getAlbumsAdmin', [page], function (d) {
+      if (page !== AL.page) return;   // switched pages while loading
       AL.data = d; AL.dirty = {}; AL.colsDirty = false;
       AL.cols = d.collections.map(function (c) { return Object.assign({ was: c.name }, c); });
       buildOrder();
       renderAll();
     }, function (e) {
       AL.loaded = false;
-      clear(el('alLib')).appendChild(h('div', { cls: 'list-empty', text: 'Couldn’t load albums: ' + e.message }));
+      clear(el('alLib')).appendChild(h('div', { cls: 'list-empty', text: 'Couldn’t load: ' + e.message }));
     });
   }
   function buildOrder() {
     AL.order = {};
     AL.cols.forEach(function (c) { AL.order[c.name] = []; });
     AL.order[NONE] = [];
-    AL.data.library.filter(function (a) { return eff(a).show; })
+    AL.data.library.filter(function (a) { var x = eff(a); return x.show && canShow(x); })
       .sort(function (a, b) { return (a.position || 99) - (b.position || 99); })
       .forEach(function (a) {
         var col = AL.cols.some(function (c) { return c.name === a.collection; }) ? a.collection : NONE;
@@ -71,26 +93,26 @@
   /* ---------- top cards ---------- */
   function renderFeatured() {
     var sel = clear(el('alFeatured'));
-    sel.appendChild(h('option', { value: '', text: 'My newest album with a story (automatic)' }));
-    AL.data.library.filter(function (a) { var x = eff(a); return x.show && x.kind === 'main'; }).forEach(function (a) {
+    sel.appendChild(h('option', { value: '', text: w('My newest album with a story (automatic)', 'My newest EP with a story (automatic)') }));
+    AL.data.library.filter(function (a) { var x = eff(a); return x.show && (isEp() ? canShow(x) : x.kind === 'main'); }).forEach(function (a) {
       sel.appendChild(h('option', { value: key(a), text: a.song_title + ' (' + String(a.release_date).slice(0, 4) + ')' }));
     });
-    var f = AL.data.library.filter(function (a) { return a.featured; })[0];
+    var f = AL.data.library.filter(function (a) { return a.featured && canShow(a); })[0];
     sel.value = f ? key(f) : '';
   }
   el('alSaveFeat').addEventListener('click', function () {
     var a = byKey(el('alFeatured').value);
     say('alFeatStatus', 'Saving…');
-    call('setFeaturedAlbum', [a ? { song_id: a.song_id, song_title: a.song_title } : null], function (r) {
+    call('setFeaturedAlbum', [a ? { song_id: a.song_id, song_title: a.song_title } : null, AL.page], function (r) {
       AL.data.library.forEach(function (x) { x.featured = !!a && key(x) === key(a); });
-      say('alFeatStatus', r.featured === 'auto' ? 'The page now picks your newest album.' : 'Saved. “' + r.featured + '” is now spinning.', 'ok');
+      say('alFeatStatus', r.featured === 'auto' ? w('The page now picks your newest album.', 'The page now picks your newest EP.') : 'Saved. “' + r.featured + '” is now spinning.', 'ok');
     }, function (e) { say('alFeatStatus', e.message, 'err'); });
   });
   function renderNext() {
     var box = clear(el('alNext')), now = today();
-    var next = AL.data.library.filter(function (a) { var x = eff(a); return x.release_date > now && x.kind !== 'single' && x.kind !== 'ep'; })
+    var next = AL.data.library.filter(function (a) { var x = eff(a); return x.release_date > now && canShow(x); })
       .sort(function (a, b) { return String(a.release_date).localeCompare(String(b.release_date)); })[0];
-    if (!next) { box.appendChild(h('p', { cls: 'sx-note', text: 'No album with a future release date. Add one in Songs and it shows here.' })); return; }
+    if (!next) { box.appendChild(h('p', { cls: 'sx-note', text: w('No album', 'No EP') + ' with a future release date. Add one in Songs and it shows here.' })); return; }
     var days = Math.round((Date.parse(next.release_date) - Date.parse(now)) / 86400000);
     box.appendChild(h('div', { cls: 'al-next' }, [
       thumb(next.cover) ? h('img', { src: thumb(next.cover), alt: '' }) : h('div', { cls: 'al-thumb' }),
@@ -102,7 +124,7 @@
     if (notes.length) box.appendChild(h('div', { cls: 'sx-warn', style: 'margin-top:10px', text: notes.join(' ') }));
   }
   function renderChecks() {
-    var box = clear(el('alChecks')), shown = AL.data.library.map(eff).filter(function (a) { return a.show; });
+    var box = clear(el('alChecks')), shown = AL.data.library.map(eff).filter(function (a) { return a.show && canShow(a); });
     var list = [];
     var noStory = shown.filter(function (a) { return !a.story; }).map(function (a) { return a.song_title; });
     var noBc = shown.filter(function (a) { return !a.bandcamp; }).map(function (a) { return a.song_title; });
@@ -111,8 +133,8 @@
     if (noStory.length) list.push(noStory.join(', ') + (noStory.length > 1 ? ' have' : ' has') + ' no story yet, so the page shows a short fallback line.');
     if (noBc.length) list.push(noBc.join(', ') + (noBc.length > 1 ? ' have' : ' has') + ' no Bandcamp code, so there’s no player.');
     if (orphan) list.push(orphan + ' installment' + (orphan > 1 ? 's don’t' : ' doesn’t') + ' say which main album ' + (orphan > 1 ? 'they belong' : 'it belongs') + ' to.');
-    if (unsorted) list.push(unsorted + ' release' + (unsorted > 1 ? 's are' : ' is') + ' not sorted yet in the Album library.');
-    if (!list.length) { box.appendChild(h('p', { cls: 'sx-note', text: 'All good. Every album on the page has a story and a player.' })); return; }
+    if (unsorted) list.push(unsorted + ' release' + (unsorted > 1 ? 's are' : ' is') + ' not sorted yet in the ' + w('Album', 'EP') + ' library.');
+    if (!list.length) { box.appendChild(h('p', { cls: 'sx-note', text: 'All good. Every ' + w('album', 'EP') + ' on the page has a story and a player.' })); return; }
     list.forEach(function (t) { box.appendChild(h('div', { cls: 'al-warn' }, [h('b', { text: '!' }), h('span', { text: t })])); });
   }
 
@@ -127,7 +149,7 @@
   el('alSearch').addEventListener('input', function () { renderLib(); });
   function setDirty(a, change) {
     var k = key(a), cur = eff(a), next = Object.assign({ kind: cur.kind, part_of: cur.part_of, show: cur.show }, change);
-    if (next.kind === 'single') next.show = false;
+    if (!canShow(next) && !(next.kind === 'ep' && !isEp())) next.show = false;
     if (next.kind !== 'installment') next.part_of = '';
     if (next.kind === a.kind && next.part_of === a.part_of && next.show === a.show) delete AL.dirty[k];
     else AL.dirty[k] = next;
@@ -135,8 +157,9 @@
   function renderLib() {
     var box = clear(el('alLib')), q = el('alSearch').value.trim().toLowerCase();
     var all = AL.data.library.map(eff);
-    el('alLibCount').textContent = '(' + all.length + ' marked Album · ' + all.filter(function (a) { return a.show; }).length + ' on the page)';
-    var mains = all.filter(function (a) { return a.kind === 'main'; });
+    el('alLibCount').textContent = '(' + all.length + ' releases · ' + all.filter(function (a) { return a.show && canShow(a); }).length + ' on the page)';
+    var mains = isEp() ? AL.data.mainAlbums.map(function (t) { return { song_title: t, song_id: '' }; })
+                       : all.filter(function (a) { return a.kind === 'main'; });
     box.appendChild(h('div', { cls: 'al-row head' }, [h('span', { text: 'RELEASE' }), h('span', { text: 'WHAT IT REALLY IS' }), h('span', { text: 'PART OF' }), h('span', { text: 'ON THE PAGE', style: 'text-align:center' })]));
     var rows = AL.data.library.filter(function (a) {
       var x = eff(a), f = AL.filter;
@@ -147,7 +170,7 @@
     rows.forEach(function (a) {
       var x = eff(a);
       var kind = h('select', { 'aria-label': 'What ' + a.song_title + ' really is', onchange: function () { setDirty(a, { kind: this.value }); refreshLib(); } });
-      AL.data.kinds.forEach(function (k) { kind.appendChild(h('option', { value: k, text: KIND_NAMES[k] })); });
+      AL.data.kinds.forEach(function (k) { kind.appendChild(h('option', { value: k, text: KIND_NAMES[AL.page][k] })); });
       kind.value = x.kind;
       var part = null;
       if (x.kind === 'installment') {
@@ -155,14 +178,16 @@
         part.appendChild(h('option', { value: '', text: 'Pick the main album…' }));
         mains.filter(function (m) { return key(m) !== key(a); }).forEach(function (m) { part.appendChild(h('option', { value: m.song_title, text: m.song_title })); });
         part.value = x.part_of;
-      } else part = h('span', { cls: 'sx-note', text: 'Only for installments' });
-      var show = h('input', { type: 'checkbox', checked: !!x.show, disabled: x.kind === 'single', 'aria-label': 'Show ' + a.song_title + ' on the Albums page',
+      } else part = h('span', { cls: 'sx-note', text: isEp() ? 'Only for album parts' : 'Only for installments' });
+      var can = canShow(x);
+      var show = h('input', { type: 'checkbox', checked: !!x.show && can, disabled: !can, 'aria-label': 'Show ' + a.song_title + ' on the ' + w('Albums', 'EPs') + ' page',
         onchange: function () { setDirty(a, { show: this.checked }); refreshLib(); } });
+      var showText = can ? (x.show ? 'Showing' : 'Hidden') : (x.kind === 'ep' ? 'On EPs page' : x.kind === 'installment' ? 'In its album' : 'Hidden');
       box.appendChild(h('div', { cls: 'al-row' + (x.show ? ' on' : '') + (AL.dirty[key(a)] ? ' dirty' : '') }, [
         h('div', { cls: 't', title: a.song_title }, [document.createTextNode(a.song_title), h('small', {}, [
-          document.createTextNode(a.release_date + ' · '), h('span', { cls: a.bandcamp ? 'ok' : 'no', text: a.bandcamp ? 'Bandcamp' : 'no Bandcamp code' }),
+          document.createTextNode(a.release_date + (isEp() && a.type === 'Album' ? ' · marked Album' : '') + ' · '), h('span', { cls: a.bandcamp ? 'ok' : 'no', text: a.bandcamp ? 'Bandcamp' : 'no Bandcamp code' }),
           document.createTextNode(' · '), h('span', { cls: a.story ? 'ok' : 'no', text: a.story ? 'story' : 'no story' })])]),
-        kind, part, h('label', {}, [show, x.show ? 'Showing' : 'Hidden'])
+        kind, part, h('label', {}, [show, showText])
       ]));
     });
     el('alLibDirty').textContent = Object.keys(AL.dirty).length;
@@ -172,7 +197,7 @@
   el('alSaveLib').addEventListener('click', function () {
     var list = Object.keys(AL.dirty).map(function (k) { var a = byKey(k); return Object.assign({ song_id: a.song_id, song_title: a.song_title }, AL.dirty[k]); });
     var b = this; b.disabled = true; say('alLibStatus', 'Saving…');
-    call('saveAlbumLibrary', [list], function (r) {
+    call('saveAlbumLibrary', [list, AL.page], function (r) {
       say('alLibStatus', 'Saved ' + r.saved + ' change' + (r.saved === 1 ? '' : 's') + '.', 'ok');
       AL.loaded = false; loadAlbums();
     }, function (e) { b.disabled = false; say('alLibStatus', e.message, 'err'); });
@@ -199,7 +224,7 @@
             h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: '▲', 'aria-label': 'Move collection up', disabled: i === 0, onclick: function () { moveCol(c, -1); } }),
             h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: '✕', 'aria-label': 'Remove collection', onclick: function () {
               var n = (AL.order[c.name] || []).length;
-              if (n && !confirm('Remove “' + c.name + '”? Its ' + n + ' album' + (n > 1 ? 's go' : ' goes') + ' to “not in a collection yet” until you drag ' + (n > 1 ? 'them' : 'it') + ' into another one.')) return;
+              if (n && !confirm('Remove “' + c.name + '”? Its ' + n + ' ' + w('album', 'EP') + (n > 1 ? 's go' : ' goes') + ' to “not in a collection yet” until you drag ' + (n > 1 ? 'them' : 'it') + ' into another one.')) return;
               AL.order[NONE] = AL.order[NONE].concat(AL.order[c.name] || []); delete AL.order[c.name];
               if (c.was) c.removed = true; else AL.cols.splice(AL.cols.indexOf(c), 1);
               AL.colsDirty = true; renderCols();
@@ -225,7 +250,7 @@
         chip.addEventListener('drop', function (e) { e.preventDefault(); e.stopPropagation(); if (dragKey && dragKey !== k) moveAlbum(dragKey, c.name, k); });
         chips.appendChild(chip);
       });
-      if (!(AL.order[c.name] || []).length) chips.appendChild(h('span', { cls: 'sx-note', text: 'Drag albums here' }));
+      if (!(AL.order[c.name] || []).length) chips.appendChild(h('span', { cls: 'sx-note', text: w('Drag albums here', 'Drag EPs here') }));
       box.appendChild(h('div', { cls: 'al-col' }, [head, chips]));
     });
     el('alAddCol').disabled = AL.cols.filter(function (c) { return !c.removed; }).length >= AL.data.maxCollections;
@@ -256,9 +281,9 @@
     Object.keys(AL.order).forEach(function (col) {
       order[col] = AL.order[col].map(function (k) { var a = byKey(k); return { song_id: a.song_id, song_title: a.song_title }; });
     });
-    call('saveAlbumCollections', [cols], function () {
+    call('saveAlbumCollections', [cols, AL.page], function () {
       call('saveAlbumOrder', [order], function () {
-        b.disabled = false; say('alColStatus', 'Saved. Your Albums page shows the new order within a minute.', 'ok');
+        b.disabled = false; say('alColStatus', 'Saved. Your ' + w('Albums', 'EPs') + ' page shows the new order within a minute.', 'ok');
         AL.loaded = false; loadAlbums();
       }, function (e) { b.disabled = false; say('alColStatus', e.message, 'err'); });
     }, function (e) { b.disabled = false; say('alColStatus', e.message, 'err'); });
@@ -267,11 +292,11 @@
   /* ---------- one album ---------- */
   function renderEdit() {
     var box = clear(el('alEdit')), a = AL.sel && byKey(AL.sel);
-    if (!a) { box.appendChild(h('div', { cls: 'sx-empty', text: 'Click an album to edit its color, hook, tracks and store link.' })); return; }
+    if (!a) { box.appendChild(h('div', { cls: 'sx-empty', text: 'Click ' + w('an album', 'an EP') + ' to edit its color, hook, tracks and store link.' })); return; }
     var col = Object.keys(AL.order).filter(function (c) { return AL.order[c].indexOf(AL.sel) >= 0; })[0] || '';
     var accent = /^#[0-9a-f]{6}$/i.test(a.accent) ? a.accent.toUpperCase() : '#E3122A';
-    var picker = h('input', { type: 'color', value: accent, 'aria-label': 'Album color' });
-    var hex = h('input', { type: 'text', value: accent, 'aria-label': 'Album color code', maxlength: '7' });
+    var picker = h('input', { type: 'color', value: accent, 'aria-label': w('Album', 'EP') + ' color' });
+    var hex = h('input', { type: 'text', value: accent, 'aria-label': w('Album', 'EP') + ' color code', maxlength: '7' });
     picker.addEventListener('input', function () { hex.value = picker.value.toUpperCase(); box.style.borderColor = picker.value; });
     hex.addEventListener('input', function () { if (/^#[0-9a-f]{6}$/i.test(hex.value)) { picker.value = hex.value; box.style.borderColor = hex.value; } });
     var sw = h('div', { cls: 'al-sw' }, [picker, hex]);
@@ -282,16 +307,16 @@
     var hook = h('input', { value: a.hook, maxlength: '120', placeholder: 'Leave blank to use the story’s first line' });
     var tracks = h('input', { value: a.tracks, inputmode: 'numeric', maxlength: '3' });
     var bonus = h('input', { value: a.bonus, inputmode: 'numeric', maxlength: '3' });
-    var store = h('input', { value: a.store_url, type: 'url', placeholder: 'Leave blank to use the Bandcamp album page' });
+    var store = h('input', { value: a.store_url, type: 'url', placeholder: 'Leave blank to use the Bandcamp page' });
     box.style.borderColor = accent;
     box.appendChild(h('div', { cls: 'hd' }, [thumb(a.cover) ? h('img', { src: thumb(a.cover), alt: '' }) : null,
       h('div', {}, [h('b', { text: a.song_title }), h('span', { cls: 'sx-note', text: a.release_date + (col ? ' · ' + col : ' · not in a collection yet') })])]));
-    box.appendChild(field('Album color', sw, 'the sleeve, vinyl label and buttons on the page'));
+    box.appendChild(field(w('Album', 'EP') + ' color', sw, 'the sleeve, vinyl label and buttons on the page'));
     box.appendChild(field('One-line hook', hook, 'shows when a fan hovers the cover'));
     box.appendChild(h('div', { cls: 'row2' }, [field('Tracks', tracks), field('Bonus tracks', bonus)]));
     box.appendChild(field('Store link', store, 'vinyl, CD or merch'));
     box.appendChild(h('div', { style: 'display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px' }, [
-      h('button', { type: 'button', cls: 'primary', text: 'Save album', onclick: function () {
+      h('button', { type: 'button', cls: 'primary', text: w('Save album', 'Save EP'), onclick: function () {
         var btn = this; btn.disabled = true; say('alEditStatus', 'Saving…');
         var d = { song_id: a.song_id, song_title: a.song_title, collection: col, accent: hex.value, hook: hook.value, tracks: tracks.value, bonus: bonus.value, store_url: store.value };
         call('saveAlbumDetails', [d], function () {
@@ -301,7 +326,7 @@
       } }),
       h('span', { cls: 'sx-status', id: 'alEditStatus' })
     ]));
-    if (!a.story) box.appendChild(h('p', { cls: 'sx-note', style: 'margin-top:10px', text: 'This album has no story yet. Add it in the Songs screen (song_description) and the page picks it up.' }));
+    if (!a.story) box.appendChild(h('p', { cls: 'sx-note', style: 'margin-top:10px', text: 'This ' + w('album', 'EP') + ' has no story yet. Add it in the Songs screen (song_description) and the page picks it up.' }));
   }
 })();
 </script>

@@ -246,6 +246,7 @@
       <button type="button" data-view="analytics">Analytics</button>
       <button type="button" data-view="singles">Singles Page</button>
       <button type="button" data-view="albums">Albums Page</button>
+      <button type="button" data-view="eps">EPs Page</button>
     </nav>
   </div>
 </header>
@@ -903,7 +904,7 @@
       $('viewFeatures').hidden = v !== 'features';
       $('viewExplore').hidden = v !== 'explore';
       $('viewHighlights').hidden = v !== 'highlights';
-      ['shorts', 'maker', 'x', 'analytics', 'singles', 'albums'].forEach(function (k) {
+      ['shorts', 'maker', 'x', 'analytics', 'singles', 'albums', 'eps'].forEach(function (k) {
         var el = $('view' + k.charAt(0).toUpperCase() + k.slice(1)); if (el) el.hidden = v !== k;
       });
       if (window.onAdminView) window.onAdminView(v);

@@ -1,4 +1,4 @@
-<!-- Danyel OZ admin: Albums Page screen (layout). Included by Form.html. -->
+<!-- Danyel OZ admin: Albums Page and EPs Page screen (layout; the words switch per page). Included by Form.html. -->
 <style>
   .al-top { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; }
   .al-top > .card { flex: 1 1 320px; min-width: 0; margin: 0; }
@@ -49,7 +49,7 @@
   <div class="al-top">
     <div class="card">
       <h2>Now spinning</h2>
-      <p class="sx-note" style="margin:-6px 0 10px">The big album at the top of the page.</p>
+      <p class="sx-note" style="margin:-6px 0 10px" data-al-words="The big album at the top of the page.|The big EP at the top of the page.">The big album at the top of the page.</p>
       <select id="alFeatured" aria-label="Featured album"></select>
       <div class="sg-bar" style="margin-top:10px"><button type="button" class="primary sx-btn-sm" id="alSaveFeat">Save</button><span class="sx-status" id="alFeatStatus"></span></div>
     </div>
@@ -58,14 +58,14 @@
       <div id="alNext"><div class="list-empty">Loading…</div></div>
     </div>
     <div class="card">
-      <h2>Check your albums</h2>
+      <h2 data-al-words="Check your albums|Check your EPs">Check your albums</h2>
       <div id="alChecks"></div>
     </div>
   </div>
 
   <div class="card" style="margin-bottom:20px">
-    <h2>Album library <span class="count" id="alLibCount"></span></h2>
-    <p class="sx-note" style="margin:-6px 0 12px">Everything marked Album in your Song Database. Say what each one really is, and switch on the ones you want on the Albums page. Your songs’ release types don’t change.</p>
+    <h2><span data-al-words="Album library|EP library">Album library</span> <span class="count" id="alLibCount"></span></h2>
+    <p class="sx-note" style="margin:-6px 0 12px" data-al-words="Everything marked Album in your Song Database. Say what each one really is, and switch on the ones you want on the Albums page. Your songs’ release types don’t change.|Everything marked EP in your Song Database, plus albums you sorted as “became an EP”. Say what each one really is: a real EP, part of an album (a waterfall release, shown inside that album on the Albums page), or really a single. Switch on the real EPs you want on the EPs page. Your songs’ release types don’t change.">Everything marked Album in your Song Database. Say what each one really is, and switch on the ones you want on the Albums page. Your songs’ release types don’t change.</p>
     <div class="sg-filter">
       <input id="alSearch" placeholder="Search albums" aria-label="Search albums">
       <button type="button" class="ghost on" data-alf="all">All</button>
@@ -81,8 +81,8 @@
   </div>
 
   <div class="card">
-    <h2>Collections and albums <span class="count" id="alColCount"></span></h2>
-    <p class="sx-note" style="margin:-6px 0 12px">Albums switched on in the library appear here. Click one to edit it. Drag albums to reorder them or to move them to another collection.</p>
+    <h2><span data-al-words="Collections and albums|Collections and EPs">Collections and albums</span> <span class="count" id="alColCount"></span></h2>
+    <p class="sx-note" style="margin:-6px 0 12px"><span data-al-words="Albums|EPs">Albums</span> switched on in the library appear here. Click one to edit it. Drag albums to reorder them or to move them to another collection.</p>
     <div class="al-cols">
       <div style="flex:3 1 520px;min-width:0">
         <div id="alCols"><div class="list-empty">Loading…</div></div>

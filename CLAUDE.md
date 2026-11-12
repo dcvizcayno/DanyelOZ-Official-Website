@@ -1,6 +1,6 @@
 # Danyel OZ: project handbook
 
-_Last updated: November 12, 2026 (Shorts Maker, skills and agents added). One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
+_Last updated: November 12, 2026 (EPs page added). One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
 
 **Copies of this file** (keep them identical; update all three together):
 1. `CLAUDE.md` in private repo **dcvizcayno/DanyelOZ-Official-Website** (Claude Code reads it automatically)
@@ -58,8 +58,8 @@ Shared as **Anyone with the link: Viewer** so the widgets can read it. That mean
 | `music_highlights` (1521214689) | Music Highlights | Music Highlights |
 | `featured_singles` (read by name) | Singles Page | Featured Singles |
 | `themes` (read by name) | Singles Page | Explore by Theme |
-| `albums` (read by name) | Albums Page | Albums page |
-| `album_collections` (read by name) | Albums Page | Albums page |
+| `albums` (read by name) | Albums Page, EPs Page | Albums and EPs pages |
+| `album_collections` (read by name) | Albums Page, EPs Page | Albums and EPs pages |
 
 **Song columns (Sheet1):** `song_id` (Apple collection ID), `song_title`, `release_date` (yyyy-mm-dd), `release_type` (Single, EP, Album),
 `song_genre` ("Acoustic" puts a song on the Live page), `song_description` (first paragraph = intro line; blank line between paragraphs),
@@ -70,7 +70,7 @@ Shared as **Anyone with the link: Viewer** so the widgets can read it. That mean
 **Other tabs:** `features`: month (YYYY-MM), slot 1 to 3, song_id, yt_video_link, title, description.
 `explore`: order, visible, title, script, sub, text, link, image, focus.
 `featured_singles`: position 1 to 10, song_id, song_title (only songs with a Bandcamp code). `themes`: slot 1 to 5, theme, tagline, visible.
-`albums`: song_id, song_title, kind (unsorted, main, installment, ep, single), part_of, show, collection, position, accent, hook, tracks, bonus, store_url, featured. It never changes a song's `release_type`. `album_collections`: slot, name, tagline, alias (another stage name), visible; up to 8.
+`albums`: song_id, song_title, kind (unsorted, main, installment, ep, single), part_of, show, collection, position, accent, hook, tracks, bonus, store_url, featured. It never changes a song's `release_type`. `album_collections`: slot, name, tagline, alias (another stage name), visible, page (`ep` for the EPs page, blank for Albums); up to 8 per page. A row's `kind` decides its page: `main` Albums, `ep` EPs (whatever its release_type), `installment` inside its album's sleeve (EP-type installments show on neither page), `single` nowhere. Featured is kept per page.
 `music_highlights`: month, slot, actLabel, title, subtitle, catalogTag, accentHex, bandcamp_embed, coverImageUrl, and four platform links. Its "Row" and "Actions" columns are unused and left alone.
 
 **Coverage (Nov 11, 2026, after the store backfill):** 273 releases. `song_id` 267, `song_upc` 267 (all stored as text), `appl_music_link` 266, `song_ISRC` 215 (single-track releases; EPs and albums left blank), `song_description` 44, `bandcamp_embed` 56, `song_arts` 273 (all; covers backfilled Nov 11).
@@ -98,6 +98,7 @@ Deployed as a web app, **Execute as: Me**, **Who has access: Only myself**. Afte
 | X Posts | The X agent's waiting draft: edit, Revise (with a note), Post, Draft one now, Pause drafts. Same as ticking boxes on the GitHub Issue |
 | Singles Page | **Featured singles**: 10 slots, Bandcamp songs only, drag or arrows to reorder, fill empty slots with the newest singles. **Themes**: up to 5 (name, short line, show or hide); a rename or removal carries over to every song. **Theme your songs**: give many songs Theme 1 and 2 at once |
 | Albums Page | **Now spinning** (pick the hero album or leave it automatic), **Coming next** (automatic), **Checks** (missing story or Bandcamp, unsorted). **Album library**: every row marked Album; say what it really is (main, installment of which album, became an EP, really a single) and switch it on or off for the page. **Collections**: up to 8, name, short line, other stage name; drag albums to order or move them. **Album editor**: color, hook, tracks, bonus, store link. First use seeds the 10 albums already on the page |
+| EPs Page | The same screen as Albums Page for releases marked EP (plus albums sorted as "became an EP"): **A real EP** (can show), **Part of an album** (waterfall release; pick the album; listed in that album's sleeve), **Really a single**. Its own collections, now spinning and coming next |
 | Analytics | YouTube numbers for Shorts uploaded from the app, X numbers from the agent's log, hashtag ranking, Export CSV and summary (to Drive folder "Danyel OZ Reports") |
 
 **Shorts schedule lives in a separate private sheet**, "Danyel OZ Shorts (private)", which the app creates on first use (its ID is kept in Script Properties as `SHORTS_SHEET_ID`). Nothing about Shorts goes in the public Song Database.
@@ -126,6 +127,7 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 |---|---|
 | Home | `player.html` + `song-info.html` (Listen Now), `upcoming-player.html` + `upcoming-details.html` (Upcoming Release), `featured-videos.html`, `music-highlights.html`, `explore-music.html` |
 | Released | `explore-releases.html`, `release-shelf.html?type=Single|EP|Album|Holiday`; Singles page: `featured-singles.html` (10 picks, details left, player right, 01 to 10 strip), `explore-themes.html` (theme tiles, play button opens a small player, Read more, Share) |
+| EPs | `albums.html?page=ep`: the Albums design for EPs (EP tags, "Buy the EP", EP collections, Coming next for EPs). `EPS_URL` in Settings once the page address is known |
 | Albums | `albums.html`: Coming next banner on top (countdown, pre-order; hidden when nothing is coming; `NEXT_ON_TOP = false` moves it to the bottom), Now spinning hero, collection rows of covers, a sleeve in the album's color opens under its row (Bandcamp album player, story, Buy or Store, Share, installments listed). Falls back to albums with Bandcamp and a story if the tabs are empty. `albums.html?only=next` is just the banner for other pages; with nothing coming it shows the latest album |
 | Behind the Scenes | `tiny-desk.html`, `in-progress.html` |
 | Connect | `follow-along.html`, `letter.html` (Cognito), plus the Cognito contact form embed |
