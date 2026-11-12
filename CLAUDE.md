@@ -1,6 +1,6 @@
 # Danyel OZ: project handbook
 
-_Last updated: November 12, 2026 (EPs page added). One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
+_Last updated: November 12, 2026 (EPs page and seasonal Holiday Music page added). One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
 
 **Copies of this file** (keep them identical; update all three together):
 1. `CLAUDE.md` in private repo **dcvizcayno/DanyelOZ-Official-Website** (Claude Code reads it automatically)
@@ -69,7 +69,7 @@ Shared as **Anyone with the link: Viewer** so the widgets can read it. That mean
 
 **Other tabs:** `features`: month (YYYY-MM), slot 1 to 3, song_id, yt_video_link, title, description.
 `explore`: order, visible, title, script, sub, text, link, image, focus.
-`featured_singles`: position 1 to 10, song_id, song_title (only songs with a Bandcamp code). `themes`: slot 1 to 5, theme, tagline, visible.
+`featured_singles`: position 1 to 10, song_id, song_title (only songs with a Bandcamp code). `seasonal` (optional, not created yet): season (christmas or valentine), position, song_title, song_id; replaces the automatic list on the Holiday Music page. `themes`: slot 1 to 5, theme, tagline, visible.
 `albums`: song_id, song_title, kind (unsorted, main, installment, ep, single), part_of, show, collection, position, accent, hook, tracks, bonus, store_url, featured. It never changes a song's `release_type`. `album_collections`: slot, name, tagline, alias (another stage name), visible, page (`ep` for the EPs page, blank for Albums); up to 8 per page. A row's `kind` decides its page: `main` Albums, `ep` EPs (whatever its release_type), `installment` inside its album's sleeve (EP-type installments show on neither page), `single` nowhere. Featured is kept per page.
 `music_highlights`: month, slot, actLabel, title, subtitle, catalogTag, accentHex, bandcamp_embed, coverImageUrl, and four platform links. Its "Row" and "Actions" columns are unused and left alone.
 
@@ -129,6 +129,7 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 | Released | `explore-releases.html`, `release-shelf.html?type=Single|EP|Album|Holiday`; Singles page: `featured-singles.html` (10 picks, details left, player right, 01 to 10 strip), `explore-themes.html` (theme tiles, play button opens a small player, Read more, Share) |
 | EPs | `albums.html?page=ep`: the Albums design for EPs (EP tags, "Buy the EP", EP collections, Coming next for EPs). `EPS_URL` in Settings once the page address is known |
 | Albums | `albums.html`: Coming next banner on top (countdown, pre-order; hidden when nothing is coming; `NEXT_ON_TOP = false` moves it to the bottom), Now spinning hero, collection rows of covers, a sleeve in the album's color opens under its row (Bandcamp album player, story, Buy or Store, Share, installments listed). Falls back to albums with Bandcamp and a story if the tabs are empty. `albums.html?only=next` is just the banner for other pages; with nothing coming it shows the latest album |
+| Holiday Music | `holiday.html`: changes with the season by the date in Manila. Christmas Nov 1 to Dec 25 (snow, red and gold, countdown), New Year Dec 26 to Jan 6 (gold sparkles, Christmas songs), Valentine's Jan 25 to Feb 15 (blush, hearts, love songs), otherwise both collections and a countdown to the next season. Songs are picked automatically (Christmas: genre Holiday or a Christmas word in the title; Valentine's: romantic or love genre, or a love word in the title) unless a `seasonal` tab lists them (season, position, song_title). Preview with `?season=` or `?date=` |
 | Behind the Scenes | `tiny-desk.html`, `in-progress.html` |
 | Connect | `follow-along.html`, `letter.html` (Cognito), plus the Cognito contact form embed |
 | Live | `acoustic-takes.html` (songs whose genre contains "Acoustic"), plus the Songkick widget |
