@@ -176,6 +176,10 @@ function planSeries(d) {
   let file;
   try { file = DriveApp.getFileById(d.file_id); } catch (e) { throw new Error('Can’t open that video in Drive. Pick it again.'); }
   if (!/^video\//.test(file.getMimeType())) throw new Error('That file is not a video.');
+  if (file.getSize() < 200 * 1024) {
+    throw new Error('“' + file.getName() + '” is ' + (file.getSize() ? 'almost empty' : '0 MB') + ' in Drive, so it’s probably still uploading ' +
+                    'or the upload broke. Wait until Drive shows its full size (or upload it again), then reload and try.');
+  }
   const max = d.max === 90 ? 90 : 59;
   const endcard = d.endcard !== false;
 

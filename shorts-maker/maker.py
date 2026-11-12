@@ -232,6 +232,20 @@ class Drive:
 
 # ---------------------------------------------------------------- commands
 
+def download_video(drive, file_id, path):
+    """Download, then make sure it is a whole video before anything else touches it."""
+    drive.download(file_id, path)
+    size = os.path.getsize(path)
+    if size < 200 * 1024:
+        raise ValueError('The video in Drive is %s, so it is probably still uploading. Wait until Drive shows its full size, then try again.'
+                         % ('empty' if size == 0 else 'only %d KB' % (size // 1024)))
+    try:
+        probe(path)
+    except RuntimeError:
+        raise ValueError('The video file is incomplete or damaged (it has no playable index). Upload it to Drive again, '
+                         'wait until the upload finishes, then try again.')
+
+
 def job_update(drive, job_file, job, **kw):
     job.update(kw)
     job['updated'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
@@ -248,7 +262,7 @@ def cmd_plan(env):
     tmp = tempfile.mkdtemp()
     try:
         src = os.path.join(tmp, 'in.mp4')
-        drive.download(env['file_id'], src)
+        download_video(drive, env['file_id'], src)
         info = probe(src)
         if info['w'] > info['h']:
             job['warning'] = 'This video is landscape, not 9:16. The parts will keep its shape.'
@@ -276,7 +290,7 @@ def cmd_cut(env):
     tmp = tempfile.mkdtemp()
     try:
         src = os.path.join(tmp, 'in.mp4')
-        drive.download(env['file_id'], src)
+        download_video(drive, env['file_id'], src)
         info = probe(src)
         if not info['audio']:
             raise ValueError('This video has no sound, so there is nothing to cut on.')

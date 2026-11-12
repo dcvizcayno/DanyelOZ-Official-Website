@@ -105,7 +105,7 @@
   function fillVideos() {
     var sel = clear(el('mkVideo'));
     sel.appendChild(h('option', { value: '', text: MK.data.videos.length ? 'Pick the long video' : 'No videos in the folder yet' }));
-    MK.data.videos.forEach(function (f) { sel.appendChild(h('option', { value: f.id, text: f.name + ' · ' + f.sizeMb + ' MB' })); });
+    MK.data.videos.forEach(function (f) { sel.appendChild(h('option', { value: f.id, text: f.name + ' · ' + (f.sizeMb > 0 ? f.sizeMb + ' MB' : '0 MB, still uploading?') })); });
   }
   el('mkSongSearch').addEventListener('input', fillSongs);
   el('mkSong').addEventListener('change', songInfo);
