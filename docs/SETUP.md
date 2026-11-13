@@ -5,9 +5,9 @@ Everything you set up once and then forget about. Keys and tokens go only where 
 ## 1. The admin app (Apps Script)
 
 1. Open the Song Database, then **Extensions > Apps Script**.
-2. Make sure all fifteen files are there, with these exact names:
-   - Scripts: `Code`, `Shorts`, `XPosts`, `Singles`, `Albums`, `ShortsMaker`
-   - HTML: `Form`, `ShortsViews`, `ShortsApp`, `SinglesViews`, `SinglesApp`, `AlbumsViews`, `AlbumsApp`, `ShortsMakerViews`, `ShortsMakerApp`
+2. Make sure all eighteen files are there, with these exact names:
+   - Scripts: `Code`, `Shorts`, `XPosts`, `Singles`, `Albums`, `ShortsMaker`, `Tracks`
+   - HTML: `Form`, `ShortsViews`, `ShortsApp`, `SinglesViews`, `SinglesApp`, `AlbumsViews`, `AlbumsApp`, `ShortsMakerViews`, `ShortsMakerApp`, `TracksViews`, `TracksApp`
 3. **Services +** (left sidebar): add **YouTube Data API v3**, name **YouTube**.
 4. **Deploy > New deployment > Web app**: Execute as **Me**, Who has access **Only myself**.
 5. After every code change: **Deploy > Manage deployments > pencil > New version > Deploy**. The link stays the same.
