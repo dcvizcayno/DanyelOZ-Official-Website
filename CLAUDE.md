@@ -1,6 +1,6 @@
 # Danyel OZ: project handbook
 
-_Last updated: November 12, 2026 (EPs page and seasonal Holiday Music page added). One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
+_Last updated: November 13, 2026 (tracklists: `tracks` and `release_tracks` tabs added). One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
 
 **Copies of this file** (keep them identical; update all three together):
 1. `CLAUDE.md` in private repo **dcvizcayno/DanyelOZ-Official-Website** (Claude Code reads it automatically)
@@ -60,6 +60,8 @@ Shared as **Anyone with the link: Viewer** so the widgets can read it. That mean
 | `themes` (read by name) | Singles Page | Explore by Theme |
 | `albums` (read by name) | Albums Page, EPs Page | Albums and EPs pages |
 | `album_collections` (read by name) | Albums Page, EPs Page | Albums and EPs pages |
+| `tracks` (read by name) | none yet (filled from Deezer) | nothing yet; ready for tracklists, lyrics, Shorts timing |
+| `release_tracks` (read by name) | none yet (filled from Deezer) | nothing yet; links releases to their songs |
 
 **Song columns (Sheet1):** `song_id` (Apple collection ID), `song_title`, `release_date` (yyyy-mm-dd), `release_type` (Single, EP, Album),
 `song_genre` ("Acoustic" puts a song on the Live page), `song_description` (first paragraph = intro line; blank line between paragraphs),
@@ -71,10 +73,12 @@ Shared as **Anyone with the link: Viewer** so the widgets can read it. That mean
 `explore`: order, visible, title, script, sub, text, link, image, focus.
 `featured_singles`: position 1 to 10, song_id, song_title (only songs with a Bandcamp code). `seasonal` (optional, not created yet): season (christmas or valentine), position, song_title, song_id; replaces the automatic list on the Holiday Music page. `themes`: slot 1 to 5, theme, tagline, visible.
 `albums`: song_id, song_title, kind (unsorted, main, installment, ep, single), part_of, show, collection, position, accent, hook, tracks, bonus, store_url, featured. It never changes a song's `release_type`. `album_collections`: slot, name, tagline, alias (another stage name), visible, page (`ep` for the EPs page, blank for Albums); up to 8 per page. A row's `kind` decides its page: `main` Albums, `ep` EPs (whatever its release_type), `installment` inside its album's sleeve (EP-type installments show on neither page), `single` nowhere. Featured is kept per page.
+`tracks` (one row per recording, by ISRC): isrc, track_title, artist, duration (m:ss text), explicit, first_release, first_upc, releases, language, lyrics. `release_tracks` (one row per song on a release): upc, release_title, disc, track_number, isrc, track_title (as on that release), duration, bonus. A release has one UPC; a single holds one ISRC, an EP or album many, and one ISRC can sit on several releases (waterfall singles). Join Sheet1 `song_upc` to `release_tracks.upc`, then `isrc` to `tracks`. **Lyrics go in `tracks.lyrics` only once a song is released**; chords, key, BPM, notes and unreleased lyrics belong in a private sheet (not built yet).
 `music_highlights`: month, slot, actLabel, title, subtitle, catalogTag, accentHex, bandcamp_embed, coverImageUrl, and four platform links. Its "Row" and "Actions" columns are unused and left alone.
 
 **Coverage (Nov 11, 2026, after the store backfill):** 273 releases. `song_id` 267, `song_upc` 267 (all stored as text), `appl_music_link` 266, `song_ISRC` 215 (single-track releases; EPs and albums left blank), `song_description` 44, `bandcamp_embed` 56, `song_arts` 273 (all; covers backfilled Nov 11).
 **Store backfill (Nov 11, 2026):** one-time fill from Deezer (artist IDs 229950385 Danyel OZ, 289172811 M4RCU$ H33R0) plus Apple lookups by UPC. Blank cells only; 58 releases that were missing were added as new rows. Where the sheet and the stores disagreed (17 release types, 1 date, Bleeding Heart), the sheet value was kept. Backup CSV and review list were sent to Daniel. Covers: `tools/CoverBackfill.gs` ran Nov 11 and filled every row.
+**Tracklists (Nov 13, 2026):** 266 released UPCs from Deezer: 340 recordings in `tracks`, 722 rows in `release_tracks`, all ISRCs and lengths filled; every single's `song_ISRC` matched. 154 recordings sit on more than one release. Kareena (EP, out Dec 14) and six releases without a UPC are upcoming and wait for release. 29 ISRCs carry different names or lengths across releases (`isrc-review-2026-11-13.csv`, sent to Daniel). **Spotify links:** `tools/SpotifyBackfill.gs`, first real run after Spotify's pause ends (Nov 13, about 9:10 PM Manila).
 Some releases are under a different stage name (for example the EP "Money"); they belong in the database too.
 
 **Apple Music:** artist ID `1706653995`. Always add `sort=recent` to catalog lookups; without it Apple returns the 200 oldest releases and misses new ones.

@@ -1,6 +1,6 @@
 ---
 name: song-database
-description: How to read, check and change the Danyel OZ Song Database (Google Sheet) safely, including filling store details (UPC, ISRC, Apple links, covers) from Deezer and Apple. Use for any data question, cleanup, backfill or bulk edit of the sheet.
+description: How to read, check and change the Danyel OZ Song Database (Google Sheet) safely, including filling store details (UPC, ISRC, Apple links, covers, Spotify links) and tracklists (tracks, release_tracks) from Deezer, Apple and Spotify. Use for any data question, cleanup, backfill or bulk edit of the sheet.
 ---
 
 # Song Database
@@ -34,7 +34,20 @@ Google Sheet `1WD98RYgWPURqwtczPYEblCOOPFutAIO1jf42oSfbzPw`. The single source o
 4. ISRC only for single-track releases (an EP or album has one per track).
 5. New releases go in as new rows (title, date, type, genre from Apple, ISRC, UPC as text, label, Apple link and ID). Existing rows keep their values.
 6. Covers: don't upload through the connector one by one. Use `tools/CoverBackfill.gs` (Daniel runs it once from the Apps Script editor; it saves covers to "Danyel OZ Song Art", shares them, fills blank `song_arts`).
-7. Not available for free: Amazon links (closed API). Spotify needs Daniel's own developer app (Premium required since Feb 2026).
+7. Not available for free: Amazon links (closed API; song.link from the Apple link is the route). Spotify: `tools/SpotifyBackfill.gs` with Daniel's own developer app (Premium owner; keys in Script Properties). Keep it slow: one call every 0.8 s. Spotify paused the app 23 hours on Nov 12, 2026 for going faster.
+
+## Tracklists: `tracks` and `release_tracks` (added Nov 13, 2026)
+
+A release (row in Sheet1) has **one UPC**; each recording on it has **its own ISRC**. A single is one UPC to one ISRC; an EP or album is one UPC to many ISRCs. The same ISRC often sits on several releases (waterfall singles later collected on an EP or album), so songs live once in `tracks` and are linked to releases in `release_tracks`.
+
+- `tracks` (one row per ISRC): isrc, track_title, artist (stage name), duration (m:ss text), explicit, first_release (yyyy-mm-dd text), first_upc, releases (how many releases carry it), language, lyrics. `track_title` is the single's title when the song came out as a single, otherwise the most common title.
+- `release_tracks` (one row per song on a release): upc, release_title, disc, track_number, isrc, track_title (as printed on that release, with "(Radio Edit)" etc.), duration (that release's length), bonus.
+- Join: Sheet1 `song_upc` = `release_tracks.upc`; `release_tracks.isrc` = `tracks.isrc`. Every ISRC in release_tracks exists in tracks.
+- Source: Deezer `/album/upc:<UPC>` then `/album/<id>/tracks` (isrc, track_position, disk_number, duration). Try the UPC with a leading 0 if the 12-digit form misses. Check the artist is Danyel OZ or M4RCU$ H33R0.
+- **Writing these tabs:** build an .xlsx with text cells (`@`) for ids, dates and lengths, upload it to Drive as a Google Sheet, then copy the tabs in. The connector's value writes would turn "3:34" into a time and dates into dates. Read back through gviz afterwards and compare counts and keys.
+- **After each release:** add its rows once Deezer has it (1 to 3 days). Upcoming releases with no UPC yet stay out.
+- **Lyrics are public** in `tracks.lyrics`, but only once the song is released. Chords, key, BPM, notes and unreleased lyrics go in a **private** sheet (not built yet; same pattern as "Danyel OZ Shorts (private)").
+- **ISRC reuse:** 29 ISRCs carry different song names or lengths that differ by more than 20 s across releases (edits or special versions that kept the original ISRC). Listed for Daniel in `isrc-review-2026-11-13.csv`. Don't "fix" these in the sheet; they mirror what the stores have. Changes go through DistroKid.
 
 ## Other sources
 
