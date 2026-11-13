@@ -60,8 +60,8 @@ Shared as **Anyone with the link: Viewer** so the widgets can read it. That mean
 | `themes` (read by name) | Singles Page | Explore by Theme |
 | `albums` (read by name) | Albums Page, EPs Page | Albums and EPs pages |
 | `album_collections` (read by name) | Albums Page, EPs Page | Albums and EPs pages |
-| `tracks` (read by name) | Tracks | nothing on the site yet; ready for tracklists, lyrics, scores, Shorts timing |
-| `release_tracks` (read by name) | Tracks (Release tracklist) | nothing on the site yet; links releases to their songs |
+| `tracks` (read by name) | Tracks | Lyrics button (`lyrics.js`) in Listen Now, Featured Singles and the release shelves; scores not shown yet |
+| `release_tracks` (read by name) | Tracks (Release tracklist) | Lyrics button: which songs are on a release |
 
 **Song columns (Sheet1):** `song_id` (Apple collection ID), `song_title`, `release_date` (yyyy-mm-dd), `release_type` (Single, EP, Album),
 `song_genre` ("Acoustic" puts a song on the Live page), `song_description` (first paragraph = intro line; blank line between paragraphs),
@@ -148,6 +148,7 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 - **Upcoming Release** shows the nearest song whose release date is still ahead; it moves on at midnight Manila on release day. A countdown badge shows in the last week.
 - **Featured Videos** and **Music Highlights** show the current month's picks and switch at midnight on the 1st. An empty month keeps the last month that had picks.
 - **Read more** in the song panels shows the first paragraph, then the rest on click.
+- **Lyrics** (Nov 13, 2026): `lyrics.js` adds a Lyrics button to Listen Now (`song-info.html`, `SHOW.lyrics`), Featured Singles and the release shelves, only when the release has a song whose lyrics are published and whose `first_release` is today or earlier. It swaps the panel for the lyrics (Back or Escape returns); `[Chorus]`-style lines become small red labels; an EP or album shows one button per song with lyrics. Text only, never HTML.
 
 **Rules every widget follows**
 - Read the sheet by **header name**, never column position (gviz CSV with `&gid=`).
