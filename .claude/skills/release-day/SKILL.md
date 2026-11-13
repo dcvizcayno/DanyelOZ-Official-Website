@@ -26,7 +26,7 @@ What then happens by itself:
 
 ## The week after
 
-1. **Store details**: UPC, ISRC, Apple link and ID can be filled from the stores (see the `song-database` skill, "Fill from the stores"). Stores usually have it 1 to 3 days after release.
+1. **Store details**: UPC, ISRC, Apple link and ID can be filled from the stores (see the `song-database` skill, "Fill from the stores"). Stores usually have it 1 to 3 days after release. Then add its tracklist to `tracks` and `release_tracks` (same skill, "Tracklists"), and offer to paste the lyrics into `tracks.lyrics` now that it's out.
 2. **Singles page**: offer to add it to Featured Singles (Bandcamp singles only) and to give it Theme 1 (and 2).
 3. **Albums**: if it's part of an album or an installment, set it in the Album library.
 4. **Shorts**: if a long 9:16 lyric video exists, suggest a Shorts Maker series (see the `shorts-maker` skill).
