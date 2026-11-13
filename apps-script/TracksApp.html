@@ -153,7 +153,7 @@
       if (t.has_abc) tags.push(h('span', { cls: 'tk-tag ok', text: 'score' }));
       if (d.drafts[t.isrc]) tags.push(h('span', { cls: 'tk-tag', text: 'draft' }));
       box.appendChild(h('div', { cls: 'tk-item' + (TK.sel === t.isrc ? ' sel' : ''), tabindex: 0, role: 'button',
-        onclick: function () { openSong(t.isrc); }, onkeydown: function (e) { if (e.key === 'Enter') openSong(t.isrc); } },
+        onclick: function () { TK.relNav = null; openSong(t.isrc); }, onkeydown: function (e) { if (e.key === 'Enter') { TK.relNav = null; openSong(t.isrc); } } },
         [h('div', {}, [h('b', { text: t.track_title }), h('small', { text: t.isrc + ' · ' + (t.duration || '?') + ' · ' + t.releases + (t.releases === 1 ? ' release' : ' releases') + (t.first_release ? ' · ' + t.first_release.slice(0, 4) : '') })]),
          h('div', { cls: 'tk-tags' }, tags)]));
     });
@@ -172,6 +172,7 @@
   function renderEditor() {
     var D = TK.detail, t = D.track, n = D.notes || {}, box = clear(el('tkEditor'));
     var ed = h('div', { cls: 'tk-edit' });
+    var nav = relNavBar(t.isrc); if (nav) ed.appendChild(nav);
     ed.appendChild(h('h3', { text: t.track_title }));
     ed.appendChild(h('div', { cls: 'tk-meta', text: t.isrc + ' · ' + (t.duration || '?') + ' · ' + (D.released ? 'out since ' + t.first_release : (t.first_release ? 'out ' + t.first_release : 'not on a release yet')) }));
     if (TK.data.look[t.isrc]) ed.appendChild(h('p', { cls: 'tk-lock', text: 'This ISRC needs a look: ' + TK.data.look[t.isrc] + '. See the Fix plan tab.' }));
@@ -234,7 +235,7 @@
       var b = this; b.disabled = true; say(msg, 'Publishing…');
       var p = {}; p[pubKey] = area.value;
       call('publishTrackText', [t.isrc, p], function () { b.disabled = false; t[pubKey] = area.value; var x = TK.data.byIsrc[t.isrc]; if (x) x[isAbc ? 'has_abc' : 'has_lyrics'] = true;
-        say(msg, 'On the site', 'ok'); renderEditor(); renderSongs(); }, function (e) { b.disabled = false; say(msg, e.message, 'err'); });
+        say(msg, 'On the site', 'ok'); renderEditor(); renderSongs(); if (TK.rel) renderTracklist(); }, function (e) { b.disabled = false; say(msg, e.message, 'err'); });
     } });
     var off = published ? h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: 'Take off site', onclick: function () {
       if (!confirm('Remove the ' + (isAbc ? 'score' : 'lyrics') + ' of "' + t.track_title + '" from the site? Your draft stays.')) return;
@@ -336,14 +337,22 @@
       };
       tr._cells = cells;
       ['disc', 'track_number', 'isrc', 'track_title', 'duration', 'bonus', 'from_isrc'].forEach(function (k) { tr.appendChild(h('td', {}, [cells[k]])); });
+      var known = r.isrc && d.byIsrc[r.isrc];
+      tr.appendChild(h('td', {}, [known ? h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: (known.has_lyrics ? '✓ Edit' : 'Write') + (known.has_abc ? ' · score' : ''),
+        title: known.has_lyrics ? 'Lyrics are on the site' : 'No lyrics yet', onclick: function () { openFromRelease(upc, r.isrc); } }) : h('span', { cls: 'sx-note', text: 'save first' })]));
       tr.appendChild(h('td', {}, [h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: '✕', 'aria-label': 'Remove song', onclick: function () { tr.remove(); } })]));
       tbody.appendChild(tr);
     }
     rows.forEach(addRow);
     var msg = h('span', { cls: 'sx-status' });
-    box.appendChild(h('p', { cls: 'sx-note', text: s.title + ' · ' + (s.type || '') + ' · ' + (s.date || '') + ' · UPC ' + upc + (s.date > d.today ? ' · not out yet' : '') }));
+    var withLyrics = rows.filter(function (r) { return d.byIsrc[r.isrc] && d.byIsrc[r.isrc].has_lyrics; }).length;
+    box.appendChild(h('p', { cls: 'sx-note', text: s.title + ' · ' + (s.type || '') + ' · ' + (s.date || '') + ' · UPC ' + upc + (s.date > d.today ? ' · not out yet' : '') +
+      ' · lyrics for ' + withLyrics + ' of ' + rows.length + (rows.length === 1 ? ' song' : ' songs') }));
+    var firstMissing = rows.filter(function (r) { return d.byIsrc[r.isrc] && !d.byIsrc[r.isrc].has_lyrics; })[0];
+    if (rows.length > 1 && (firstMissing || rows[0])) box.appendChild(h('div', { cls: 'sg-bar', style: 'margin-bottom:8px' }, [h('button', { type: 'button', cls: 'primary sx-btn-sm',
+      text: firstMissing ? 'Write lyrics, song by song' : 'Read through the lyrics', onclick: function () { openFromRelease(upc, (firstMissing || rows[0]).isrc); } })]));
     box.appendChild(h('div', { style: 'overflow-x:auto' }, [h('table', { cls: 'tk-tl' }, [
-      h('thead', {}, [h('tr', {}, ['Disc', '#', 'ISRC', 'Title on this release', 'Length', 'Bonus', 'Replaces', ''].map(function (x) { return h('th', { text: x }); }))]), tbody])]));
+      h('thead', {}, [h('tr', {}, ['Disc', '#', 'ISRC', 'Title on this release', 'Length', 'Bonus', 'Replaces', 'Lyrics', ''].map(function (x) { return h('th', { text: x }); }))]), tbody])]));
     box.appendChild(h('div', { cls: 'sg-bar', style: 'margin-top:10px;flex-wrap:wrap' }, [
       h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: '+ Add song', onclick: function () { addRow({}); } }),
       h('button', { type: 'button', cls: 'primary sx-btn-sm', text: 'Save tracklist', onclick: function () {
@@ -354,6 +363,27 @@
         call('saveReleaseTracklist', [upc, list], function (res) { b.disabled = false; say(msg, 'Saved' + (res.added ? ', ' + res.added + ' new song' + (res.added === 1 ? '' : 's') + ' added' : ''), 'ok'); load(true); },
           function (e) { b.disabled = false; say(msg, e.message, 'err'); });
       } }), msg]));
+  }
+
+  /* Album mode: open a song from a release and step through that release's songs in track order. */
+  function openFromRelease(upc, isrc) {
+    var list = TK.data.rts.filter(function (r) { return r.upc === upc; }).sort(function (a, b) { return a.disc - b.disc || a.track_number - b.track_number; });
+    TK.relNav = { upc: upc, title: (TK.data.rel[upc] || {}).title || '', list: list };
+    TK.tab = 'lyrics';
+    openSong(isrc);
+    el('tkEditor').scrollIntoView({ behavior: 'smooth' });
+  }
+  function relNavBar(isrc) {
+    var N = TK.relNav; if (!N) return null;
+    var i = -1; N.list.forEach(function (r, k) { if (r.isrc === isrc) i = k; });
+    if (i < 0) return null;
+    function go(k) { return function () { TK.tab = 'lyrics'; openSong(N.list[k].isrc); }; }
+    var bar = h('div', { cls: 'sg-bar', style: 'flex-wrap:wrap;margin:0 0 10px;padding:8px 10px;border-radius:10px;background:var(--soft)' }, [
+      h('b', { text: N.title + ': song ' + (i + 1) + ' of ' + N.list.length }),
+      i > 0 ? h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: '← ' + N.list[i - 1].track_title, onclick: go(i - 1) }) : null,
+      i < N.list.length - 1 ? h('button', { type: 'button', cls: 'primary sx-btn-sm', text: 'Next: ' + N.list[i + 1].track_title + ' →', onclick: go(i + 1) }) : null,
+      h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: 'Leave album mode', onclick: function () { TK.relNav = null; renderEditor(); } })]);
+    return bar;
   }
 
   /* ---------- small helpers ---------- */
