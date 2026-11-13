@@ -1,0 +1,101 @@
+<!-- Danyel OZ admin: Tracks screen (layout). Included by Form.html. -->
+<style>
+  .tk-checks { display: flex; flex-wrap: wrap; gap: 10px; }
+  .tk-check { flex: 1 1 170px; text-align: left; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line); background: #fff; cursor: pointer; }
+  .tk-check b { display: block; font: 500 26px 'Oswald', sans-serif; color: var(--purple); line-height: 1.1; }
+  .tk-check span { font-size: 12.5px; color: #6b6480; font-weight: 600; }
+  .tk-check.warn b { color: var(--warn); }
+  .tk-check.on { border-color: var(--purple); background: var(--soft); }
+  .tk-list { border: 1px solid var(--line); border-radius: 12px; max-height: 520px; overflow-y: auto; }
+  .tk-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 9px 12px; border-bottom: 1px solid #f1edf9; cursor: pointer; }
+  .tk-item:hover { background: var(--soft); }
+  .tk-item.sel { background: var(--purple); color: #fff; }
+  .tk-item.sel small { color: #e8e0ff; }
+  .tk-item b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+  .tk-item small { font-size: 11.5px; color: #6b6480; }
+  .tk-tags { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start; }
+  .tk-tag { font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: #ece6fb; color: var(--purple); white-space: nowrap; }
+  .tk-tag.warn { background: #fff1e0; color: #a65a00; }
+  .tk-tag.ok { background: #e6f6ec; color: #1d7a41; }
+  .tk-grid { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr); gap: 20px; align-items: start; }
+  @media (max-width: 900px) { .tk-grid { grid-template-columns: 1fr; } }
+  .tk-edit { border: 2px solid var(--purple); border-radius: 14px; padding: 16px; background: #fdfcff; }
+  .tk-edit h3 { margin: 0; font: 500 24px 'Oswald', sans-serif; color: var(--purple); text-transform: uppercase; }
+  .tk-meta { font-size: 12.5px; color: #6b6480; margin: 4px 0 12px; }
+  .tk-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+  @media (max-width: 700px) { .tk-row { grid-template-columns: 1fr 1fr; } }
+  .tk-row label, .tk-field label { font-size: 12px; font-weight: 700; color: #6b6480; display: block; margin-bottom: 3px; }
+  .tk-field { margin-bottom: 10px; }
+  .tk-edit textarea { width: 100%; min-height: 220px; font-family: ui-monospace, Menlo, monospace; font-size: 13px; line-height: 1.5; }
+  .tk-edit textarea.short { min-height: 90px; }
+  .tk-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 900px) { .tk-two { grid-template-columns: 1fr; } }
+  .tk-pub { background: #f6f4fb; border-radius: 10px; padding: 10px; white-space: pre-wrap; font-size: 13px; line-height: 1.55; max-height: 260px; overflow-y: auto; min-height: 60px; }
+  .tk-pub.empty { color: #8a83a0; font-style: italic; }
+  .tk-score { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 6px; min-height: 120px; overflow-x: auto; }
+  .tk-on { font-size: 13px; margin: 0 0 12px; padding: 0; list-style: none; }
+  .tk-on li { padding: 4px 0; border-bottom: 1px dashed #eee8f8; }
+  .tk-lock { font-size: 12.5px; font-weight: 700; color: var(--warn); }
+  .tk-fix { display: grid; grid-template-columns: 130px minmax(0, 1.6fr) 150px 150px 130px 120px 110px; gap: 8px; align-items: start; padding: 10px 12px; border-bottom: 1px solid #f1edf9; }
+  .tk-fix.head { position: sticky; top: 0; background: #f6f4fb; font-size: 11.5px; font-weight: 700; color: #6b6480; z-index: 1; }
+  .tk-fix code { font-size: 12px; font-weight: 700; }
+  .tk-fix ul { margin: 0; padding-left: 16px; font-size: 12.5px; }
+  .tk-fix input, .tk-fix select { padding: 6px 8px; font-size: 12.5px; width: 100%; }
+  .tk-fix textarea { min-height: 40px; font-size: 12.5px; }
+  .tk-fix .why { color: #a65a00; font-size: 11.5px; font-weight: 700; display: block; margin-top: 3px; }
+  @media (max-width: 1100px) { .tk-fix { grid-template-columns: 1fr 1fr; } .tk-fix.head { display: none; } .tk-fix > div:nth-child(2) { grid-column: 1 / -1; } }
+  .tk-tl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .tk-tl th { text-align: left; font-size: 11.5px; color: #6b6480; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+  .tk-tl td { padding: 4px; border-bottom: 1px solid #f1edf9; vertical-align: middle; }
+  .tk-tl input { padding: 5px 7px; font-size: 13px; width: 100%; }
+  .tk-tl input.num { width: 52px; }
+  .tk-tl input.code { font-family: ui-monospace, Menlo, monospace; width: 140px; }
+  .tk-tl input[type=checkbox] { width: auto; }
+  .tk-public { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #fff1e0; color: #a65a00; margin-left: 6px; }
+  .tk-private { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #e6f6ec; color: #1d7a41; margin-left: 6px; }
+</style>
+
+<section id="viewTracks" hidden>
+  <div class="card">
+    <h2>Songs and codes <span class="mode">one UPC per release, one ISRC per song</span></h2>
+    <p class="sx-note" style="margin:-6px 0 12px">Click a box to see what's in it. Lyrics and music scores go on the site only once a song is out; fixes, drafts and studio notes stay in your private Song Vault sheet.</p>
+    <div class="tk-checks" id="tkChecks"><div class="list-empty">Loading…</div></div>
+  </div>
+
+  <div class="card" id="tkFixCard">
+    <h2>Fix list <span class="tk-private">private</span></h2>
+    <p class="sx-note" style="margin:-6px 0 10px">One ISRC used for different songs, or for versions of very different length. Plan the fix here, then republish through DistroKid with the new codes. Saving changes nothing on the site.</p>
+    <div class="sg-bar" style="margin-bottom:10px">
+      <select id="tkFixFilter" aria-label="Show"><option value="">All</option></select>
+      <span class="sx-status" id="tkFixStatus"></span>
+    </div>
+    <div class="tk-list" id="tkFixes" style="max-height:620px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Songs</h2>
+    <div class="tk-grid">
+      <div>
+        <input type="search" id="tkSearch" placeholder="Search a song, release or ISRC" aria-label="Search songs" style="margin-bottom:8px">
+        <div class="tabs" id="tkFilters">
+          <button type="button" class="on" data-tkf="all">All</button>
+          <button type="button" data-tkf="look">Needs a look</button>
+          <button type="button" data-tkf="nolyrics">No lyrics</button>
+          <button type="button" data-tkf="draft">Has drafts</button>
+        </div>
+        <div class="tk-list" id="tkSongs"></div>
+      </div>
+      <div id="tkEditor"><div class="list-empty">Pick a song on the left.</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Release tracklist <span class="tk-public">public</span></h2>
+    <p class="sx-note" style="margin:-6px 0 10px">Pick a release to see or correct its songs. For a republished release, add it on the Songs screen with its new UPC first; then list its songs here. When a song has a new ISRC, put the old one in "Replaces" and its title, lyrics, score and notes come along.</p>
+    <div class="sg-bar" style="margin-bottom:10px;flex-wrap:wrap">
+      <input type="search" id="tkRelSearch" placeholder="Search releases" aria-label="Search releases" style="max-width:240px">
+      <select id="tkRel" aria-label="Release" style="max-width:420px"></select>
+    </div>
+    <div id="tkTracklist"><div class="list-empty">Pick a release.</div></div>
+  </div>
+</section>

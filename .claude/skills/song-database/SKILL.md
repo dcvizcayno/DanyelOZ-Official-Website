@@ -46,7 +46,8 @@ A release (row in Sheet1) has **one UPC**; each recording on it has **its own IS
 - Source: Deezer `/album/upc:<UPC>` then `/album/<id>/tracks` (isrc, track_position, disk_number, duration). Try the UPC with a leading 0 if the 12-digit form misses. Check the artist is Danyel OZ or M4RCU$ H33R0.
 - **Writing these tabs:** build an .xlsx with text cells (`@`) for ids, dates and lengths, upload it to Drive as a Google Sheet, then copy the tabs in. The connector's value writes would turn "3:34" into a time and dates into dates. Read back through gviz afterwards and compare counts and keys.
 - **After each release:** add its rows once Deezer has it (1 to 3 days). Upcoming releases with no UPC yet stay out.
-- **Lyrics are public** in `tracks.lyrics`, but only once the song is released. Chords, key, BPM, notes and unreleased lyrics go in a **private** sheet (not built yet; same pattern as "Danyel OZ Shorts (private)").
+- **Lyrics and scores are public** in `tracks.lyrics` and `tracks.abc` (ABC notation), but only once the song is released; the Tracks screen refuses earlier. Drafts, chords, key, BPM, notes and ISRC fix plans live in the private "Danyel OZ Song Vault (private)" sheet (`track_notes`, `track_fixes`; ID in Script Properties `VAULT_SHEET_ID`). Never copy them into the Song Database.
+- Daniel edits all of this on the **Tracks** screen (`apps-script/Tracks.gs`, `TracksViews.html`, `TracksApp.html`).
 - **ISRC reuse:** 29 ISRCs carry different song names or lengths that differ by more than 20 s across releases (edits or special versions that kept the original ISRC). Listed for Daniel in `isrc-review-2026-11-13.csv`. Don't "fix" these in the sheet; they mirror what the stores have. Changes go through DistroKid.
 
 ## Other sources

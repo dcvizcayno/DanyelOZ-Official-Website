@@ -1,0 +1,372 @@
+<!-- Danyel OZ admin: Tracks screen (behavior). Included at the end of Form.html. -->
+<script>
+(function () {
+  'use strict';
+  var TK = { data: null, loaded: false, sel: '', filter: 'all', check: '', detail: null, tab: 'lyrics', rel: '', fixFilter: '' };
+  var ABCJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/abcjs/6.4.4/abcjs-basic-min.js';
+
+  function el(id) { return document.getElementById(id); }
+  function h(tag, props, kids) {
+    var e = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (k) {
+      var v = props[k];
+      if (v == null || v === false) return;
+      if (k === 'text') e.textContent = v;
+      else if (k === 'cls') e.className = v;
+      else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v);
+      else if (k in e && typeof v !== 'string') e[k] = v;
+      else e.setAttribute(k, v === true ? '' : v);
+    });
+    (kids || []).forEach(function (c) { if (c != null && c !== false) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function clear(n) { while (n.firstChild) n.removeChild(n.firstChild); return n; }
+  function say(node, text, kind) { if (node) { node.textContent = text || ''; node.className = 'sx-status ' + (kind || ''); } }
+  function call(fn, args, ok, fail) {
+    var r = google.script.run.withSuccessHandler(ok).withFailureHandler(fail || function (e) { alert(e.message); });
+    r[fn].apply(r, args || []);
+  }
+  function norm(s) { return String(s || '').toLowerCase().replace(/[’']/g, "'").replace(/\s+/g, ' ').trim(); }
+  function opt(v, label, sel) { return h('option', { value: v, text: label || v || '(none)', selected: v === sel }); }
+
+  var prevView = window.onAdminView;
+  window.onAdminView = function (v) {
+    if (prevView) prevView(v);
+    if (v !== 'tracks') return;
+    el('viewTracks').hidden = false;
+    if (!TK.loaded) load();
+  };
+
+  function load(keepSel) {
+    TK.loaded = true;
+    call('getTracksAdmin', [], function (d) {
+      TK.data = d;
+      d.byIsrc = {}; d.tracks.forEach(function (t) { d.byIsrc[t.isrc] = t; });
+      d.on = {}; d.rts.forEach(function (r) { (d.on[r.isrc] = d.on[r.isrc] || []).push(r); });
+      d.rel = {}; d.songs.forEach(function (s) { if (s.upc) d.rel[s.upc] = s; });
+      d.look = {}; d.checks.reuse.forEach(function (x) { d.look[x.isrc] = x.issue; });
+      renderChecks(); renderFixes(); renderSongs(); renderRelPicker();
+      if (keepSel && TK.sel) openSong(TK.sel);
+      if (TK.rel) renderTracklist();
+    }, function (e) { TK.loaded = false; clear(el('tkChecks')).appendChild(h('div', { cls: 'list-empty', text: 'Couldn’t load: ' + e.message })); });
+  }
+
+  /* ---------- Checks ---------- */
+  function renderChecks() {
+    var c = TK.data.checks, box = clear(el('tkChecks'));
+    var open = Object.keys(TK.data.look).filter(function (i) { var f = TK.data.fixes[i]; return !f || ['Keep as is', 'Republished'].indexOf(f.status) < 0; }).length;
+    [['fix', open, 'ISRCs to sort out', c.reuse.length + ' found; ' + (c.reuse.length - open) + ' settled'],
+     ['notracklist', c.noTracklist.length, 'Released, no tracklist', 'add them in Release tracklist'],
+     ['codes', c.badCodes.length + c.singleMismatch.length, 'Code problems', 'bad ISRC or UPC, or a single’s ISRC differs'],
+     ['noupc', c.noUpc.length, 'Releases with no UPC', 'usually upcoming'],
+     ['nolyrics', c.noLyrics, 'Released songs, no lyrics', 'of ' + TK.data.tracks.length + ' songs']
+    ].forEach(function (x) {
+      box.appendChild(h('button', { type: 'button', cls: 'tk-check' + (x[1] && x[0] !== 'noupc' ? ' warn' : '') + (TK.check === x[0] ? ' on' : ''),
+        onclick: function () { showCheck(x[0]); } }, [h('b', { text: String(x[1]) }), h('span', { text: x[2] }), h('div', { cls: 'sx-note', text: x[3] })]));
+    });
+    var more = el('tkCheckMore'); if (more) more.remove();
+    if (!TK.check || TK.check === 'fix' || TK.check === 'nolyrics') return;
+    var list = h('ul', { cls: 'tk-on', id: 'tkCheckMore', style: 'margin-top:12px' });
+    if (TK.check === 'notracklist') c.noTracklist.forEach(function (r) { list.appendChild(h('li', {}, [h('a', { href: '#', text: r.title, onclick: function (e) { e.preventDefault(); pickRelease(r.upc); } }), ' · ' + r.date + ' · UPC ' + r.upc])); });
+    if (TK.check === 'codes') {
+      c.badCodes.forEach(function (r) { list.appendChild(h('li', { text: r.what + ': ' + r.code + ' on ' + r.where })); });
+      c.singleMismatch.forEach(function (r) { list.appendChild(h('li', { text: r.title + ': Sheet1 says ' + r.sheet + ', tracklist says ' + r.tracklist })); });
+    }
+    if (TK.check === 'noupc') c.noUpc.forEach(function (r) { list.appendChild(h('li', { text: r.title + ' · ' + (r.date || 'no date') })); });
+    if (!list.children.length) list.appendChild(h('li', { text: 'Nothing here. Nice.' }));
+    box.parentNode.appendChild(list);
+  }
+  function showCheck(k) {
+    TK.check = TK.check === k ? '' : k;
+    if (k === 'fix') el('tkFixCard').scrollIntoView({ behavior: 'smooth' });
+    if (k === 'nolyrics') { setFilter('nolyrics'); el('tkSongs').scrollIntoView({ behavior: 'smooth' }); }
+    renderChecks();
+  }
+
+  /* ---------- Fix list (private) ---------- */
+  function renderFixes() {
+    var d = TK.data, sel = el('tkFixFilter');
+    if (sel.options.length < 2) {
+      d.statuses.forEach(function (s) { sel.appendChild(opt(s)); });
+      sel.addEventListener('change', function () { TK.fixFilter = sel.value; renderFixes(); });
+    }
+    var box = clear(el('tkFixes'));
+    box.appendChild(h('div', { cls: 'tk-fix head' }, ['ISRC', 'Where it appears', 'Status', 'Plan', 'New ISRC', 'New UPC', '']));
+    var isrcs = Object.keys(d.look).concat(Object.keys(d.fixes).filter(function (i) { return !d.look[i]; }));
+    var shown = 0;
+    isrcs.forEach(function (isrc) {
+      var f = d.fixes[isrc] || { status: d.statuses[0], plan: '', new_isrc: '', new_upc: '', new_title: '', notes: '' };
+      if (TK.fixFilter && f.status !== TK.fixFilter) return;
+      shown++;
+      var row = h('div', { cls: 'tk-fix' });
+      var where = h('ul');
+      (d.on[isrc] || []).slice().sort(function (a, b) { return String((d.rel[a.upc] || {}).date).localeCompare(String((d.rel[b.upc] || {}).date)); })
+        .forEach(function (r) { where.appendChild(h('li', { text: r.track_title + ' (' + r.duration + ') on ' + r.release_title + ((d.rel[r.upc] || {}).date ? ', ' + d.rel[r.upc].date.slice(0, 4) : '') })); });
+      var st = h('select', { 'aria-label': 'Status' }, d.statuses.map(function (s) { return opt(s, s, f.status); }));
+      var pl = h('select', { 'aria-label': 'Plan' }, d.plans.map(function (s) { return opt(s, s || 'Not decided', f.plan); }));
+      var ni = h('input', { value: f.new_isrc || '', placeholder: 'new ISRC', 'aria-label': 'New ISRC', maxlength: 15 });
+      var nu = h('input', { value: f.new_upc || '', placeholder: 'new UPC', 'aria-label': 'New UPC', maxlength: 14, inputmode: 'numeric' });
+      var nt = h('input', { value: f.new_title || '', placeholder: 'new title (optional)', 'aria-label': 'New title' });
+      var no = h('textarea', { placeholder: 'notes', 'aria-label': 'Notes' }); no.value = f.notes || '';
+      var msg = h('span', { cls: 'sx-status' });
+      var save = h('button', { type: 'button', cls: 'primary sx-btn-sm', text: 'Save', onclick: function () {
+        save.disabled = true; say(msg, 'Saving…');
+        call('saveTrackFix', [isrc, { issue: d.look[isrc] || f.issue || '', status: st.value, plan: pl.value, new_isrc: ni.value, new_upc: nu.value, new_title: nt.value, notes: no.value }],
+          function () { save.disabled = false; d.fixes[isrc] = { status: st.value, plan: pl.value, new_isrc: ni.value.toUpperCase().replace(/[\s-]/g, ''), new_upc: nu.value.replace(/\D/g, ''), new_title: nt.value, notes: no.value }; say(msg, 'Saved', 'ok'); renderChecks(); },
+          function (e) { save.disabled = false; say(msg, e.message, 'err'); });
+      } });
+      row.appendChild(h('div', {}, [h('code', { text: isrc }), d.look[isrc] ? h('span', { cls: 'why', text: d.look[isrc] }) : null,
+        h('a', { href: '#', text: 'open song', style: 'font-size:12px', onclick: function (e) { e.preventDefault(); openSong(isrc); el('tkEditor').scrollIntoView({ behavior: 'smooth' }); } })]));
+      row.appendChild(h('div', {}, [where, nt, no]));
+      row.appendChild(h('div', {}, [st])); row.appendChild(h('div', {}, [pl]));
+      row.appendChild(h('div', {}, [ni])); row.appendChild(h('div', {}, [nu]));
+      row.appendChild(h('div', {}, [save, msg]));
+      box.appendChild(row);
+    });
+    if (!shown) box.appendChild(h('div', { cls: 'list-empty', text: TK.fixFilter ? 'None with that status.' : 'Nothing to fix. Every ISRC points to one song.' }));
+  }
+
+  /* ---------- Song list ---------- */
+  function setFilter(f) {
+    TK.filter = f;
+    document.querySelectorAll('[data-tkf]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-tkf') === f); });
+    renderSongs();
+  }
+  document.querySelectorAll('[data-tkf]').forEach(function (b) { b.addEventListener('click', function () { setFilter(b.getAttribute('data-tkf')); }); });
+  el('tkSearch').addEventListener('input', function () { renderSongs(); });
+
+  function renderSongs() {
+    if (!TK.data) return;
+    var d = TK.data, q = norm(el('tkSearch').value), box = clear(el('tkSongs'));
+    var list = d.tracks.filter(function (t) {
+      if (TK.filter === 'look' && !d.look[t.isrc]) return false;
+      if (TK.filter === 'nolyrics' && (t.has_lyrics || !(t.first_release && t.first_release <= d.today))) return false;
+      if (TK.filter === 'draft' && !d.drafts[t.isrc]) return false;
+      if (!q) return true;
+      var hay = norm(t.track_title + ' ' + t.isrc + ' ' + (d.on[t.isrc] || []).map(function (r) { return r.release_title + ' ' + r.track_title; }).join(' '));
+      return hay.indexOf(q) >= 0;
+    });
+    list.slice(0, 400).forEach(function (t) {
+      var tags = [];
+      if (d.look[t.isrc]) tags.push(h('span', { cls: 'tk-tag warn', text: 'check' }));
+      if (t.has_lyrics) tags.push(h('span', { cls: 'tk-tag ok', text: 'lyrics' }));
+      if (t.has_abc) tags.push(h('span', { cls: 'tk-tag ok', text: 'score' }));
+      if (d.drafts[t.isrc]) tags.push(h('span', { cls: 'tk-tag', text: 'draft' }));
+      box.appendChild(h('div', { cls: 'tk-item' + (TK.sel === t.isrc ? ' sel' : ''), tabindex: 0, role: 'button',
+        onclick: function () { openSong(t.isrc); }, onkeydown: function (e) { if (e.key === 'Enter') openSong(t.isrc); } },
+        [h('div', {}, [h('b', { text: t.track_title }), h('small', { text: t.isrc + ' · ' + (t.duration || '?') + ' · ' + t.releases + (t.releases === 1 ? ' release' : ' releases') + (t.first_release ? ' · ' + t.first_release.slice(0, 4) : '') })]),
+         h('div', { cls: 'tk-tags' }, tags)]));
+    });
+    if (!list.length) box.appendChild(h('div', { cls: 'list-empty', text: 'No songs match.' }));
+    if (list.length > 400) box.appendChild(h('div', { cls: 'list-empty', text: 'Showing 400 of ' + list.length + '. Search to narrow it down.' }));
+  }
+
+  /* ---------- Song editor ---------- */
+  function openSong(isrc) {
+    TK.sel = isrc; renderSongs();
+    var box = clear(el('tkEditor')); box.appendChild(h('div', { cls: 'list-empty', text: 'Loading…' }));
+    call('getTrackDetail', [isrc], function (d) { if (TK.sel === isrc) { TK.detail = d; renderEditor(); } },
+      function (e) { clear(box).appendChild(h('div', { cls: 'list-empty', text: e.message })); });
+  }
+
+  function renderEditor() {
+    var D = TK.detail, t = D.track, n = D.notes || {}, box = clear(el('tkEditor'));
+    var ed = h('div', { cls: 'tk-edit' });
+    ed.appendChild(h('h3', { text: t.track_title }));
+    ed.appendChild(h('div', { cls: 'tk-meta', text: t.isrc + ' · ' + (t.duration || '?') + ' · ' + (D.released ? 'out since ' + t.first_release : (t.first_release ? 'out ' + t.first_release : 'not on a release yet')) }));
+    if (TK.data.look[t.isrc]) ed.appendChild(h('p', { cls: 'tk-lock', text: 'This ISRC needs a look: ' + TK.data.look[t.isrc] + '. See the Fix plan tab.' }));
+
+    // Basics (public)
+    var title = h('input', { value: t.track_title, 'aria-label': 'Song title' });
+    var artist = h('select', { 'aria-label': 'Artist' }, TK.data.artists.concat(TK.data.artists.indexOf(t.artist) < 0 && t.artist ? [t.artist] : []).map(function (a) { return opt(a, a, t.artist || TK.data.artists[0]); }));
+    var lang = h('input', { value: t.language || '', placeholder: 'English', 'aria-label': 'Language' });
+    var exp = h('input', { type: 'checkbox', checked: t.explicit, id: 'tkExp' });
+    var bmsg = h('span', { cls: 'sx-status' });
+    ed.appendChild(h('div', { cls: 'tk-row' }, [
+      h('div', { style: 'grid-column: span 2' }, [h('label', { text: 'Title (site)' }), title]),
+      h('div', {}, [h('label', { text: 'Artist' }), artist]),
+      h('div', {}, [h('label', { text: 'Language' }), lang])]));
+    ed.appendChild(h('div', { cls: 'sg-bar', style: 'margin-bottom:12px' }, [h('label', { 'for': 'tkExp', style: 'display:inline-flex;gap:6px;align-items:center;margin:0' }, [exp, 'Explicit']),
+      h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: 'Save basics', onclick: function (e) {
+        var b = e.target; b.disabled = true; say(bmsg, 'Saving…');
+        call('saveTrackInfo', [t.isrc, { track_title: title.value, artist: artist.value, language: lang.value, explicit: exp.checked }],
+          function () { b.disabled = false; say(bmsg, 'Saved', 'ok'); var x = TK.data.byIsrc[t.isrc]; if (x) { x.track_title = title.value.trim(); renderSongs(); } },
+          function (er) { b.disabled = false; say(bmsg, er.message, 'err'); });
+      } }), bmsg]));
+
+    var on = h('ul', { cls: 'tk-on' });
+    D.on.forEach(function (r) { on.appendChild(h('li', {}, [h('a', { href: '#', text: r.release_title, onclick: function (e) { e.preventDefault(); pickRelease(r.upc); } }),
+      ' · track ' + r.track_number + (Number(r.disc) > 1 ? ' (disc ' + r.disc + ')' : '') + ' · "' + r.track_title + '" · ' + r.duration + ' · ' + (r.date || '') + ' · UPC ' + r.upc])); });
+    ed.appendChild(h('div', { cls: 'tk-field' }, [h('label', { text: 'On these releases' }), on]));
+
+    var tabs = h('div', { cls: 'tabs' });
+    [['lyrics', 'Lyrics'], ['abc', 'Music score'], ['notes', 'Studio notes'], ['fix', 'Fix plan']].forEach(function (x) {
+      tabs.appendChild(h('button', { type: 'button', cls: TK.tab === x[0] ? 'on' : '', text: x[1], onclick: function () { TK.tab = x[0]; renderEditor(); } }));
+    });
+    ed.appendChild(tabs);
+    var pane = h('div'); ed.appendChild(pane);
+    if (TK.tab === 'lyrics') textPane(pane, 'lyrics', 'draft_lyrics', t.lyrics, n.draft_lyrics);
+    if (TK.tab === 'abc') textPane(pane, 'abc', 'draft_abc', t.abc, n.draft_abc);
+    if (TK.tab === 'notes') notesPane(pane, n);
+    if (TK.tab === 'fix') fixPane(pane);
+    box.appendChild(ed);
+  }
+
+  /* Lyrics or score: private draft on the left, what the site shows on the right. */
+  function textPane(pane, pubKey, draftKey, published, draft) {
+    var D = TK.detail, t = D.track, isAbc = pubKey === 'abc';
+    var area = h('textarea', { 'aria-label': isAbc ? 'Draft score in ABC' : 'Draft lyrics', placeholder: isAbc ? 'X:1\nT:' + t.track_title + '\nM:4/4\nL:1/8\nK:C\n|: C2 E2 G2 c2 :|' : 'Type or paste the lyrics.\n\nA blank line between verses.' });
+    area.value = draft != null && draft !== '' ? draft : (published || '');
+    var msg = h('span', { cls: 'sx-status' });
+    var preview = isAbc ? h('div', { cls: 'tk-score', id: 'tkAbcDraft' }) : null;
+    var pubBox = isAbc ? h('div', { cls: 'tk-score', id: 'tkAbcPub' }) : h('div', { cls: 'tk-pub' + (published ? '' : ' empty'), text: published || 'Nothing on the site yet.' });
+    if (isAbc && !published) { pubBox.className = 'tk-pub empty'; pubBox.textContent = 'No score on the site yet.'; }
+
+    var saveDraft = h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: 'Save draft (private)', onclick: function () {
+      var b = this; b.disabled = true; say(msg, 'Saving…');
+      var d = Object.assign({}, D.notes || {}); d[draftKey] = area.value;
+      call('saveTrackNotes', [t.isrc, d], function () { b.disabled = false; D.notes = d; TK.data.drafts[t.isrc] = true; say(msg, 'Draft saved', 'ok'); },
+        function (e) { b.disabled = false; say(msg, e.message, 'err'); });
+    } });
+    var publish = h('button', { type: 'button', cls: 'primary sx-btn-sm', text: 'Publish to site', disabled: !D.released, onclick: function () {
+      if (!area.value.trim()) { say(msg, 'Nothing to publish. Use "Take off site" to remove it.', 'err'); return; }
+      if (!confirm('Put this ' + (isAbc ? 'score' : 'lyric sheet') + ' on the public Song Database for "' + t.track_title + '"?')) return;
+      var b = this; b.disabled = true; say(msg, 'Publishing…');
+      var p = {}; p[pubKey] = area.value;
+      call('publishTrackText', [t.isrc, p], function () { b.disabled = false; t[pubKey] = area.value; var x = TK.data.byIsrc[t.isrc]; if (x) x[isAbc ? 'has_abc' : 'has_lyrics'] = true;
+        say(msg, 'On the site', 'ok'); renderEditor(); renderSongs(); }, function (e) { b.disabled = false; say(msg, e.message, 'err'); });
+    } });
+    var off = published ? h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: 'Take off site', onclick: function () {
+      if (!confirm('Remove the ' + (isAbc ? 'score' : 'lyrics') + ' of "' + t.track_title + '" from the site? Your draft stays.')) return;
+      var p = {}; p[pubKey] = '';
+      call('publishTrackText', [t.isrc, p], function () { t[pubKey] = ''; var x = TK.data.byIsrc[t.isrc]; if (x) x[isAbc ? 'has_abc' : 'has_lyrics'] = false; renderEditor(); renderSongs(); },
+        function (e) { say(msg, e.message, 'err'); });
+    } }) : null;
+
+    pane.appendChild(h('div', { cls: 'tk-two' }, [
+      h('div', {}, [h('label', {}, [isAbc ? 'Draft score (ABC notation)' : 'Draft lyrics', h('span', { cls: 'tk-private', text: 'private' })]), area, preview]),
+      h('div', {}, [h('label', {}, ['On the site now', h('span', { cls: 'tk-public', text: 'public' })]), pubBox])]));
+    pane.appendChild(h('div', { cls: 'sg-bar', style: 'margin-top:10px;flex-wrap:wrap' }, [saveDraft, publish, off, msg]));
+    if (!D.released) pane.appendChild(h('p', { cls: 'tk-lock', text: 'Not out yet, so it can only be saved as a draft. Publishing opens on release day (' + (t.first_release || 'add it to a release first') + ').' }));
+    if (isAbc) {
+      pane.appendChild(h('p', { cls: 'sx-note', text: 'ABC is plain text for sheet music: X: number, T: title, M: meter, L: note length, K: key, then the notes. The preview updates as you type.' }));
+      withAbc(function () {
+        var draw = function () { try { window.ABCJS.renderAbc('tkAbcDraft', area.value || '', { responsive: 'resize', add_classes: true }); } catch (e) { preview.textContent = 'Can’t read this ABC yet.'; } };
+        area.addEventListener('input', debounce(draw, 400)); draw();
+        if (published) { try { window.ABCJS.renderAbc('tkAbcPub', published, { responsive: 'resize' }); } catch (e) { pubBox.textContent = published; } }
+      });
+    }
+  }
+
+  function notesPane(pane, n) {
+    var D = TK.detail, t = D.track;
+    var bpm = h('input', { value: n.bpm || '', placeholder: '92', inputmode: 'decimal', 'aria-label': 'BPM' });
+    var key = h('input', { value: n.key || '', placeholder: 'A minor', 'aria-label': 'Key' });
+    var ts = h('input', { value: n.time_signature || '', placeholder: '4/4', 'aria-label': 'Time signature' });
+    var chords = h('textarea', { cls: 'short', placeholder: 'Verse: Am  F  C  G\nChorus: F  G  Am  Am', 'aria-label': 'Chords' }); chords.value = n.chords || '';
+    var notes = h('textarea', { cls: 'short', placeholder: 'Anything: capo, tuning, who played what, ideas for a new version', 'aria-label': 'Notes' }); notes.value = n.notes || '';
+    var msg = h('span', { cls: 'sx-status' });
+    pane.appendChild(h('p', { cls: 'sx-note' }, ['Studio notes stay in your private Song Vault sheet.', h('span', { cls: 'tk-private', text: 'private' })]));
+    pane.appendChild(h('div', { cls: 'tk-row' }, [h('div', {}, [h('label', { text: 'BPM' }), bpm]), h('div', {}, [h('label', { text: 'Key' }), key]), h('div', {}, [h('label', { text: 'Time signature' }), ts])]));
+    pane.appendChild(h('div', { cls: 'tk-field' }, [h('label', { text: 'Chords' }), chords]));
+    pane.appendChild(h('div', { cls: 'tk-field' }, [h('label', { text: 'Notes' }), notes]));
+    pane.appendChild(h('div', { cls: 'sg-bar' }, [h('button', { type: 'button', cls: 'primary sx-btn-sm', text: 'Save notes', onclick: function () {
+      var b = this; b.disabled = true; say(msg, 'Saving…');
+      var d = Object.assign({}, D.notes || {}, { bpm: bpm.value, key: key.value, time_signature: ts.value, chords: chords.value, notes: notes.value });
+      call('saveTrackNotes', [t.isrc, d], function () { b.disabled = false; D.notes = d; TK.data.drafts[t.isrc] = true; say(msg, 'Saved', 'ok'); }, function (e) { b.disabled = false; say(msg, e.message, 'err'); });
+    } }), msg]));
+  }
+
+  function fixPane(pane) {
+    var t = TK.detail.track, d = TK.data;
+    var f = d.fixes[t.isrc] || TK.detail.fix || { status: d.statuses[0], plan: '' };
+    var st = h('select', { 'aria-label': 'Status' }, d.statuses.map(function (s) { return opt(s, s, f.status); }));
+    var pl = h('select', { 'aria-label': 'Plan' }, d.plans.map(function (s) { return opt(s, s || 'Not decided', f.plan); }));
+    var ni = h('input', { value: f.new_isrc || '', placeholder: 'new ISRC', 'aria-label': 'New ISRC' });
+    var nu = h('input', { value: f.new_upc || '', placeholder: 'new UPC', 'aria-label': 'New UPC', inputmode: 'numeric' });
+    var nt = h('input', { value: f.new_title || '', placeholder: 'new title (optional)', 'aria-label': 'New title' });
+    var no = h('textarea', { cls: 'short', placeholder: 'notes', 'aria-label': 'Notes' }); no.value = f.notes || '';
+    var msg = h('span', { cls: 'sx-status' });
+    pane.appendChild(h('p', { cls: 'sx-note' }, [d.look[t.isrc] ? 'Found: ' + d.look[t.isrc] + '. ' : 'No problem found with this ISRC; you can still plan a change. ', h('span', { cls: 'tk-private', text: 'private' })]));
+    pane.appendChild(h('div', { cls: 'tk-row' }, [h('div', {}, [h('label', { text: 'Status' }), st]), h('div', {}, [h('label', { text: 'Plan' }), pl]), h('div', {}, [h('label', { text: 'New ISRC' }), ni]), h('div', {}, [h('label', { text: 'New UPC' }), nu])]));
+    pane.appendChild(h('div', { cls: 'tk-field' }, [h('label', { text: 'New title' }), nt]));
+    pane.appendChild(h('div', { cls: 'tk-field' }, [h('label', { text: 'Notes' }), no]));
+    pane.appendChild(h('div', { cls: 'sg-bar' }, [h('button', { type: 'button', cls: 'primary sx-btn-sm', text: 'Save plan', onclick: function () {
+      var b = this; b.disabled = true; say(msg, 'Saving…');
+      var v = { issue: d.look[t.isrc] || '', status: st.value, plan: pl.value, new_isrc: ni.value, new_upc: nu.value, new_title: nt.value, notes: no.value };
+      call('saveTrackFix', [t.isrc, v], function () { b.disabled = false; d.fixes[t.isrc] = v; say(msg, 'Saved', 'ok'); renderFixes(); renderChecks(); }, function (e) { b.disabled = false; say(msg, e.message, 'err'); });
+    } }), msg]));
+    pane.appendChild(h('p', { cls: 'sx-note', text: 'When the republished release is out: add it on the Songs screen with its new UPC, then list its songs under Release tracklist below, with this ISRC in "Replaces". Then set the status to Republished.' }));
+  }
+
+  /* ---------- Release tracklist (public) ---------- */
+  el('tkRelSearch').addEventListener('input', renderRelPicker);
+  el('tkRel').addEventListener('change', function () { TK.rel = el('tkRel').value; renderTracklist(); });
+  function renderRelPicker() {
+    if (!TK.data) return;
+    var q = norm(el('tkRelSearch').value), sel = clear(el('tkRel'));
+    sel.appendChild(opt('', 'Pick a release…', TK.rel));
+    TK.data.songs.filter(function (s) { return s.upc && (!q || norm(s.title + ' ' + s.upc).indexOf(q) >= 0); })
+      .sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); })
+      .forEach(function (s) {
+        var n = TK.data.rts.filter(function (r) { return r.upc === s.upc; }).length;
+        sel.appendChild(opt(s.upc, s.title + ' · ' + s.type + ' · ' + (s.date || '?') + ' · ' + (n ? n + (n === 1 ? ' song' : ' songs') : 'no tracklist'), TK.rel));
+      });
+  }
+  function pickRelease(upc) { TK.rel = upc; el('tkRelSearch').value = ''; renderRelPicker(); el('tkRel').value = upc; renderTracklist(); el('tkTracklist').scrollIntoView({ behavior: 'smooth' }); }
+
+  function renderTracklist() {
+    var box = clear(el('tkTracklist')), d = TK.data, upc = TK.rel;
+    if (!upc) { box.appendChild(h('div', { cls: 'list-empty', text: 'Pick a release.' })); return; }
+    var s = d.rel[upc] || {};
+    var rows = d.rts.filter(function (r) { return r.upc === upc; }).sort(function (a, b) { return a.disc - b.disc || a.track_number - b.track_number; })
+      .map(function (r) { return { disc: r.disc, track_number: r.track_number, isrc: r.isrc, track_title: r.track_title, duration: r.duration, bonus: r.bonus, from_isrc: '' }; });
+    if (!rows.length && s.isrc) rows.push({ disc: 1, track_number: 1, isrc: s.isrc, track_title: s.title, duration: '', bonus: false, from_isrc: '' });
+    var tbody = h('tbody');
+    function addRow(r) {
+      var tr = h('tr');
+      var cells = {
+        disc: h('input', { cls: 'num', value: r.disc || 1, inputmode: 'numeric', 'aria-label': 'Disc' }),
+        track_number: h('input', { cls: 'num', value: r.track_number || tbody.children.length + 1, inputmode: 'numeric', 'aria-label': 'Track number' }),
+        isrc: h('input', { cls: 'code', value: r.isrc || '', placeholder: 'QZTB42330583', 'aria-label': 'ISRC' }),
+        track_title: h('input', { value: r.track_title || '', 'aria-label': 'Title on this release' }),
+        duration: h('input', { cls: 'num', value: r.duration || '', placeholder: '3:34', 'aria-label': 'Length', style: 'width:64px' }),
+        bonus: h('input', { type: 'checkbox', checked: !!r.bonus, 'aria-label': 'Bonus track' }),
+        from_isrc: h('input', { cls: 'code', value: r.from_isrc || '', placeholder: 'old ISRC', 'aria-label': 'Replaces ISRC' })
+      };
+      tr._cells = cells;
+      ['disc', 'track_number', 'isrc', 'track_title', 'duration', 'bonus', 'from_isrc'].forEach(function (k) { tr.appendChild(h('td', {}, [cells[k]])); });
+      tr.appendChild(h('td', {}, [h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: '✕', 'aria-label': 'Remove song', onclick: function () { tr.remove(); } })]));
+      tbody.appendChild(tr);
+    }
+    rows.forEach(addRow);
+    var msg = h('span', { cls: 'sx-status' });
+    box.appendChild(h('p', { cls: 'sx-note', text: s.title + ' · ' + (s.type || '') + ' · ' + (s.date || '') + ' · UPC ' + upc + (s.date > d.today ? ' · not out yet' : '') }));
+    box.appendChild(h('div', { style: 'overflow-x:auto' }, [h('table', { cls: 'tk-tl' }, [
+      h('thead', {}, [h('tr', {}, ['Disc', '#', 'ISRC', 'Title on this release', 'Length', 'Bonus', 'Replaces', ''].map(function (x) { return h('th', { text: x }); }))]), tbody])]));
+    box.appendChild(h('div', { cls: 'sg-bar', style: 'margin-top:10px;flex-wrap:wrap' }, [
+      h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: '+ Add song', onclick: function () { addRow({}); } }),
+      h('button', { type: 'button', cls: 'primary sx-btn-sm', text: 'Save tracklist', onclick: function () {
+        var list = Array.prototype.map.call(tbody.children, function (tr) { var c = tr._cells;
+          return { disc: c.disc.value, track_number: c.track_number.value, isrc: c.isrc.value, track_title: c.track_title.value, duration: c.duration.value, bonus: c.bonus.checked, from_isrc: c.from_isrc.value }; });
+        if (!confirm('Save the tracklist of "' + s.title + '" (' + list.length + (list.length === 1 ? ' song' : ' songs') + ')? This is public.')) return;
+        var b = this; b.disabled = true; say(msg, 'Saving…');
+        call('saveReleaseTracklist', [upc, list], function (res) { b.disabled = false; say(msg, 'Saved' + (res.added ? ', ' + res.added + ' new song' + (res.added === 1 ? '' : 's') + ' added' : ''), 'ok'); load(true); },
+          function (e) { b.disabled = false; say(msg, e.message, 'err'); });
+      } }), msg]));
+  }
+
+  /* ---------- small helpers ---------- */
+  function debounce(fn, ms) { var t; return function () { clearTimeout(t); t = setTimeout(fn, ms); }; }
+  var abcWaiting = null;
+  function withAbc(fn) {
+    if (window.ABCJS) return fn();
+    if (abcWaiting) { abcWaiting.push(fn); return; }
+    abcWaiting = [fn];
+    var s = document.createElement('script'); s.src = ABCJS_URL; s.async = true;
+    s.onload = function () { var q = abcWaiting; abcWaiting = null; q.forEach(function (f) { f(); }); };
+    s.onerror = function () { abcWaiting = null; var p = el('tkAbcDraft'); if (p) p.textContent = 'The score preview couldn’t load. Saving still works.'; };
+    document.head.appendChild(s);
+  }
+})();
+</script>
