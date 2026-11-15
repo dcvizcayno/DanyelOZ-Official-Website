@@ -23,9 +23,12 @@ const { chromium } = require('playwright'); const fs=require('fs');
   console.log('draft shown', JSON.stringify(await p.inputValue('.tk-edit textarea')), '| public:', JSON.stringify(await p.textContent('.tk-pub')));
   await p.click('button:has-text("Save draft")'); await p.waitForTimeout(100); console.log('draft saved', JSON.stringify(await p.evaluate(()=>window.__tkNotes)));
   await p.click('button:has-text("Publish to site")'); await p.waitForTimeout(150); console.log('published', JSON.stringify(await p.evaluate(()=>window.__tkPub)));
-  await p.click('.tk-edit .tabs button:has-text("Music score")'); await p.waitForTimeout(600);
+  // abcjs comes from cdnjs, and the first download can take a few seconds: wait for the drawn score, not a fixed time
+  await p.click('.tk-edit .tabs button:has-text("Music score")');
+  await p.locator('#tkAbcPub svg').first().waitFor({ timeout: 15000 }).catch(()=>{});
   console.log('score svg (site)', await p.locator('#tkAbcPub svg').count());
-  await p.fill('.tk-edit textarea','X:1\nT:Test\nM:3/4\nL:1/4\nK:D\nDFA|d2A|'); await p.waitForTimeout(700);
+  await p.fill('.tk-edit textarea','X:1\nT:Test\nM:3/4\nL:1/4\nK:D\nDFA|d2A|');
+  await p.locator('#tkAbcDraft svg[aria-label*="Test"]').waitFor({ timeout: 15000 }).catch(()=>{});
   console.log('score svg (draft preview)', await p.locator('#tkAbcDraft svg').count());
   await p.screenshot({path:__dirname+'/out/tk_score.png',fullPage:false});
   await p.click('.tk-edit .tabs button:has-text("Studio notes")'); console.log('bpm', await p.inputValue('input[aria-label=BPM]'));
