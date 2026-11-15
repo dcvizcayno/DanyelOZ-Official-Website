@@ -90,7 +90,7 @@ const UrlFetchApp = { fetch(url, opt = {}) {
   if (u.endsWith('/actions/workflows/x-draft.yml')) return resp(200, { state: gh.workflow });
   if (u.endsWith('/disable')) { gh.workflow = 'disabled_manually'; return resp(204, ''); }
   if (u.endsWith('/enable')) { gh.workflow = 'active'; return resp(204, ''); }
-  if (u.endsWith('/dispatches')) { gh.dispatched++; return resp(204, ''); }
+  if (u.endsWith('/dispatches')) { gh.dispatched++; gh.lastDispatch = JSON.parse(opt.payload); return resp(204, ''); }
   throw new Error('unexpected fetch ' + url);
 } };
 
@@ -267,5 +267,31 @@ ctx.setXDraftsPaused(false); assert.strictEqual(gh.workflow, 'active');
 ctx.xDraftNow(); assert.strictEqual(gh.dispatched, 1);
 gh.issues[0].state = 'open';
 assert.throws(() => ctx.xDraftNow(), /already waiting/);
+
+/* ----- X: pick a song to draft ----- */
+x = ctx.getXData();
+eq(x.rotation.songs.map(s => s.title), x.rotation.songs.filter(s => !s.postedThisRound).concat(x.rotation.songs.filter(s => s.postedThisRound)).map(s => s.title));
+assert.strictEqual(x.rotation.songs.length, 2, 'every song with a Bandcamp code is pickable');
+assert.ok(x.rotation.songs.every(s => typeof s.hasStory === 'boolean'));
+assert.strictEqual(x.draft.picked, false);
+assert.throws(() => ctx.xDraftSong('', false), /Pick a song/);
+assert.throws(() => ctx.xDraftSong('Not A Song', false), /no Bandcamp code/);
+assert.throws(() => ctx.xDraftSong('Carmen', false), /already waiting/, 'a waiting draft needs replace');
+assert.throws(() => ctx.xDraftSong('Carmen', true), /being posted/, 'never replace a draft that is mid-post');
+assert.strictEqual(gh.dispatched, 1, 'nothing dispatched on errors');
+gh.issues[0].body = gh.issues[0].body.replace('- [x] Post', '- [ ] Post');
+let pk = ctx.xDraftSong(' Carmen ', true);
+assert.strictEqual(pk.replaced, 1); assert.strictEqual(gh.dispatched, 2);
+eq(gh.lastDispatch, { ref: 'main', inputs: { song: 'Carmen', replace: 'true' } });
+gh.issues[0].state = 'closed';
+pk = ctx.xDraftSong('Carmen', false);
+eq(gh.lastDispatch, { ref: 'main', inputs: { song: 'Carmen', replace: 'false' } });
+// a picked draft shows as your pick
+gh.issues[0].state = 'open'; gh.issues[0].body = gh.issues[0].body.replace('"version": 1}', '"version": 1, "picked": true}');
+assert.strictEqual(ctx.getXData().draft.picked, true);
+// release posts stay out of the rotation count, same as the agent
+xlog.push({ id: '5', song: 'Carmen', kind: 'release', status: 'posted', test: false, posted_at: '2026-11-09T01:00+08:00', metrics: {} });
+assert.strictEqual(ctx.getXData().rotation.postedThisRound, 0, 'release post not counted');
+xlog.pop();
 
 console.log('ALL SHORTS + X TESTS PASSED');

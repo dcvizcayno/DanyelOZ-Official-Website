@@ -94,7 +94,7 @@ function getXData() {
         const p = parseXIssue_(it.body);
         out.draft = { number: it.number, url: it.html_url, title: it.title, created: it.created_at,
                       song: p.meta.song || it.title.replace(/^X draft:\s*/, ''), hook: p.meta.hook || '',
-                      link: p.meta.link || '', version: p.meta.version || 1, text: p.text,
+                      link: p.meta.link || '', version: p.meta.version || 1, picked: !!p.meta.picked, text: p.text,
                       length: xLength_(p.text), testMode: p.testMode };
       }
       const wf = gh_('GET', '/repos/' + repo + '/actions/workflows/' + X_DRAFT_WORKFLOW);
@@ -104,19 +104,23 @@ function getXData() {
     } catch (e) { out.error = e.message; }
   }
 
-  // Song rotation: every song with a Bandcamp code gets a turn before any repeats (same rule as the agent).
+  // Song rotation: every song with a Bandcamp code gets a turn before any repeats (same rule as the agent,
+  // which leaves release posts out of the rotation).
   const eligible = xEligibleSongs_();
-  const posted = log.filter(function (p) { return p.status === 'posted'; }).map(function (p) { return p.song; });
+  const posted = log.filter(function (p) { return p.status === 'posted' && p.kind !== 'release'; }).map(function (p) { return p.song; });
   const cycle = posted.length % Math.max(1, eligible.length);
   const recent = {};
   (cycle ? posted.slice(-cycle) : []).forEach(function (t) { recent[t] = true; });
+  const all = eligible.map(function (s) {
+    return { title: s.song_title, hasStory: !!String(s.song_description).trim(), postedThisRound: !!recent[s.song_title] };
+  });
   out.rotation = {
     eligible: eligible.length,
     postedThisRound: cycle,
-    noStory: eligible.filter(function (s) { return !String(s.song_description).trim(); }).map(function (s) { return s.song_title; }),
-    notYet: eligible.filter(function (s) { return !recent[s.song_title]; }).slice(0, 8).map(function (s) {
-      return { title: s.song_title, hasStory: !!String(s.song_description).trim() };
-    })
+    noStory: all.filter(function (s) { return !s.hasStory; }).map(function (s) { return s.title; }),
+    notYet: all.filter(function (s) { return !s.postedThisRound; }).slice(0, 8),
+    // Every song you can pick, not-posted-yet first (sheet order inside each group).
+    songs: all.filter(function (s) { return !s.postedThisRound; }).concat(all.filter(function (s) { return s.postedThisRound; }))
   };
 
   const hooks = (config.experiments && config.experiments.hook) || ['question', 'story', 'invite', 'behind'];
@@ -190,4 +194,21 @@ function xDraftNow() {
   if (open.length) throw new Error('A draft is already waiting. Post or revise it first.');
   gh_('POST', '/repos/' + xRepo_() + '/actions/workflows/' + X_DRAFT_WORKFLOW + '/dispatches', { ref: 'main' });
   return { requested: true };
+}
+
+/* Asks the agent to draft a song you picked, now. Leave it and the 7:07 PM rotation picks as before.
+   replace: a draft is waiting, so the agent closes it (nothing is posted) and drafts this song instead. */
+function xDraftSong(title, replace) {
+  title = String(title || '').trim();
+  if (!title) throw new Error('Pick a song first.');
+  const song = xEligibleSongs_().filter(function (s) { return String(s.song_title).trim() === title; })[0];
+  if (!song) throw new Error('“' + title + '” has no Bandcamp code in the Song Database, so the agent can’t link it. Add the code on the Songs screen first.');
+  const open = gh_('GET', '/repos/' + xRepo_() + '/issues?labels=x-draft&state=open&per_page=5');
+  if (open.length && !replace) throw new Error('A draft is already waiting. Post it, or pick again and choose to replace it.');
+  open.forEach(function (it) {
+    if (parseXIssue_(it.body).post) throw new Error('The waiting draft is being posted right now. Give it a minute, then pick again.');
+  });
+  gh_('POST', '/repos/' + xRepo_() + '/actions/workflows/' + X_DRAFT_WORKFLOW + '/dispatches',
+      { ref: 'main', inputs: { song: title, replace: open.length ? 'true' : 'false' } });
+  return { requested: true, song: title, replaced: open.length };
 }

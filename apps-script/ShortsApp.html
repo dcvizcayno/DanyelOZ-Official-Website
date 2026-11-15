@@ -510,7 +510,7 @@
           setTimeout(function () { XS.loaded = false; loadX(); }, 60000);
         }, function (e) { left.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); say('xStatus', e.message, 'err'); });
       };
-      left.appendChild(h('h2', {}, [document.createTextNode('Waiting for you '), h('span', { cls: 'mode', text: 'Approach: ' + (dr.hook || '?') + ' · Version ' + dr.version })]));
+      left.appendChild(h('h2', {}, [document.createTextNode('Waiting for you '), h('span', { cls: 'mode', text: (dr.picked ? 'Your pick · ' : '') + 'Approach: ' + (dr.hook || '?') + ' · Version ' + dr.version })]));
       left.appendChild(h('div', { cls: 'sx-head' }, [h('div', {}, [h('h3', { text: dr.song }),
         h('div', { cls: 'meta' }, [document.createTextNode('Drafted ' + String(dr.created).slice(0, 10) + ' · '),
           h('a', { href: safeUrl(dr.url), target: '_blank', rel: 'noopener', text: 'GitHub Issue #' + dr.number })])])]));
@@ -557,20 +557,63 @@
     var right = h('div', { style: 'flex:5 1 340px;display:grid;gap:18px' });
     var rc = h('div', { cls: 'card' }, [
       h('h2', {}, [document.createTextNode('Song rotation '), h('span', { cls: 'count', text: rot.postedThisRound + ' of ' + rot.eligible + ' this round' })]),
-      h('p', { cls: 'sx-note', style: 'margin:-6px 0 12px', text: 'Songs with a Bandcamp code take turns. Every song gets one before any repeats.' })
+      h('p', { cls: 'sx-note', style: 'margin:-6px 0 12px', text: 'Songs with a Bandcamp code take turns. Every song gets one before any repeats. ' +
+        (d.connected ? 'Want a certain song? Tap Draft next to it. If you don’t pick, the agent picks the next one at 7:07 PM.' : 'Connect GitHub (above) to pick a song yourself.') })
     ]);
     if (rot.noStory.length) {
       rc.appendChild(h('div', { cls: 'sx-warn', style: 'margin-bottom:12px' }, [
-        h('b', { text: rot.noStory.length + ' songs have no story yet' }), document.createTextNode(', so their posts read generic: ' + rot.noStory.slice(0, 6).join(', ') + (rot.noStory.length > 6 ? '…' : '') + ' '),
-        h('a', { href: '#', text: 'Fill them in', onclick: function (ev) { ev.preventDefault(); viewTo('songs'); var b = document.querySelector('[data-filter="missing"]'); if (b) b.click(); } })
+        h('b', { text: rot.noStory.length === 1 ? '1 song has no story yet' : rot.noStory.length + ' songs have no story yet' }),
+        document.createTextNode(', so ' + (rot.noStory.length === 1 ? 'its post reads' : 'their posts read') + ' generic: ' + rot.noStory.slice(0, 6).join(', ') + (rot.noStory.length > 6 ? '…' : '') + ' '),
+        h('a', { href: '#', text: rot.noStory.length === 1 ? 'Fill it in' : 'Fill them in', onclick: function (ev) { ev.preventDefault(); viewTo('songs'); var b = document.querySelector('[data-filter="missing"]'); if (b) b.click(); } })
       ]));
     }
-    rc.appendChild(h('div', { cls: 'sx-note', style: 'font-weight:700;margin-bottom:6px', text: 'NOT POSTED YET THIS ROUND' }));
-    rot.notYet.forEach(function (s) {
-      rc.appendChild(h('div', { style: 'border:1px solid var(--line);border-radius:10px;padding:7px 10px;margin-bottom:6px;display:flex;justify-content:space-between;font-size:13.5px' }, [
-        h('span', { text: s.title }), h('span', { cls: 'sx-pill ' + (s.hasStory ? 'Uploaded' : 'Draft'), text: s.hasStory ? 'Has story' : 'No story' })
-      ]));
-    });
+    var pickSongs = rot.songs || rot.notYet;
+    var find = h('input', { type: 'search', cls: 'sx-rot-find', placeholder: 'Find a song (' + pickSongs.length + ')', 'aria-label': 'Find a song to draft' });
+    var list = h('div', { cls: 'sx-rot-list', role: 'list' });
+    var pickDraft = function (s, row, btn) {
+      var waiting = d.draft ? d.draft.song : '';
+      if (waiting && !confirm('A draft for “' + waiting + '” is waiting.\n\nClose it (nothing gets posted) and draft “' + s.title + '” instead?')) return;
+      list.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+      row.classList.add('sel'); btn.textContent = 'Asking…';
+      say('xPickStatus', 'Asking the agent to draft “' + s.title + '”…');
+      call('xDraftSong', [s.title, !!waiting], function () {
+        btn.textContent = 'Asked';
+        say('xPickStatus', 'Asked. The draft for “' + s.title + '” shows up under Waiting for you in about a minute.', 'ok');
+        setTimeout(function () { XS.loaded = false; loadX(); }, 60000);
+      }, function (e) {
+        list.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+        row.classList.remove('sel'); btn.textContent = 'Draft';
+        say('xPickStatus', e.message, 'err');
+      });
+    };
+    var drawList = function () {
+      var q = find.value.trim().toLowerCase();
+      clear(list);
+      var shown = pickSongs.filter(function (s) { return !q || s.title.toLowerCase().indexOf(q) >= 0; });
+      var lastDone = null;
+      shown.forEach(function (s) {
+        var done = !!s.postedThisRound;
+        if (lastDone !== done) {
+          list.appendChild(h('div', { cls: 'sx-note', style: 'font-weight:700;margin:' + (lastDone === null ? '0' : '8px') + ' 0 0', text: done ? 'ALREADY POSTED THIS ROUND' : 'NOT POSTED YET THIS ROUND' }));
+          lastDone = done;
+        }
+        var row = h('div', { cls: 'sx-rot-item' + (done ? ' done' : ''), role: 'listitem' });
+        row.appendChild(h('span', { cls: 't', text: s.title }));
+        row.appendChild(h('span', { cls: 'sx-pill ' + (s.hasStory ? 'Uploaded' : 'Draft'), text: s.hasStory ? 'Has story' : 'No story' }));
+        if (d.connected) {
+          var btn = h('button', { type: 'button', cls: 'ghost', text: 'Draft', 'aria-label': 'Draft a post for ' + s.title });
+          btn.onclick = function () { pickDraft(s, row, btn); };
+          row.appendChild(btn);
+        }
+        list.appendChild(row);
+      });
+      if (!shown.length) list.appendChild(h('div', { cls: 'sx-empty', text: q ? 'No song with a Bandcamp code matches “' + find.value.trim() + '”.' : 'No songs with a Bandcamp code yet.' }));
+    };
+    find.addEventListener('input', drawList);
+    drawList();
+    rc.appendChild(find);
+    rc.appendChild(list);
+    rc.appendChild(h('span', { cls: 'sx-status', id: 'xPickStatus' }));
     right.appendChild(rc);
 
     var pause = h('input', { type: 'checkbox', checked: paused, disabled: !d.connected, 'aria-label': 'Pause daily drafts', onchange: function () {

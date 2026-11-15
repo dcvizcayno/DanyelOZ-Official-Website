@@ -81,8 +81,12 @@ var H={
  applyBatch:function(ids){return {scheduled:ids.length,skipped:0};},
  getXData:function(){return {connected:true,repo:'dcvizcayno/danyeloz-embeds',error:'',drafts:1,workflow:'active',report:'https://github.com/x/issues/5',minSamples:3,exploreRate:0.2,
    draft:{number:2,url:'https://github.com/dcvizcayno/danyeloz-embeds/issues/2',title:'X draft: NOTE TO SELF',created:'2026-11-05T11:07:00Z',song:'NOTE TO SELF',hook:'question',link:'bandcamp',version:1,text:'Ever held on to something long after it was over? "NOTE TO SELF" lives in that space.\n\nhttps://danyeloz.bandcamp.com/track/note-to-self',length:110,testMode:true},
-   rotation:{eligible:50,postedThisRound:0,noStory:['Carmen','Dahlia','Ivy','June','Mara','Nina','Opal','Pia','Rue','Sia','Tess','Vera'],notYet:[{title:'Carmen',hasStory:false},{title:'The Realization',hasStory:true},{title:'Aubrey',hasStory:true},{title:'The Search',hasStory:true}]},
+   rotation:{eligible:50,postedThisRound:0,noStory:['Carmen','Dahlia','Ivy','June','Mara','Nina','Opal','Pia','Rue','Sia','Tess','Vera'],notYet:[{title:'Carmen',hasStory:false},{title:'The Realization',hasStory:true},{title:'Aubrey',hasStory:true},{title:'The Search',hasStory:true}],
+     songs:[{title:'Carmen',hasStory:false,postedThisRound:false},{title:'The Realization',hasStory:true,postedThisRound:false},{title:'Aubrey',hasStory:true,postedThisRound:false},
+       {title:'<b>Bold</b> & a very long song title that keeps going and going to test wrapping on a phone',hasStory:true,postedThisRound:false},
+       {title:'Semantics',hasStory:true,postedThisRound:true},{title:'NOTE TO SELF',hasStory:true,postedThisRound:true}]},
    approaches:[{name:'question',tries:0,score:null},{name:'story',tries:0,score:null},{name:'invite',tries:0,score:null},{name:'behind',tries:0,score:null}],posts:[]};},
+ xDraftSong:function(title,replace){window.__xPick=[title,replace];if(title==='Aubrey')throw new Error('“Aubrey” has no Bandcamp code in the Song Database.');return {requested:true,song:title,replaced:replace?1:0};},
  getAnalytics:function(){return {youtube:{connected:true,channel:'Danyel OZ',error:''},x:{connected:true,error:''},
    shorts:shorts.map(function(s){return {short_id:s.short_id,song_title:s.song_title,date:s.scheduled_date,status:s.status,yt:true,tt:true,ig:false,yt_video_id:s.yt_video_id,tags:s.yt_tags,stats:s.yt_video_id?{views:0,likes:0,comments:0}:null};}),
    xPosts:[],totals:{ytVideos:1,ytViews:0,ytLikes:0,ytComments:0,xPosts:0,xViews:0,xLikes:0,xClicks:0},hashtags:[]};}

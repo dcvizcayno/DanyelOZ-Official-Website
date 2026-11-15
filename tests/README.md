@@ -28,6 +28,7 @@ node tests/ui/sg.js           # every admin screen opens (Singles, Albums, EPs, 
 node tests/ui/tk.js           # Tracks screen at desktop and phone size (score preview loads abcjs from cdnjs)
 node tests/ui/tk2.js          # Tracks album mode: song by song, Previous and Next
 node tests/ui/ep.js           # EPs Page
+node tests/ui/xp.js           # X Posts: pick a song from Song rotation to draft
 ```
 
 Screenshots land in `tests/ui/out/` (ignored by git). Add a mock for any new server function in `tests/ui/mock.js` (the `H` object).

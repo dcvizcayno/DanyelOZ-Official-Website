@@ -9,7 +9,7 @@ Lives in the public repo **dcvizcayno/danyeloz-embeds**: `x-agent/agent.py`, `x-
 
 ## What it does
 
-- **Daily draft, 7:07 PM Manila**: picks a song with a Bandcamp code (each song gets a turn before repeats), opens a GitHub Issue assigned to Daniel. He ticks **Post** or **Revise** (a comment first steers the rewrite), or edits the text then ticks Post. The admin app's X Posts screen does the same. Only the repo owner's ticks count. No new draft while one is waiting.
+- **Daily draft, 7:07 PM Manila**: picks a song with a Bandcamp code (each song gets a turn before repeats), opens a GitHub Issue assigned to Daniel. He ticks **Post** or **Revise** (a comment first steers the rewrite), or edits the text then ticks Post. The admin app's X Posts screen does the same. Only the repo owner's ticks count. No new draft while one is waiting. Daniel can pick the song instead: Draft in the app's Song rotation, or `x-draft.yml` run by hand with **song** (and **replace** to swap out a waiting draft, closed as `x-replaced`, nothing posted).
 - **Release posts, about 1 AM Manila, automatic**: "coming soon" when a song is 1 to 7 days out, "out now" on release day, linking to the Bandcamp page. One per night, "out now" first; each song gets each post once; a missed night is not made up. No Bandcamp code means an `x-release-skipped` Issue.
 - **Weekly report, Monday 9:23 AM Manila**: views, likes, replies, reposts, link clicks; updates `playbook.json` (each approach tried at least 3 times, then mostly the winners, 20% experiments).
 - Every post ends with "Want more? Check my Official Site https://www.danyeloz.info/home" (`site_line`, `site_url` in `config.json`). The story line shortens first so the post fits 280 (links count as 23).
