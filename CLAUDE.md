@@ -1,6 +1,6 @@
 # Danyel OZ: project handbook
 
-_Last updated: November 13, 2026 (tracklists: `tracks` and `release_tracks` tabs added). One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
+_Last updated: November 16, 2026 (session handoff, agents and skills index, tests saved in the repo). One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
 
 **Copies of this file** (keep them identical; update all three together):
 1. `CLAUDE.md` in private repo **dcvizcayno/DanyelOZ-Official-Website** (Claude Code reads it automatically)
@@ -78,7 +78,7 @@ Shared as **Anyone with the link: Viewer** so the widgets can read it. That mean
 
 **Coverage (Nov 11, 2026, after the store backfill):** 273 releases. `song_id` 267, `song_upc` 267 (all stored as text), `appl_music_link` 266, `song_ISRC` 215 (single-track releases; EPs and albums left blank), `song_description` 44, `bandcamp_embed` 56, `song_arts` 273 (all; covers backfilled Nov 11).
 **Store backfill (Nov 11, 2026):** one-time fill from Deezer (artist IDs 229950385 Danyel OZ, 289172811 M4RCU$ H33R0) plus Apple lookups by UPC. Blank cells only; 58 releases that were missing were added as new rows. Where the sheet and the stores disagreed (17 release types, 1 date, Bleeding Heart), the sheet value was kept. Backup CSV and review list were sent to Daniel. Covers: `tools/CoverBackfill.gs` ran Nov 11 and filled every row.
-**Tracklists (Nov 13, 2026):** 266 released UPCs from Deezer: 340 recordings in `tracks`, 722 rows in `release_tracks`, all ISRCs and lengths filled; every single's `song_ISRC` matched. 154 recordings sit on more than one release. Kareena (EP, out Dec 14) and six releases without a UPC are upcoming and wait for release. 29 ISRCs carry different names or lengths across releases (`isrc-review-2026-11-13.csv`, sent to Daniel). **Spotify links:** `tools/SpotifyBackfill.gs`, first real run after Spotify's pause ends (Nov 13, about 9:10 PM Manila).
+**Tracklists (Nov 13, 2026):** 266 released UPCs from Deezer: 340 recordings in `tracks`, 722 rows in `release_tracks`, all ISRCs and lengths filled; every single's `song_ISRC` matched. 154 recordings sit on more than one release. Kareena (EP, out Dec 14) and six releases without a UPC are upcoming and wait for release. 29 ISRCs carry different names or lengths across releases (`isrc-review-2026-11-13.csv`, sent to Daniel). **Spotify links:** `tools/SpotifyBackfill.gs` ran Nov 13 to 14: 266 releases have a Spotify link. Not found: upcoming releases and "Not Mine to Keep" (on Deezer and Apple, not on Spotify by its UPC). Run it again after new releases; it fills blanks only.
 Some releases are under a different stage name (for example the EP "Money"); they belong in the database too.
 
 **Apple Music:** artist ID `1706653995`. Always add `sort=recent` to catalog lookups; without it Apple returns the 200 oldest releases and misses new ones.
@@ -244,6 +244,9 @@ Private repo only (they describe how the project runs; nothing secret in them).
 | `.claude/agents/app-reviewer.md` | Safety review of an app or Shorts Maker change before handover |
 | `docs/SETUP.md` | Every one-time setup: Apps Script, Script Properties, GitHub token, YouTube permission, X secrets, Shorts Maker, Sites embeds |
 | `docs/TROUBLESHOOTING.md` | Errors seen so far and their fixes |
+| `docs/SESSION-HANDOFF.md` | Where the work stands and what's open; read it first in a new session |
+| `docs/AGENTS-AND-SKILLS.md` | Index of the agents and skills, and how to move them |
+| `tests/` | Mocked tests for the app and tools; `tests/README.md` has the commands |
 
 Daniel's local copy of this repo: `~/DanyelOZ_Official WebSite` on his Mac.
 

@@ -1,0 +1,18 @@
+const { chromium } = require('playwright'); const fs=require('fs');
+(async()=>{const b=await chromium.launch();const errs=[];
+ const p=await b.newPage({viewport:{width:1300,height:1000}});p.on('pageerror',e=>errs.push(e.message));p.on('dialog',d=>d.accept());
+ await p.route(/^https?:\/\//,r=>r.abort());
+ await p.goto('file://'+__dirname+'/page.html');await p.waitForTimeout(400);
+ await p.click('[data-view="tracks"]');await p.waitForTimeout(500);
+ await p.selectOption('#tkRel','222222222222');await p.waitForTimeout(150);
+ console.log('summary',await p.textContent('#tkTracklist .sx-note'));
+ console.log('lyric cells',await p.$$eval('#tkTracklist tbody tr td:nth-child(8)',x=>x.map(e=>e.textContent)));
+ await p.click('button:has-text("Write lyrics, song by song")');await p.waitForTimeout(250);
+ console.log('editor',await p.textContent('.tk-edit h3'),'| nav',await p.textContent('.tk-edit .sg-bar b'),'| tab',await p.textContent('.tk-edit .tabs .on'));
+ await p.fill(".tk-edit textarea","[Verse]\nhello");await p.click(".tk-edit button:has-text(\"Publish to site\")");await p.waitForTimeout(200);console.log("cells after Today publish",await p.$$eval("#tkTracklist tbody tr td:nth-child(8)",x=>x.map(e=>e.textContent)));await p.click('.tk-edit button:has-text("Next:")');await p.waitForTimeout(250);
+ console.log('after next',await p.textContent('.tk-edit h3'),'|',await p.textContent('.tk-edit .sg-bar b'),'| next btn?',await p.locator('.tk-edit button:has-text("Next:")').count());
+ await p.click('.tk-edit button:has-text("Publish to site")');await p.waitForTimeout(200);
+ console.log('lyric cells after publish',await p.$$eval('#tkTracklist tbody tr td:nth-child(8)',x=>x.map(e=>e.textContent)));
+ await p.click('button:has-text("Leave album mode")');console.log('nav gone',await p.locator('.tk-edit .sg-bar b').count());
+ await p.screenshot({path:__dirname+'/out/tk2.png',fullPage:true});
+ console.log('errors',errs);await b.close();})();

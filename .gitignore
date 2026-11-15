@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+# test output
+tests/ui/page.html
+tests/ui/out/
