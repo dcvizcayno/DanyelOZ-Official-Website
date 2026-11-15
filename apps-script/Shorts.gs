@@ -238,7 +238,7 @@ function addShort(d) {
     const sh = shortsSheet_();
     const now = manilaNow_();
     const s = {
-      short_id: 'S' + Date.now().toString(36).toUpperCase(),
+      short_id: newShortId_(sh),
       song_id: song.song_id, song_title: song.song_title,
       drive_file_id: file.getId(), file_name: file.getName(),
       size_mb: String(Math.round(file.getSize() / 104857.6) / 10),
@@ -335,6 +335,16 @@ function applyBatch(ids, opts) {
     });
     return { scheduled: n, skipped: skipped };
   } finally { lock.releaseLock(); }
+}
+
+/* A Short ID nobody else has: time-based, with a letter added if two land in the same millisecond. */
+function newShortId_(sh) {
+  const used = {};
+  readShorts_(sh).forEach(function (x) { used[x.short_id] = true; });
+  const base = 'S' + Date.now().toString(36).toUpperCase();
+  let id = base, n = 0;
+  while (used[id]) { n++; id = base + String.fromCharCode(64 + Math.min(n, 26)) + (n > 26 ? n : ''); }
+  return id;
 }
 
 function batchDates_(start, cadence, count) {
