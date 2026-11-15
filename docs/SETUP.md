@@ -50,6 +50,30 @@ GitHub Secrets (repo > Settings > Secrets and variables > Actions): `X_API_KEY`,
 2. `.github/workflows/shorts-maker.yml` and `shorts-maker/` must be on the `main` branch.
 3. Long 9:16 videos go in the Drive folder **Danyel OZ Shorts**. The editor gets a Drive token from the app for each run (expires within an hour, masked in the logs). No service account, nothing shared publicly.
 
+## 6b. TikTok posting (Shorts)
+
+The app posts approved Shorts to TikTok through TikTok's Content Posting API (`TikTok.gs`).
+
+**On TikTok's side (only Daniel can do this)**
+1. Sign in at developers.tiktok.com with the Danyel OZ TikTok account and create an app (Manage apps > Connect an app). Give it a name, the icon, a short description, and the links to a Terms of Service page and a Privacy Policy page on danyeloz.info (TikTok checks these).
+2. Add the products **Login Kit** and **Content Posting API**. In Content Posting API, turn on **Direct Post**.
+3. Scopes: `user.info.basic` and `video.publish`.
+4. Login Kit > Redirect URI: the web app's address, the `https://script.google.com/macros/s/…/exec` link (the TikTok tab in the app shows it).
+5. Copy the **Client key** and **Client secret**.
+
+**In Apps Script**
+1. Add the new script file **TikTok** and replace **Code**, **ShortsApp** and **ShortsViews**.
+2. Project Settings > Script Properties: add `TIKTOK_CLIENT_KEY` and `TIKTOK_CLIENT_SECRET`.
+3. Deploy > Manage deployments > pencil > New version > Deploy.
+4. Open a Short > TikTok tab > **Connect TikTok** and allow. Google asks once for the new permissions (time triggers for Auto-post): Advanced > Go to … (unsafe) > Allow.
+5. Tick **Auto-post** on the TikTok tab.
+
+**Before TikTok's audit:** TikTok only accepts posts to a **private** account, and the posts are seen by you alone. To test, set the TikTok account to private for a moment, post one Short with "Only me", then set it back. A public account gets the message "TikTok hasn't approved this app yet".
+
+**The audit (to post publicly):** in the developer portal, submit the app for review with a screen recording of the whole flow: Connect TikTok, the TikTok tab (who can see it, comments, Duet, Stitch, commercial content, the Music Usage Confirmation line), Approve, Post now, and the post appearing on TikTok. The TikTok tab already follows TikTok's Content Sharing Guidelines (no preset for who can see it, interactions off until turned on, branded content can't be private, the creator's name shown). Approval takes days to weeks.
+
+**Keep in mind:** the sign-in refreshes on its own; after 180 days without use, connect again. The app sends videos up to 50 MB. TikTok allows 6 post requests a minute; Auto-post sends at most 2 per 15-minute run.
+
 ## 7. Google Sites embeds
 
 Insert > Embed > **By URL**: `https://dcvizcayno.github.io/danyeloz-embeds/<widget>.html`. A By URL embed updates itself about 10 minutes after a push. A pasted-code embed does not. Set the box height in the editor; an embed can't resize its own box.

@@ -16,6 +16,7 @@ Nothing here touches the real Song Database, Drive, YouTube, Spotify or GitHub: 
 | `node tests/unit/test_singles.js apps-script` | Singles Page, themes |
 | `node tests/unit/test_albums.js apps-script` | Albums Page and EPs Page |
 | `node tests/unit/test_tracks.js apps-script` | Tracks screen: tracklists, lyrics and scores (public only once out), private Song Vault, ISRC fixes |
+| `node tests/unit/test_tiktok.js apps-script` | TikTok posting: connect, TikTok's posting rules, post, status, 19-digit IDs, token refresh, Auto-post |
 | `node tests/unit/test_spotify_backfill.js` | `tools/SpotifyBackfill.gs`: blank cells only, artist check, 429 pause, resume |
 
 Each prints a "PASSED" line at the end; any failure stops with the line that broke.
@@ -29,6 +30,7 @@ node tests/ui/tk.js           # Tracks screen at desktop and phone size (score p
 node tests/ui/tk2.js          # Tracks album mode: song by song, Previous and Next
 node tests/ui/ep.js           # EPs Page
 node tests/ui/xp.js           # X Posts: pick a song from Song rotation to draft
+node tests/ui/tt.js           # Shorts > TikTok tab: connect, posting choices, approve, post, status
 ```
 
 Screenshots land in `tests/ui/out/` (ignored by git). Add a mock for any new server function in `tests/ui/mock.js` (the `H` object).

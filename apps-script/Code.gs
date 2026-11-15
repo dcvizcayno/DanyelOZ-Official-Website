@@ -23,7 +23,10 @@ const TEXT_ONLY = ['song_ISRC', 'song_upc'];    // kept as text so leading zeros
 
 /* ---------- Web page ---------- */
 
-function doGet() {
+function doGet(e) {
+  // TikTok's sign-in sends you back here with ?code=…&state=… (TikTok.gs finishes the connection).
+  const p = (e && e.parameter) || {};
+  if (p.state && (p.code || p.error) && typeof tiktokCallback_ === 'function') return tiktokCallback_(p);
   return page_()
     .setTitle('Danyel OZ Song Database')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');

@@ -58,6 +58,20 @@ They're unsigned, that's all. The handbook says commits go out as Danyel OZ, so 
 **A test created real GitHub Issues**
 Tests must run with `env -u GITHUB_TOKEN -u GH_TOKEN` so nothing reaches the real repo.
 
+## TikTok
+
+**"TikTok hasn't approved this app yet, so it only posts to a private account"**
+TikTok's rule for apps before their audit (error `unaudited_client_can_only_post_to_private_accounts`). Set the account to private to test, or wait for the audit (docs/SETUP.md, 6b).
+
+**"Connect TikTok again" / "The TikTok sign-in expired"**
+TikTok's sign-in lasts 180 days without use, or someone removed the app's access in TikTok. Click Connect TikTok on any Short's TikTok tab.
+
+**A posted TikTok link opens the wrong video**
+Fixed before launch (Nov 16, 2026): TikTok video IDs are 19-digit numbers, too big for JavaScript numbers, so reading them the normal way rounded the last digits. `TikTok.gs` reads the ID from TikTok's raw reply.
+
+**A Short says "Sending" for a long time**
+Apps Script stopped mid-upload. Nothing is retried on its own, so nothing double-posts. Check the TikTok app; if it isn't there, ask Claude to reset that row in the private sheet's `tiktok` tab.
+
 ## YouTube
 
 **Copyright claim on your own song**

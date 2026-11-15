@@ -307,7 +307,7 @@
     [['yt', 'YouTube Shorts', d.youtube
         ? (uploaded ? 'Uploaded as private. Make it public in YouTube Studio.' : 'Uploads as Private until Google approves the app. You make it public.')
         : 'To upload from here, turn on YouTube: Apps Script editor > Services (+) > YouTube Data API v3 > Add. Until then, copy the text.'],
-     ['tt', 'TikTok', 'Copy and post in the TikTok app for now. Auto-posting needs TikTok to approve the app.'],
+     ['tt', 'TikTok', 'Approve it on the TikTok tab and it posts at its time. Until TikTok approves the app, it only posts to a private account.'],
      ['ig', 'Instagram Reels', 'Optional. Caption is ready if you turn it on. Post it in the Instagram app.']]
       .forEach(function (p) {
         var cb = h('input', { type: 'checkbox', checked: !!e[p[0]], onchange: function () { e[p[0]] = this.checked; this.closest('div').classList.toggle('on', this.checked); markDirty(); } });
@@ -369,6 +369,7 @@
       ytBtn
     ]));
     editors.appendChild(h('div', { style: 'margin-top:8px' }, [h('span', { cls: 'sx-status', id: 'sxStudioStatus' })]));
+    if (SX.tab === 'tt') editors.appendChild(ttPanel(e));
 
     var phone = h('div', { cls: 'sx-phone', 'aria-label': 'Preview' }, [
       h('div', { cls: 'top' }, [h('span', { text: { yt: 'Shorts', tt: 'TikTok', ig: 'Reels' }[SX.tab] }), h('span', { text: '9:16' })]),
@@ -378,6 +379,152 @@
     box.appendChild(h('div', { cls: 'sx-edit' }, [editors, h('div', { cls: 'p' }, [phone])]));
     renderPhoneCaption();
   }
+  /* ---------- TikTok posting (TikTok.gs) ---------- */
+  var TT_MUSIC = 'https://www.tiktok.com/legal/page/global/music-usage-confirmation/en';
+  var TT_BC = 'https://www.tiktok.com/legal/page/global/bc-policy/en';
+  function ttPanel(e) {
+    var box = h('div', { cls: 'sx-tt', id: 'sxTtPanel' }, [h('div', { cls: 'sx-note', text: 'Loading TikTok…' })]);
+    if (typeof google === 'undefined') return box;
+    call('getTikTokPanel', [e.short_id], function (t) { if (SX.edit && SX.edit.short_id === e.short_id && SX.tab === 'tt') ttDraw(box, e, t); },
+      function (err) { clear(box).appendChild(h('div', { cls: 'sx-warn', text: 'Couldn’t load TikTok: ' + err.message })); });
+    return box;
+  }
+  function ttWhen(e) {
+    if (!e.scheduled_date) return '';
+    var t = Date.parse(e.scheduled_date + 'T' + (e.scheduled_time || '19:00') + ':00+08:00');
+    if (!isNaN(t) && t <= Date.now()) return 'at the next check (its time, ' + e.scheduled_date + ' ' + (e.scheduled_time || '19:00') + ' Manila, has passed)';
+    return e.scheduled_date + ' ' + (e.scheduled_time || '19:00') + ' Manila';
+  }
+  function ttDraw(box, e, t) {
+    clear(box);
+    box.appendChild(h('h3', { text: 'Post to TikTok' }));
+    if (!t.configured) {
+      box.appendChild(h('p', { cls: 'sx-note', text: 'Set up once, then the app posts your approved Shorts to TikTok.' }));
+      box.appendChild(h('ol', { cls: 'sx-steps' }, [
+        h('li', {}, ['On developers.tiktok.com, create an app with Login Kit and Content Posting API (Direct Post on).']),
+        h('li', {}, ['Redirect URI: ', h('code', { text: t.redirect || 'deploy the web app first' })]),
+        h('li', {}, ['In Apps Script: Project Settings > Script Properties > add ', h('code', { text: 'TIKTOK_CLIENT_KEY' }), ' and ', h('code', { text: 'TIKTOK_CLIENT_SECRET' }), '.']),
+        h('li', {}, ['Reload this page and click Connect TikTok.'])
+      ]));
+      return;
+    }
+    if (!t.connected) {
+      if (t.error) box.appendChild(h('div', { cls: 'sx-warn', style: 'margin-bottom:8px', text: t.error }));
+      box.appendChild(h('p', { cls: 'sx-note', text: 'Sign in to TikTok once. TikTok opens in a new tab; come back and reload when it says connected.' }));
+      box.appendChild(h('button', { type: 'button', cls: 'primary', text: 'Connect TikTok', onclick: function () {
+        var b = this; b.disabled = true;
+        call('tiktokAuthUrl', [], function (url) { b.disabled = false; if (/^https:\/\/www\.tiktok\.com\//.test(url)) window.open(url, '_blank', 'noopener'); },
+          function (err) { b.disabled = false; say('sxTtStatus', err.message, 'err'); });
+      } }));
+      box.appendChild(h('div', {}, [h('span', { cls: 'sx-status', id: 'sxTtStatus' })]));
+      return;
+    }
+    var c = t.creator;
+    if (t.error || !c) { box.appendChild(h('div', { cls: 'sx-warn', text: t.error || 'TikTok didn’t answer. Reload to try again.' })); return; }
+    box.appendChild(h('p', { cls: 'sx-note', style: 'margin-top:-4px' }, ['Posting as ', h('b', { text: c.nickname || 'your account' }), c.username ? document.createTextNode(' (@' + c.username + ')') : null]));
+
+    var p = t.post || {};
+    var locked = p.status === 'Sending' || p.status === 'Processing' || p.status === 'Posted';
+    var approved = p.status === 'Approved';
+
+    // Status
+    var st = h('div', { cls: 'sx-tt-state' });
+    if (p.status === 'Approved') st.appendChild(document.createTextNode(ttWhen(e) ? 'Approved. Posts ' + ttWhen(e) + (t.autoPost ? '.' : ' once Auto-post is on, or use Post now.') : 'Approved. Add a date and time, or use Post now.'));
+    else if (p.status === 'Sending') st.appendChild(document.createTextNode('Sending to TikTok…'));
+    else if (p.status === 'Processing') st.appendChild(document.createTextNode('Sent. TikTok is processing it; this can take a few minutes.'));
+    else if (p.status === 'Posted') { st.appendChild(document.createTextNode('Posted on TikTok. ')); if (p.url) st.appendChild(h('a', { href: safeUrl(p.url), target: '_blank', rel: 'noopener', text: 'Open it' })); }
+    else if (p.status === 'Failed') st.appendChild(h('span', { cls: 'err', text: 'Didn’t post: ' + (p.error || 'unknown reason') }));
+    else if (p.status === 'Cancelled') st.appendChild(document.createTextNode('Approval cancelled. Nothing was posted.'));
+    else st.appendChild(document.createTextNode('Not approved yet. Nothing posts until you approve.'));
+    if (p.status) box.appendChild(st);
+
+    // Choices (TikTok's rules: no default for who can see it, interactions off until you turn them on)
+    var priv = h('select', { 'aria-label': 'Who can see this video', disabled: locked });
+    priv.appendChild(h('option', { value: '', text: 'Choose…' }));
+    c.privacy.forEach(function (o) { priv.appendChild(h('option', { value: o.value, text: o.label })); });
+    if (p.privacy && (approved || locked || p.status === 'Failed')) priv.value = p.privacy;
+    var chk = function (label, on, off, offNote) {
+      var cb = h('input', { type: 'checkbox', checked: !!on && !off, disabled: !!off || locked });
+      return { cb: cb, el: h('label', { cls: 'sx-tt-chk' + (off ? ' off' : '') , title: off ? offNote : '' }, [cb, h('span', { text: label + (off ? ' (off in your TikTok settings)' : '') })]) };
+    };
+    var com = chk('Comments', p.allow_comment, c.commentOff, 'Turned off in your TikTok privacy settings');
+    var duet = chk('Duet', p.allow_duet, c.duetOff, 'Turned off in your TikTok privacy settings');
+    var stitch = chk('Stitch', p.allow_stitch, c.stitchOff, 'Turned off in your TikTok privacy settings');
+    var commercial = h('input', { type: 'checkbox', checked: !!(p.brand_organic || p.brand_content), disabled: locked, 'aria-label': 'This video promotes a brand, product or service' });
+    var mine = chk('Your brand: you’re promoting yourself or your own business. Labelled “Promotional content”.', p.brand_organic, false);
+    var paid = chk('Branded content: you’re promoting another brand or a third party. Labelled “Paid partnership”.', p.brand_content, false);
+    var comBox = h('div', { cls: 'sx-tt-sub' }, [mine.el, paid.el]);
+    var decl = h('p', { cls: 'sx-note sx-tt-decl' });
+    var approveBtn = h('button', { type: 'button', cls: 'primary', text: approved ? 'Approve again with these choices' : 'Approve for TikTok', disabled: locked });
+    var hint = h('span', { cls: 'sx-note' });
+    var sync = function () {
+      comBox.hidden = !commercial.checked;
+      var bc = commercial.checked && paid.cb.checked;
+      Array.prototype.forEach.call(priv.options, function (o) { if (o.value === 'SELF_ONLY') { o.disabled = bc; o.textContent = bc ? 'Only me (not allowed for branded content)' : 'Only me'; } });
+      if (bc && priv.value === 'SELF_ONLY') priv.value = '';
+      clear(decl);
+      decl.appendChild(document.createTextNode('By approving, you agree to TikTok’s '));
+      if (bc) { decl.appendChild(h('a', { href: TT_BC, target: '_blank', rel: 'noopener', text: 'Branded Content Policy' })); decl.appendChild(document.createTextNode(' and ')); }
+      decl.appendChild(h('a', { href: TT_MUSIC, target: '_blank', rel: 'noopener', text: 'Music Usage Confirmation' }));
+      decl.appendChild(document.createTextNode('.'));
+      var why = !priv.value ? 'Choose who can see it.' : (commercial.checked && !mine.cb.checked && !paid.cb.checked ? 'Choose Your brand, Branded content, or both.' : '');
+      approveBtn.disabled = locked || !!why;
+      hint.textContent = locked ? '' : why;
+    };
+    [priv, commercial, mine.cb, paid.cb].forEach(function (x) { x.addEventListener('change', sync); });
+
+    box.appendChild(h('div', { cls: 'field' }, [h('label', { text: 'Who can see this video' }), priv]));
+    box.appendChild(h('div', { cls: 'field' }, [h('label', { text: 'Allow people to' }), h('div', { cls: 'sx-tt-row' }, [com.el, duet.el, stitch.el])]));
+    box.appendChild(h('div', { cls: 'field' }, [
+      h('label', { cls: 'sx-tt-chk' }, [commercial, h('span', { text: 'This video promotes a brand, product or service' })]), comBox]));
+    box.appendChild(decl);
+
+    var act = function (fn, args, okMsg) {
+      box.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+      say('sxTtStatus', 'Talking to TikTok…');
+      call(fn, args, function (r) {
+        say('sxTtStatus', typeof okMsg === 'function' ? okMsg(r) : okMsg, r && r.status === 'Failed' ? 'err' : 'ok');
+        call('getTikTokPanel', [e.short_id], function (t2) { var keep = el('sxTtStatus').textContent, k2 = el('sxTtStatus').className; ttDraw(box, e, t2); var s2 = el('sxTtStatus'); s2.textContent = keep; s2.className = k2; });
+      }, function (err) { say('sxTtStatus', err.message, 'err'); ttDraw(box, e, t); say('sxTtStatus', err.message, 'err'); });
+    };
+    approveBtn.onclick = function () {
+      if (SX.dirty) { say('sxTtStatus', 'Save your changes first, so TikTok gets the latest caption.', 'err'); return; }
+      if (!e.tt) { say('sxTtStatus', 'Tick TikTok for this Short (top of the page), then Save.', 'err'); return; }
+      act('approveTikTok', [e.short_id, { privacy: priv.value, allow_comment: com.cb.checked, allow_duet: duet.cb.checked, allow_stitch: stitch.cb.checked,
+        commercial: commercial.checked, brand_organic: mine.cb.checked, brand_content: paid.cb.checked }],
+        ttWhen(e) ? 'Approved. It posts ' + ttWhen(e) + (t.autoPost ? '.' : ' once Auto-post is on.') : 'Approved. Add a date and time, or use Post now.');
+    };
+    var btns = h('div', { cls: 'sx-tt-row', style: 'margin-top:4px' }, [approveBtn]);
+    if (approved || p.status === 'Failed') btns.appendChild(h('button', { type: 'button', cls: 'ok-btn', text: p.status === 'Failed' ? 'Try again now' : 'Post now', onclick: function () {
+      if (!confirm('Post “' + e.song_title + '” to TikTok now (' + ((c.privacy.filter(function (o) { return o.value === p.privacy; })[0] || {}).label || p.privacy) + ')?')) return;
+      act('postTikTokNow', [e.short_id], function (r) { return r.status === 'Failed' ? 'Didn’t post: ' + r.error : 'Sent. TikTok is processing it; it can take a few minutes to show up on your profile.'; });
+    } }));
+    if (approved) btns.appendChild(h('button', { type: 'button', cls: 'ghost', text: 'Cancel approval', onclick: function () { act('cancelTikTok', [e.short_id], 'Cancelled. Nothing was posted.'); } }));
+    if (p.status === 'Processing') btns.appendChild(h('button', { type: 'button', cls: 'ghost', text: 'Check status', onclick: function () {
+      act('checkTikTok', [e.short_id], function (r) { return r.status === 'Posted' ? 'Posted on TikTok.' : (r.status === 'Failed' ? 'Didn’t post: ' + r.error : 'Still processing. Check again in a minute.'); });
+    } }));
+    btns.appendChild(hint);
+    box.appendChild(btns);
+    box.appendChild(h('div', {}, [h('span', { cls: 'sx-status', id: 'sxTtStatus' })]));
+
+    // Auto-post and account
+    var auto = h('input', { type: 'checkbox', checked: !!t.autoPost, 'aria-label': 'Auto-post approved Shorts at their time', onchange: function () {
+      var cb = this; cb.disabled = true;
+      call('setTikTokAutoPost', [cb.checked], function (r) { cb.disabled = false; say('sxTtAuto', r.autoPost ? 'Auto-post is on. Approved Shorts post at their time (checked every 15 minutes).' : 'Auto-post is off. Nothing posts on its own.', 'ok'); },
+        function (err) { cb.disabled = false; cb.checked = !cb.checked; say('sxTtAuto', err.message, 'err'); });
+    } });
+    box.appendChild(h('div', { cls: 'sx-tt-foot' }, [
+      h('label', { cls: 'sx-tt-chk' }, [auto, h('span', { text: 'Auto-post approved Shorts at their date and time' })]),
+      h('a', { href: '#', text: 'Disconnect TikTok', onclick: function (ev) {
+        ev.preventDefault(); if (!confirm('Disconnect TikTok? Auto-post turns off. Your approvals stay.')) return;
+        call('disconnectTikTok', [], function () { call('getTikTokPanel', [e.short_id], function (t2) { ttDraw(box, e, t2); }); }, function (err) { say('sxTtAuto', err.message, 'err'); });
+      } }),
+      h('span', { cls: 'sx-status', id: 'sxTtAuto' })
+    ]));
+    box.appendChild(h('p', { cls: 'sx-note', text: 'Until TikTok approves this app, TikTok only accepts posts to a private account, seen by you alone. After its review, your choice above is used as is.' }));
+    sync();
+  }
+
   function renderPhoneCaption() {
     var cap = el('sxCap'), e = SX.edit; if (!cap || !e) return;
     clear(cap);
