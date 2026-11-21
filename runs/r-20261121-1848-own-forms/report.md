@@ -14,3 +14,4 @@ embed, browsers other than Chromium.
 Open: Daniel runs setup and sends the FORMS_JSON block; supervisor writes data/forms.json after checking the
 form ids against that output (D-6); Daniel tests, updates the Privacy page on Sites, then swaps out Cognito.
 Agent usage hit the weekly limit mid-run (resets Nov 23, 8 pm Manila); work resumed after.
+- Nov 21: Daniel ran setupDanyelOzForms; data/forms.json written (ids match setup output, 17 entry ids present on live forms) and pushed. Setup log reported 1 editor + 1 viewer on the new inbox besides the owner: Daniel to check sharing (SETUP step 5).
