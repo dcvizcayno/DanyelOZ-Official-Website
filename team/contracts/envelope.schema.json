@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dsh.local/team/contracts/envelope.schema.json",
+  "title": "Team envelope",
+  "description": "Machine-readable handoff that ends every teammate's final message (AGENTS.md section 5).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["envelope", "id", "run", "from", "to", "kind", "task", "status", "summary"],
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "const": "verdict" } }, "required": ["kind"] },
+      "then": { "required": ["verdict"] }
+    }
+  ],
+  "properties": {
+    "envelope": { "const": "team/v1" },
+    "id": { "type": "string", "pattern": "^env-[0-9a-f]{8}$" },
+    "run": { "type": "string", "pattern": "^r-[0-9]{8}-[0-9]{4}-[a-z0-9][a-z0-9-]{2,39}$" },
+    "from": { "$ref": "#/$defs/role" },
+    "to": { "$ref": "#/$defs/role" },
+    "kind": {
+      "type": "string",
+      "enum": ["assignment", "report", "question", "blocker", "verdict", "status", "handoff", "ack"]
+    },
+    "task": { "type": "string", "pattern": "^(T-[0-9]{3}|RUN)$" },
+    "status": { "type": "string", "enum": ["done", "partial", "blocked", "failed", "n/a"] },
+    "summary": { "type": "string", "minLength": 8, "maxLength": 280 },
+    "verdict": { "type": "string", "enum": ["PASS", "PASS_WITH_CONDITIONS", "FAIL", "BLOCKED"] },
+    "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+    "artifacts": {
+      "type": "array",
+      "maxItems": 12,
+      "items": { "type": "string", "minLength": 3 }
+    },
+    "evidence": {
+      "type": "array",
+      "maxItems": 12,
+      "items": { "type": "string", "minLength": 3 }
+    },
+    "risks": {
+      "type": "array",
+      "maxItems": 8,
+      "items": { "type": "string", "minLength": 3 }
+    },
+    "open_questions": {
+      "type": "array",
+      "maxItems": 8,
+      "items": { "type": "string", "minLength": 3 }
+    },
+    "next": { "type": "string", "maxLength": 280 },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tokens": { "type": "integer", "minimum": 0 },
+        "minutes": { "type": "number", "minimum": 0 }
+      }
+    }
+  },
+  "$defs": {
+    "role": {
+      "type": "string",
+      "enum": ["supervisor", "researcher", "planner", "executor", "qa", "security", "monitor"]
+    }
+  }
+}

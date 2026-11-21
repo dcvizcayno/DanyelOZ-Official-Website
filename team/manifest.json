@@ -1,0 +1,67 @@
+{
+  "pack": "multi-agent-claude",
+  "platform": "Claude Code",
+  "version": "1.1.0",
+  "charter": ".claude/skills/team-protocol/SKILL.md",
+  "generated_from": "multi-agent (DeepSeek Harness pack) v1.0.0",
+  "roles": [
+    {
+      "id": "supervisor",
+      "title": "Supervisor",
+      "kind": "skill",
+      "path": ".claude/skills/team-supervisor/SKILL.md",
+      "run_dir": null
+    },
+    {
+      "id": "researcher",
+      "title": "Researcher",
+      "kind": "agent",
+      "path": ".claude/agents/team-researcher.md",
+      "run_dir": "research"
+    },
+    {
+      "id": "planner",
+      "title": "Planner",
+      "kind": "agent",
+      "path": ".claude/agents/team-planner.md",
+      "run_dir": "plan"
+    },
+    {
+      "id": "executor",
+      "title": "Executor",
+      "kind": "agent",
+      "path": ".claude/agents/team-executor.md",
+      "run_dir": "exec"
+    },
+    {
+      "id": "qa",
+      "title": "Test & QA",
+      "kind": "agent",
+      "path": ".claude/agents/team-qa.md",
+      "run_dir": "qa"
+    },
+    {
+      "id": "security",
+      "title": "Security Architect",
+      "kind": "agent",
+      "path": ".claude/agents/team-security.md",
+      "run_dir": "security"
+    },
+    {
+      "id": "monitor",
+      "title": "Monitor",
+      "kind": "agent",
+      "path": ".claude/agents/team-monitor.md",
+      "run_dir": "monitor"
+    }
+  ],
+  "contracts": {
+    "envelope": "team/contracts/envelope.schema.json",
+    "task": "team/contracts/task.schema.json",
+    "plan": "team/contracts/plan.schema.json"
+  },
+  "limits": {
+    "description_max": 700,
+    "name_max": 100
+  }
+}
