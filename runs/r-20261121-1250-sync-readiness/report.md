@@ -37,3 +37,11 @@ x6 tasks (+ rework), qa, security (design + implementation), monitor (baseline +
 - Low: N-3 public-text filter can be bypassed by spaced digits ("[at]" emails); fine while Daniel is the
   only writer. Admin email input max 120 vs 254 accepted elsewhere (cosmetic).
 - Third handbook copy in the claude.ai Project needs Daniel's paste.
+
+## After G4 (Nov 21)
+- Pushed: private admin-shorts-x 44c7a69 (team pack) and 5bbb691 (sync work); public main 426de72 (rebased on
+  8 X-agent log commits). sync.html and sync-one-sheet.html live on GitHub Pages (fallback until sync data).
+- Sites draft: automated typing into the Sites editor is not kept by Sites (text reverts on save) and the
+  browser blocks clipboard writes, so the Sync & Licensing section could not be added by the supervisor. The
+  temporary duplicate section was deleted; the draft matches its prior state ("All changes saved in Drive").
+  Daniel pastes docs/sync-contact-copy.md section 1 and publishes.
