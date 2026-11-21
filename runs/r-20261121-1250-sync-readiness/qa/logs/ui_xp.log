@@ -1,0 +1,19 @@
+xp rows 6 | groups [ 'NOT POSTED YET THIS ROUND', 'ALREADY POSTED THIS ROUND' ]
+html kept as text: true
+header mode: Approach: question · Version 1
+search real: [ 'The Realization' ]
+search zzz: No song with a Bandcamp code matches “zzz”.
+confirm: "A draft for “NOTE TO SELF” is waiting.\n\nClose it (nothing gets posted) and draft “Carmen” instead?" | asked after cancel: null
+error: “Aubrey” has no Bandcamp code in the Song Database. | buttons on: true
+asked: ["The Realization",true] | Asked. The draft for “The Realization” shows up under Waiting for you in about a minute. | btn: Asked | others off: 6
+xp scrollWidth 1400
+xp_phone rows 6 | groups [ 'NOT POSTED YET THIS ROUND', 'ALREADY POSTED THIS ROUND' ]
+html kept as text: true
+header mode: Approach: question · Version 1
+search real: [ 'The Realization' ]
+search zzz: No song with a Bandcamp code matches “zzz”.
+confirm: "A draft for “NOTE TO SELF” is waiting.\n\nClose it (nothing gets posted) and draft “Carmen” instead?" | asked after cancel: null
+error: “Aubrey” has no Bandcamp code in the Song Database. | buttons on: true
+asked: ["The Realization",true] | Asked. The draft for “The Realization” shows up under Waiting for you in about a minute. | btn: Asked | others off: 6
+xp_phone scrollWidth 390
+errors []

@@ -53,6 +53,13 @@
   .tk-tl input[type=checkbox] { width: auto; }
   .tk-public { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #fff1e0; color: #a65a00; margin-left: 6px; }
   .tk-private { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #e6f6ec; color: #1d7a41; margin-left: 6px; }
+  .sy-sum { font: 500 22px 'Oswald', sans-serif; color: var(--purple); margin: 0 0 8px; }
+  .sy-miss { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+  .sy-miss li { padding: 7px 12px; border-bottom: 1px solid #f1edf9; overflow-wrap: anywhere; }
+  .sy-moods { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 2px 10px; margin-bottom: 10px; }
+  label.sy-chk { display: flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 600; color: #3d3650; white-space: normal; margin: 0; padding: 3px 0; cursor: pointer; }
+  .sy-chk input[type=checkbox] { width: auto; margin: 0; flex: none; }
+  .sy-ta { width: 100%; min-height: 70px; }
 </style>
 
 <section id="viewTracks" hidden>
@@ -60,6 +67,12 @@
     <h2>Songs and codes <span class="mode">one UPC per release, one ISRC per song</span></h2>
     <p class="sx-note" style="margin:-6px 0 12px">Click a box to see what's in it. Lyrics and music scores go on the site only once a song is out; fixes, drafts and studio notes stay in your private Song Vault sheet.</p>
     <div class="tk-checks" id="tkChecks"><div class="list-empty">Loading…</div></div>
+  </div>
+
+  <div class="card" id="syReadyCard">
+    <h2>Sync readiness <span class="tk-public">public</span></h2>
+    <p class="sx-note" style="margin:-6px 0 10px">A song is ready for licensing once it has BPM, key, at least one mood, genre, vocal and writers. Click a song to fill in what's missing.</p>
+    <div id="syReady"><div class="list-empty">Loading…</div></div>
   </div>
 
   <div class="card" id="tkFixCard">
@@ -97,5 +110,11 @@
       <select id="tkRel" aria-label="Release" style="max-width:420px"></select>
     </div>
     <div id="tkTracklist"><div class="list-empty">Pick a release.</div></div>
+  </div>
+
+  <div class="card" id="sySetCard">
+    <h2>Licensing settings <span class="tk-public">public</span></h2>
+    <p class="sx-note" style="margin:-6px 0 10px">Who owns the rights and how to ask for a license. The sync catalogue and the one-sheet show this to music supervisors.</p>
+    <div id="sySet"><div class="list-empty">Loading…</div></div>
   </div>
 </section>

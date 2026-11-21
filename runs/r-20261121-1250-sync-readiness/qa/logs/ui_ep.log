@@ -1,0 +1,26 @@
+ep visible: true | page asked: ep
+heads: [
+  'Now spinning',
+  'Coming next automatic',
+  'Check your EPs',
+  'EP library (3 releases · 1 on the page)',
+  'Collections and EPs (0 collections)'
+]
+kinds: [
+  'Not sorted yet',
+  'A real EP',
+  'Part of an album (waterfall release)',
+  'Really a single'
+]
+part options: [ 'Pick the main album…', "She's A Puzzle", 'Midnight Struggles' ]
+installment show disabled: true In its album
+save ep [{"song_id":"e2","song_title":"Mixed Signals","kind":"installment","part_of":"She's A Puzzle","show":false},{"song_id":"e3","song_title":"Kareena","kind":"ep","part_of":"","show":true}]
+featured options: [ 'My newest EP with a story (automatic)', 'The Search (2026)' ]
+feat page ep
+next: Kareena2026-12-14 · 23 days
+cols page ep
+albums again: album Check your albums
+ep scrollWidth 1400
+ep_phone visible: true | page asked: ep
+ep_phone scrollWidth 390
+errors []

@@ -2,7 +2,7 @@
 <script>
 (function () {
   'use strict';
-  var TK = { data: null, loaded: false, sel: '', filter: 'all', check: '', detail: null, tab: 'lyrics', rel: '', fixFilter: '' };
+  var TK = { data: null, loaded: false, sel: '', filter: 'all', check: '', detail: null, tab: 'lyrics', rel: '', fixFilter: '', sync: null, syWait: null };
   var ABCJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/abcjs/6.4.4/abcjs-basic-min.js';
 
   function el(id) { return document.getElementById(id); }
@@ -35,6 +35,7 @@
     if (v !== 'tracks') return;
     el('viewTracks').hidden = false;
     if (!TK.loaded) load();
+    if (!TK.sync) loadSync();
   };
 
   function load(keepSel) {
@@ -201,7 +202,7 @@
     ed.appendChild(h('div', { cls: 'tk-field' }, [h('label', { text: 'On these releases' }), on]));
 
     var tabs = h('div', { cls: 'tabs' });
-    [['lyrics', 'Lyrics'], ['abc', 'Music score'], ['notes', 'Studio notes'], ['fix', 'Fix plan']].forEach(function (x) {
+    [['lyrics', 'Lyrics'], ['abc', 'Music score'], ['notes', 'Studio notes'], ['fix', 'Fix plan'], ['sync', 'Sync']].forEach(function (x) {
       tabs.appendChild(h('button', { type: 'button', cls: TK.tab === x[0] ? 'on' : '', text: x[1], onclick: function () { TK.tab = x[0]; renderEditor(); } }));
     });
     ed.appendChild(tabs);
@@ -210,6 +211,7 @@
     if (TK.tab === 'abc') textPane(pane, 'abc', 'draft_abc', t.abc, n.draft_abc);
     if (TK.tab === 'notes') notesPane(pane, n);
     if (TK.tab === 'fix') fixPane(pane);
+    if (TK.tab === 'sync') syncPane(pane);
     box.appendChild(ed);
   }
 
@@ -298,6 +300,188 @@
       call('saveTrackFix', [t.isrc, v], function () { b.disabled = false; d.fixes[t.isrc] = v; say(msg, 'Saved', 'ok'); renderFixes(); renderChecks(); }, function (e) { b.disabled = false; say(msg, e.message, 'err'); });
     } }), msg]));
     pane.appendChild(h('p', { cls: 'sx-note', text: 'When the republished release is out: add it on the Songs screen with its new UPC, then list its songs under Release tracklist below, with this ISRC in "Replaces". Then set the status to Republished.' }));
+  }
+
+  /* ---------- Sync (public): per-song licensing info, readiness, settings. Data from Sync.gs. ---------- */
+  var SY_NEED = [['sync_bpm', 'BPM'], ['sync_key', 'key'], ['sync_moods', 'mood'], ['sync_genre', 'genre'], ['sync_vocal', 'vocal'], ['sync_writers', 'writers']];
+  var SY_FLAGS = [['sync_instrumental', 'Instrumental version'], ['sync_clean', 'Clean version'], ['sync_stems', 'Stems'],
+    ['sync_cut60', '60 second cut'], ['sync_cut30', '30 second cut'], ['sync_featured', 'Featured on the one-sheet']];
+  var SY_LABEL = {}; SY_NEED.forEach(function (x) { SY_LABEL[x[0]] = x[1]; });
+
+  /* Loads getSyncAdmin once into TK.sync; callers waiting on the same load are queued. */
+  function loadSync(cb) {
+    if (TK.sync) { if (cb) cb(); return; }
+    (TK.syWait = TK.syWait || []).push(cb);
+    if (TK.syWait.length > 1) return;
+    call('getSyncAdmin', [], function (d) {
+      d.byIsrc = {}; d.tracks.forEach(function (t) { d.byIsrc[t.isrc] = t; });
+      TK.sync = d; var q = TK.syWait; TK.syWait = null;
+      renderReady(); renderSettings();
+      q.forEach(function (f) { if (f) f(); });
+    }, function (e) {
+      var q = TK.syWait; TK.syWait = null;
+      ['syReady', 'sySet'].forEach(function (id) { clear(el(id)).appendChild(h('div', { cls: 'list-empty', text: 'Couldn’t load the sync info: ' + e.message })); });
+      q.forEach(function (f) { if (f) f(e); });
+    });
+  }
+  function syGaps(s) { return SY_NEED.filter(function (x) { return x[0] === 'sync_moods' ? !(s.sync_moods || []).length : !s[x[0]]; }).map(function (x) { return x[0]; }); }
+  function syRecount() {
+    var S = TK.sync, miss = [];
+    S.tracks.forEach(function (x) { var g = syGaps(x); x.complete = !g.length; if (g.length) miss.push({ isrc: x.isrc, title: x.track_title, fields: g }); });
+    S.readiness = { complete: S.tracks.length - miss.length, total: S.tracks.length, missing: miss };
+  }
+  function openSync(isrc) { TK.relNav = null; TK.tab = 'sync'; openSong(isrc); el('tkEditor').scrollIntoView({ behavior: 'smooth' }); }
+
+  function renderReady() {
+    var r = TK.sync.readiness, box = clear(el('syReady'));
+    box.appendChild(h('p', { cls: 'sy-sum', text: r.complete + ' of ' + r.total + (r.total === 1 ? ' song' : ' songs') + ' complete' }));
+    if (!r.missing.length) { box.appendChild(h('div', { cls: 'list-empty', text: 'Every song has what a music supervisor needs.' })); return; }
+    var ul = h('ul', { cls: 'sy-miss' });
+    r.missing.forEach(function (m) {
+      ul.appendChild(h('li', {}, [h('a', { href: '#', text: m.title || '(no title)', onclick: function (e) { e.preventDefault(); openSync(m.isrc); } }),
+        ' · needs ' + m.fields.map(function (f) { return SY_LABEL[f] || f; }).join(', ')]));
+    });
+    box.appendChild(h('div', { cls: 'tk-list', style: 'max-height:280px' }, [ul]));
+  }
+
+  function syncPane(pane) {
+    var t = TK.detail.track, isrc = t.isrc;
+    if (!TK.sync) {
+      pane.appendChild(h('div', { cls: 'list-empty', text: 'Loading the sync info…' }));
+      loadSync(function (e) {
+        if (TK.tab !== 'sync' || !TK.detail || TK.detail.track.isrc !== isrc) return;
+        if (e) clear(pane).appendChild(h('div', { cls: 'list-empty', text: e.message })); else renderEditor();
+      });
+      return;
+    }
+    var S = TK.sync, L = S.lists, s = S.byIsrc[isrc] || { isrc: isrc, track_title: t.track_title, sync_moods: [] };
+    function pick(label, list, v, blank) {
+      return h('select', { 'aria-label': label }, [opt('', blank, v)].concat(list.concat(v && list.indexOf(v) < 0 ? [v] : []).map(function (x) { return opt(x, x, v); })));
+    }
+    var msg = h('span', { cls: 'sx-status' });
+    var bpm = h('input', { value: s.sync_bpm || '', placeholder: '96', inputmode: 'numeric', maxlength: 3, 'aria-label': 'BPM' });
+    var key = pick('Key', L.keys, s.sync_key || '', 'Pick a key');
+    var genre = pick('Genre', L.genres, s.sync_genre || '', 'Pick a genre');
+    var genre2 = pick('Second genre', L.genres, s.sync_genre_2 || '', 'None');
+    var vocal = pick('Vocal', L.vocals, s.sync_vocal || '', 'Pick one');
+    var writers = h('input', { value: s.sync_writers || '', placeholder: 'Daniel Vizcayno', maxlength: 200, 'aria-label': 'Writers' });
+    var producers = h('input', { value: s.sync_producers || '', placeholder: 'optional', maxlength: 200, 'aria-label': 'Producers' });
+    var tooMany = 'Pick up to ' + L.max_moods + ' moods.';
+    var moods = L.moods.map(function (m) {
+      return h('input', { type: 'checkbox', value: m, checked: (s.sync_moods || []).indexOf(m) >= 0, onchange: function () {
+        if (picked().length > L.max_moods) say(msg, tooMany, 'err'); else if (msg.textContent === tooMany) say(msg, '');
+      } });
+    });
+    function picked() { return moods.filter(function (c) { return c.checked; }).map(function (c) { return c.value; }); }
+    var flags = {};
+    SY_FLAGS.forEach(function (x) { flags[x[0]] = h('input', { type: 'checkbox', checked: !!s[x[0]] }); });
+    var state = h('p', { cls: 'sx-note sy-state' });
+    function showState() { var g = syGaps(s); state.textContent = g.length ? 'Still needs: ' + g.map(function (f) { return SY_LABEL[f]; }).join(', ') + '.' : 'Complete for sync.'; }
+    showState();
+
+    var n = TK.detail.notes || {}, hint = (n.bpm || n.key) ? n : (S.hints || {})[isrc];
+    var copy = h('button', { type: 'button', cls: 'ghost sx-btn-sm', text: 'Copy from studio notes', disabled: !hint, title: hint ? '' : 'No BPM or key in the studio notes', onclick: function () {
+      var b = String(hint.bpm || '').trim(), k = String(hint.key || '').trim(), off = [];
+      if (b) { var r = Math.round(Number(b)); if (isFinite(r) && r > 0) bpm.value = String(r); else off.push('BPM "' + b + '" isn’t a number'); }
+      if (k) { var hit = L.keys.filter(function (x) { return norm(x) === norm(k); })[0]; if (hit) key.value = hit; else off.push('key "' + k + '" isn’t in the list, so pick it by hand'); }
+      say(msg, off.length ? 'Copied what fits. The ' + off.join('; the ') + '.' : 'Copied from studio notes. Check it, then save.', off.length ? 'err' : 'ok');
+    } });
+    var save = h('button', { type: 'button', cls: 'primary sx-btn-sm', text: 'Save sync info', onclick: function () {
+      var v = bpm.value.trim(), m = picked();
+      if (v && (!/^\d{2,3}$/.test(v) || Number(v) < 40 || Number(v) > 220)) { say(msg, 'BPM should be a whole number from 40 to 220.', 'err'); return; }
+      if (m.length > L.max_moods) { say(msg, tooMany, 'err'); return; }
+      if (flags.sync_featured.checked && !s.sync_featured &&
+          S.tracks.filter(function (x) { return x.sync_featured && x.isrc !== isrc; }).length >= L.max_featured) {
+        say(msg, 'The one-sheet already has ' + L.max_featured + ' featured songs. Unfeature one first.', 'err'); return;
+      }
+      var d = { sync_bpm: v, sync_key: key.value, sync_moods: m, sync_genre: genre.value, sync_genre_2: genre2.value, sync_vocal: vocal.value,
+        sync_writers: writers.value.trim(), sync_producers: producers.value.trim() };
+      SY_FLAGS.forEach(function (x) { d[x[0]] = flags[x[0]].checked; });
+      var b = this; b.disabled = true; say(msg, 'Saving…');
+      call('saveTrackSync', [isrc, d], function () {
+        b.disabled = false;
+        if (!S.byIsrc[isrc]) { S.tracks.push(s); S.byIsrc[isrc] = s; }
+        Object.assign(s, d, { sync_bpm: v ? String(Number(v)) : '' });
+        syRecount(); renderReady(); showState(); say(msg, 'Saved', 'ok');
+      }, function (e) { b.disabled = false; say(msg, e.message, 'err'); });
+    } });
+
+    var wrap = h('div', { cls: 'sy-pane' });
+    wrap.appendChild(h('p', { cls: 'sx-note' }, ['Shown on the sync catalogue and the one-sheet. Explicit and language come from the basics above.', h('span', { cls: 'tk-public', text: 'public' })]));
+    wrap.appendChild(state);
+    wrap.appendChild(h('div', { cls: 'tk-row' }, [h('div', {}, [h('label', { text: 'BPM' }), bpm]), h('div', {}, [h('label', { text: 'Key' }), key]),
+      h('div', {}, [h('label', { text: 'Genre' }), genre]), h('div', {}, [h('label', { text: 'Second genre' }), genre2])]));
+    wrap.appendChild(h('div', { cls: 'tk-row' }, [h('div', {}, [h('label', { text: 'Vocal' }), vocal]),
+      h('div', {}, [h('label', { text: 'Writers' }), writers]), h('div', { style: 'grid-column: span 2' }, [h('label', { text: 'Producers' }), producers])]));
+    wrap.appendChild(h('div', { cls: 'tk-field' }, [h('label', { text: 'Moods (up to ' + L.max_moods + ')' }),
+      h('div', { cls: 'sy-moods' }, moods.map(function (c) { return h('label', { cls: 'sy-chk' }, [c, c.value]); }))]));
+    wrap.appendChild(h('div', { cls: 'tk-field' }, [h('label', { text: 'Files you can deliver' }),
+      h('div', { cls: 'sy-moods sy-flags' }, SY_FLAGS.map(function (x) { return h('label', { cls: 'sy-chk' }, [flags[x[0]], x[1]]); }))]));
+    wrap.appendChild(h('div', { cls: 'sg-bar', style: 'flex-wrap:wrap' }, [copy, save, msg]));
+    pane.appendChild(wrap);
+  }
+
+  /* contact_url: https on the hosts D-10 allows (Sync.gs checks it again on save). */
+  function syUrlOk(u) {
+    if (!u) return true;
+    var x; try { x = new URL(u); } catch (e) { return false; }
+    if (x.protocol !== 'https:' || x.username || x.password || x.port) return false;
+    if (x.hostname === 'docs.google.com') return x.pathname.indexOf('/forms/') === 0;
+    return ['www.danyeloz.info', 'forms.gle', 'www.cognitoforms.com'].indexOf(x.hostname) >= 0;
+  }
+  /* Same wording as OZSync.rightsText in sync-core.js (plan, "Rights wording"), so Daniel sees it before saving. */
+  function syRights(v) {
+    var holder = String(v.rights_holder || '').trim() || 'Danyel OZ, LLC', line = String(v.rights_line || '').trim(), pro = String(v.pro_name || '').trim();
+    var own = holder + ' owns 100% of the master recordings and 100% of the publishing';
+    var first = line || (v.one_stop ? 'One-stop clearance. ' + own + ', so one agreement clears both sides.' : own + '.');
+    return first + ' ' + (pro ? 'Songs are registered with ' + pro + '.' : 'Songs are registered with a performing rights organization.');
+  }
+
+  function renderSettings() {
+    var S = TK.sync, v = S.settings, box = clear(el('sySet'));
+    function inp(k, label, ph, max) { return h('input', { value: v[k] || '', placeholder: ph, maxlength: max, 'aria-label': label }); }
+    function area(k, label, ph, max) { var a = h('textarea', { cls: 'sy-ta', placeholder: ph, maxlength: max, 'aria-label': label }); a.value = v[k] || ''; return a; }
+    var f = {
+      rights_holder: inp('rights_holder', 'Rights holder', 'Danyel OZ, LLC', 120),
+      pro_name: inp('pro_name', 'PRO', 'BMI or ASCAP', 80),
+      turnaround: inp('turnaround', 'Reply time', '3 business days', 60),
+      contact_email: inp('contact_email', 'Contact email', 'daniel.vizkaino@gmail.com', 120),
+      contact_url: inp('contact_url', 'Contact form link', 'https://forms.gle/...', 500),
+      rights_line: area('rights_line', 'Rights line', 'optional: replaces the ownership sentence', 600),
+      process_note: area('process_note', 'Process note', 'optional: anything to add about how licensing works', 1000)
+    };
+    var one = h('input', { type: 'checkbox', checked: v.one_stop === 'TRUE' || v.one_stop === true });
+    var preview = h('div', { cls: 'tk-pub' });
+    var saved = h('p', { cls: 'sx-note sy-saved', text: S.settings_saved ? 'Last saved ' + (v.updated || '') + '.' : 'Not saved yet. The pages use these defaults until you save.' });
+    var msg = h('span', { cls: 'sx-status' });
+    function values() {
+      var d = {}; Object.keys(f).forEach(function (k) { d[k] = f[k].value.trim(); }); d.one_stop = one.checked; return d;
+    }
+    function showPreview() { preview.textContent = syRights(values()); }
+    Object.keys(f).forEach(function (k) { f[k].addEventListener('input', showPreview); });
+    one.addEventListener('change', showPreview);
+    showPreview();
+    box.appendChild(h('div', { cls: 'tk-row' }, [h('div', { style: 'grid-column: span 2' }, [h('label', { text: 'Rights holder' }), f.rights_holder]),
+      h('div', {}, [h('label', { text: 'PRO' }), f.pro_name]), h('div', {}, [h('label', { text: 'Reply time' }), f.turnaround])]));
+    box.appendChild(h('p', { cls: 'sx-note sy-pro', text: 'Type your PRO’s name (for example BMI or ASCAP). Leave it blank to show a general line instead.' }));
+    box.appendChild(h('div', { cls: 'tk-row' }, [h('div', { style: 'grid-column: span 2' }, [h('label', { text: 'Contact email' }), f.contact_email]),
+      h('div', { style: 'grid-column: span 2' }, [h('label', { text: 'Contact form link (optional)' }), f.contact_url])]));
+    box.appendChild(h('p', { cls: 'sx-note', text: 'The form link must be https on www.danyeloz.info, Google Forms (docs.google.com/forms or forms.gle) or Cognito Forms. When set, request buttons open it instead of email.' }));
+    box.appendChild(h('div', { cls: 'tk-field' }, [h('label', { cls: 'sy-chk' }, [one, 'One-stop: one agreement clears the master and the publishing'])]));
+    box.appendChild(h('div', { cls: 'tk-two' }, [h('div', {}, [h('label', { text: 'Rights line' }), f.rights_line]), h('div', {}, [h('label', { text: 'Process note' }), f.process_note])]));
+    box.appendChild(h('div', { cls: 'tk-field', style: 'margin-top:10px' }, [h('label', { text: 'The rights sentence the pages will show' }), preview]));
+    box.appendChild(h('div', { cls: 'sg-bar', style: 'flex-wrap:wrap' }, [h('button', { type: 'button', cls: 'primary sx-btn-sm', text: 'Save settings', onclick: function () {
+      var d = values();
+      if (!d.rights_holder) { say(msg, 'Add the rights holder (for example Danyel OZ, LLC).', 'err'); return; }
+      if (!syUrlOk(d.contact_url)) { say(msg, 'The form link must be https on www.danyeloz.info, docs.google.com/forms, forms.gle or www.cognitoforms.com (or leave it blank).', 'err'); return; }
+      var b = this; b.disabled = true; say(msg, 'Saving…');
+      call('saveSyncSettings', [d], function (res) {
+        b.disabled = false;
+        Object.assign(S.settings, d, { one_stop: d.one_stop ? 'TRUE' : '', updated: (res && res.updated) || '' });
+        S.settings_saved = true; saved.textContent = 'Last saved ' + S.settings.updated + '.'; say(msg, 'Saved', 'ok');
+      }, function (e) { b.disabled = false; say(msg, e.message, 'err'); });
+    } }), msg]));
+    box.appendChild(saved);
   }
 
   /* ---------- Release tracklist (public) ---------- */

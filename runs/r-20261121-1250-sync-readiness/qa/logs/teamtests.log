@@ -1,0 +1,33 @@
+warning: in the working copy of 'team/contracts/envelope.schema.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'team/contracts/plan.schema.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'team/contracts/task.schema.json', LF will be replaced by CRLF the next time Git touches it
+✔ init-run creates the run layout and refuses a duplicate (118.8775ms)
+✔ init-run rejects a bad slug and a bad tier (112.5313ms)
+✔ check-envelope accepts a valid envelope inside an agent reply (59.0083ms)
+✔ check-envelope rejects a bad id, a verdict without verdict, a wrong run and no envelope (230.1154ms)
+✔ board import rejects a cycle, then imports a valid plan once (171.72ms)
+✔ board set enforces dependencies and statuses, and bumps the revision (229.4751ms)
+✔ gate-g2 fails on a missing artifact, the wrong owner, and out-of-scope changes (378.5402ms)
+✔ gate-g2 passes in scope, records the envelope, and rejects its id on reuse (254.6423ms)
+✔ passes on an unmodified copy (397.8301ms)
+✔ fails on a reserved word in a skill name (405.6404ms)
+✔ fails on an uppercase skill name (397.8065ms)
+✔ fails on a missing description (398.826ms)
+✔ fails on a description over 1024 chars (389.8908ms)
+✔ fails on CRLF line endings (387.3853ms)
+✔ fails on a link to a missing reference file (390.4061ms)
+✔ fails on a reference to a missing script (389.1674ms)
+✔ fails on a script that does not parse (439.9757ms)
+✔ fails on a SKILL.md of 500+ lines (384.257ms)
+✔ fails on an agent preloading an unknown skill (389.4147ms)
+✔ fails on a worker that does not preload the charter (385.6217ms)
+✔ fails on a charter missing a gate (388.928ms)
+✔ fails on a skill folder without SKILL.md (386.6869ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5627.0495

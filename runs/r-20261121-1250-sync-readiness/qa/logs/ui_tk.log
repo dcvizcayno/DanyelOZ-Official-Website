@@ -1,0 +1,28 @@
+visible [ 'viewTracks' ]
+checks [
+  '1 ISRCs to sort out',
+  '1 Released, no tracklist',
+  '0 Code problems',
+  '1 Releases with no UPC',
+  '1 Released songs, no lyrics'
+]
+fix rows [ 'QZRP42414262' ] Today (3:02) on Today, 2024Goodbye (6:00) on Goodbye Album, 2024
+fix saved ["QZRP42414262",{"issue":"different song names; lengths differ by 178 s","status":"Republish planned","plan":"New ISRC","new_isrc":"QZRP42500001","new_upc":"","new_title":"","notes":""}] Saved
+songs [ 'Today', 'My Girl', 'Dahlia' ]
+search goodbye [ 'Today', 'My Girl' ]
+no lyrics [ 'Today' ]
+editor My Girl | QZK6L2424380 · 3:10 · out since 2024-03-01
+draft shown "Verse one line (new)\n" | public: "Verse one line\nVerse two line\n\nChorus line"
+draft saved {"bpm":"92","key":"G major","time_signature":"4/4","chords":"G C D G","draft_lyrics":"Verse one line (new)\n","draft_abc":"","notes":""}
+published {"lyrics":"Verse one line (new)\n"}
+score svg (site) 1
+score svg (draft preview) 1
+bpm 92
+fix plan status To check
+dahlia publish disabled true | Not out yet, so it can only be saved as a draft. Publishing opens on release day (2026-12-07).
+tracklist rows 1 QZAAA2500001
+album rows [ 'Goodbye', 'My Girl (bonus)' ]
+tracklist saved ["222222222222",[{"disc":"1","track_number":"1","isrc":"QZRP42414262","track_title":"Goodbye","duration":"6:00","bonus":false,"from_isrc":""},{"disc":"1","track_number":"2","isrc":"QZK6L2424380","track_title":"My Girl","duration":"3:10","bonus":true,"from_isrc":""},{"disc":"1","track_number":"3","is
+tk scrollW 1400 1400
+tk_phone scrollW 390 390
+errors []

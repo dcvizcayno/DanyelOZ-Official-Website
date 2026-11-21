@@ -1,0 +1,129 @@
+{
+  "run": "r-20261121-1250-sync-readiness",
+  "revision": 22,
+  "updated": "2026-11-21T05:37:16.652Z",
+  "tasks": [
+    {
+      "id": "T-004",
+      "owner": "executor",
+      "title": "Write apps-script/Sync.gs data layer with its Node unit test",
+      "status": "done",
+      "deps": [],
+      "write_scope": [
+        "apps-script/Sync.gs",
+        "tests/unit/test_sync.js"
+      ],
+      "artifact": "runs/r-20261121-1250-sync-readiness/exec/T-004.md"
+    },
+    {
+      "id": "T-005",
+      "owner": "executor",
+      "title": "Write shared widget core danyeloz-embeds/sync-core.js with fixtures and unit test",
+      "status": "done",
+      "deps": [],
+      "write_scope": [
+        "E:/Projects/danyeloz-embeds/sync-core.js",
+        "tests/widgets/fixtures/",
+        "tests/widgets/mock-sheet.js",
+        "tests/widgets/test_synccore.js"
+      ],
+      "artifact": "runs/r-20261121-1250-sync-readiness/exec/T-005.md"
+    },
+    {
+      "id": "T-006",
+      "owner": "executor",
+      "title": "Add Sync tab, readiness card and licensing settings card to the Tracks screen",
+      "status": "done",
+      "deps": [
+        "T-004"
+      ],
+      "write_scope": [
+        "apps-script/TracksApp.html",
+        "apps-script/TracksViews.html",
+        "tests/ui/mock.js",
+        "tests/ui/sy.js"
+      ],
+      "artifact": "runs/r-20261121-1250-sync-readiness/exec/T-006.md"
+    },
+    {
+      "id": "T-007",
+      "owner": "executor",
+      "title": "Build danyeloz-embeds/sync.html catalogue widget with Playwright test",
+      "status": "done",
+      "deps": [
+        "T-005"
+      ],
+      "write_scope": [
+        "E:/Projects/danyeloz-embeds/sync.html",
+        "tests/widgets/catalogue.js"
+      ],
+      "artifact": "runs/r-20261121-1250-sync-readiness/exec/T-007.md"
+    },
+    {
+      "id": "T-008",
+      "owner": "executor",
+      "title": "Build danyeloz-embeds/sync-one-sheet.html with print CSS and Playwright test",
+      "status": "done",
+      "deps": [
+        "T-005"
+      ],
+      "write_scope": [
+        "E:/Projects/danyeloz-embeds/sync-one-sheet.html",
+        "tests/widgets/one_sheet.js"
+      ],
+      "artifact": "runs/r-20261121-1250-sync-readiness/exec/T-008.md"
+    },
+    {
+      "id": "T-009",
+      "owner": "executor",
+      "title": "Write paste-ready Sync and Licensing contact copy in docs/sync-contact-copy.md",
+      "status": "done",
+      "deps": [
+        "T-005"
+      ],
+      "write_scope": [
+        "docs/sync-contact-copy.md"
+      ],
+      "artifact": "runs/r-20261121-1250-sync-readiness/exec/T-009.md"
+    },
+    {
+      "id": "T-010",
+      "owner": "executor",
+      "title": "Update CLAUDE.md, HANDOFF.md, tests/README.md and docs/SETUP.md for sync and /team-run",
+      "status": "done",
+      "deps": [
+        "T-004",
+        "T-006",
+        "T-007",
+        "T-008",
+        "T-009"
+      ],
+      "write_scope": [
+        "CLAUDE.md",
+        "E:/Projects/danyeloz-embeds/HANDOFF.md",
+        "tests/README.md",
+        "docs/SETUP.md"
+      ],
+      "artifact": "runs/r-20261121-1250-sync-readiness/exec/T-010.md"
+    },
+    {
+      "id": "T-011",
+      "owner": "qa",
+      "title": "Verify C-1 to C-7 independently with fresh planted data and a full test rerun",
+      "status": "done",
+      "deps": [
+        "T-004",
+        "T-005",
+        "T-006",
+        "T-007",
+        "T-008",
+        "T-009",
+        "T-010"
+      ],
+      "write_scope": [
+        "runs/r-20261121-1250-sync-readiness/qa/"
+      ],
+      "artifact": "runs/r-20261121-1250-sync-readiness/qa/T-011.md"
+    }
+  ]
+}

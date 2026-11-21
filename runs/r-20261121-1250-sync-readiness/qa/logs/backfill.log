@@ -1,0 +1,45 @@
+preview writes 0
+Would fill: Blue and Red Christmas  ->  https://open.spotify.com/album/good
+Would fill: Track Only  ->  https://open.spotify.com/track/t
+Would fill 2 Spotify links (5 songs checked this run).
+Matched by code, but the name differs on Spotify (worth a glance):
+Blue and Red Christmas  ->  Spotify name: "Blue & Red Christmas"
+Not found on Spotify (2):
+Padded (UPC 12345678901)
+Not There (UPC 333333333333)
+Skipped, a different artist came back (1):
+Stranger: Spotify says "Stranger" by Other Guy
+Skipped, no UPC or ISRC in the sheet (1):
+Nothing
+All done.
+---
+[[3,4,"https://open.spotify.com/album/good"],[5,4,"https://open.spotify.com/track/t"]]
+Filled 2 Spotify links (5 songs checked this run).
+Matched by code, but the name differs on Spotify (worth a glance):
+Blue and Red Christmas  ->  Spotify name: "Blue & Red Christmas"
+Not found on Spotify (2):
+Padded (UPC 12345678901)
+Not There (UPC 333333333333)
+Skipped, a different artist came back (1):
+Stranger: Spotify says "Stranger" by Other Guy
+Skipped, no UPC or ISRC in the sheet (1):
+Nothing
+All done.
+---
+Filled 0 Spotify links (0 songs checked this run).
+Spotify asked this app to pause for about 23 hours, until 2026-11-22T04:32:03.618Z (Manila time). Run it again after that; it carries on from row 3.
+saved: {"SPOTIFY_NEXT_ROW_fill":"2"}
+---
+Carrying on from row 3 (run resetSpotifyProgress to start over).
+Filled 2 Spotify links (5 songs checked this run).
+Matched by code, but the name differs on Spotify (worth a glance):
+Blue and Red Christmas  ->  Spotify name: "Blue & Red Christmas"
+Not found on Spotify (2):
+Padded (UPC 12345678901)
+Not There (UPC 333333333333)
+Skipped, a different artist came back (1):
+Stranger: Spotify says "Stranger" by Other Guy
+Skipped, no UPC or ISRC in the sheet (1):
+Nothing
+All done.
+saved: {}

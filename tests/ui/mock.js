@@ -37,6 +37,21 @@ var H={
  publishTrackText:function(i,d){if(i==='QZXX52600001')throw new Error("This song isn't out yet (2026-12-07). Keep it as a draft until release day.");window.__tkPub=d;return {ok:true};},
  saveTrackFix:function(i,d){window.__tkFix=[i,d];return {ok:true};},
  saveReleaseTracklist:function(u,l){window.__tkTl=[u,l];return {ok:true,added:0,count:l.length};},
+ // Sync.gs: planted markup (img onerror, script, svg onload) in a title, writers and every settings field must stay text.
+ getSyncAdmin:function(){var X='<img src=x onerror="window.__pwn=1"><scr'+'ipt>window.__pwn=2<\/script><svg onload="window.__pwn=3">';
+  var b=function(isrc,title,date,x){return Object.assign({isrc:isrc,track_title:title,first_release:date,explicit:false,language:'',sync_bpm:'',sync_key:'',sync_moods:[],sync_genre:'',sync_genre_2:'',sync_vocal:'',sync_writers:'',sync_producers:'',sync_instrumental:false,sync_clean:false,sync_stems:false,sync_cut60:false,sync_cut30:false,sync_featured:false},x||{});};
+  var tracks=[b('QZRP42414262','Today','2024-01-05'),b('QZK6L2424380','My Girl','2024-03-01',{sync_bpm:'92',sync_key:'G major',sync_moods:['Romantic','Smooth'],sync_genre:'R&B',sync_vocal:'Solo vocal',sync_writers:'Daniel Vizcayno',sync_featured:true}),
+   b('QZXX52600001','Dahlia','2026-12-07',{sync_bpm:'100',sync_writers:X}),b('QZXX52600099','Bold '+X,'2025-05-05')];
+  var need=['sync_bpm','sync_key','sync_moods','sync_genre','sync_vocal','sync_writers'],miss=[];
+  tracks.forEach(function(t){var g=need.filter(function(c){return c==='sync_moods'?!t[c].length:!t[c];});t.complete=!g.length;if(g.length)miss.push({isrc:t.isrc,title:t.track_title,fields:g});});
+  return {tracks:tracks,readiness:{complete:tracks.length-miss.length,total:tracks.length,missing:miss},settings_saved:false,
+   settings:{rights_holder:'Danyel OZ, LLC '+X,rights_line:'',one_stop:'TRUE',pro_name:X,contact_email:'daniel.vizkaino@gmail.com',contact_url:'',turnaround:'3 business days '+X,process_note:X,updated:''},
+   lists:{moods:['Happy','Uplifting','Hopeful','Euphoric','Empowering','Romantic','Sexy','Smooth','Laid Back','Dreamy','Peaceful','Sentimental','Nostalgic','Sad','Dark','Mysterious','Suspense','Restless','Epic','Quirky'],
+    genres:['Pop','Alt-Pop','Indie Pop','R&B','Alternative R&B','Soul','Acoustic','Singer-Songwriter','Folk Pop','Latin Pop','Electropop','Ballad'],vocals:['Solo vocal','Duet','Instrumental only','Mixed'],
+    keys:['C major','C minor','C# major','C# minor','D major','D minor','Eb major','Eb minor','E major','E minor','F major','F minor','F# major','F# minor','G major','G minor','Ab major','Ab minor','A major','A minor','Bb major','Bb minor','B major','B minor'],max_moods:3,max_featured:10},
+   hints:{QZRP42414262:{bpm:'88',key:'A minor'}}};},
+ saveTrackSync:function(i,d){window.__sySave=[i,d];return {ok:true};},
+ saveSyncSettings:function(d){if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.contact_email))throw new Error("The contact email doesn't look right.");window.__sySettings=d;return {ok:true,updated:'2026-11-21 13:05'};},
  getMakerData:function(){return window.__mk.data();},
  planSeries:function(d){window.__plan=d;return window.__mk.view('Planning');},
  getSeries:function(id){window.__gets=(window.__gets||0)+1;return window.__mk.view(window.__mk.next||'Planned');},

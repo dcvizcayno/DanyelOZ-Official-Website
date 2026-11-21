@@ -1,0 +1,31 @@
+tt unset: true | redirect shown: https://script.google.com/macros/s/APP/exec
+connect opens: https://www.tiktok.com/v2/auth/authorize/?client_key=CK&state=x
+posting as: Posting as Danyel OZ (@danyeloz)
+privacy default: "" | options [ 'Choose…', 'Everyone', 'Followers', 'Only me' ]
+interactions on by default: 0 | duet off: true
+approve before choice disabled: true | Choose who can see it.
+commercial on, none picked disabled: true | Choose Your brand, Branded content, or both.
+branded: only-me blocked: true | privacy reset: "" | declaration: By approving, you agree to TikTok’s Branded Content Policy and Music Usage Confirmation.
+approved with: {"privacy":"PUBLIC_TO_EVERYONE","allow_comment":true,"allow_duet":false,"allow_stitch":false,"commercial":true,"brand_organic":false,"brand_content":true}
+state: Approved. Posts at the next check (its time, 2026-11-10 19:30 Manila, has passed) once Auto-post is on, or use Post now. | status: Approved. It posts at the next check (its time, 2026-11-10 19:30 Manila, has passed) once Auto-post is on.
+auto: Auto-post is on. Approved Shorts post at their time (checked every 15 minutes).
+confirm: Post “Carmen” to TikTok now (Everyone)? | state: Sent. TikTok is processing it; this can take a few minutes. | locked: true
+posted: Posted on TikTok. Open it | link: https://www.tiktok.com/@danyeloz/video/7300000000000000001
+tt scrollWidth 1400
+failed: Didn’t post: TikTok hasn’t approved this app yet, so it only posts to a private account. | try again: true
+tt_phone unset: true | redirect shown: https://script.google.com/macros/s/APP/exec
+connect opens: https://www.tiktok.com/v2/auth/authorize/?client_key=CK&state=x
+posting as: Posting as Danyel OZ (@danyeloz)
+privacy default: "" | options [ 'Choose…', 'Everyone', 'Followers', 'Only me' ]
+interactions on by default: 0 | duet off: true
+approve before choice disabled: true | Choose who can see it.
+commercial on, none picked disabled: true | Choose Your brand, Branded content, or both.
+branded: only-me blocked: true | privacy reset: "" | declaration: By approving, you agree to TikTok’s Branded Content Policy and Music Usage Confirmation.
+approved with: {"privacy":"PUBLIC_TO_EVERYONE","allow_comment":true,"allow_duet":false,"allow_stitch":false,"commercial":true,"brand_organic":false,"brand_content":true}
+state: Approved. Posts at the next check (its time, 2026-11-10 19:30 Manila, has passed) once Auto-post is on, or use Post now. | status: Approved. It posts at the next check (its time, 2026-11-10 19:30 Manila, has passed) once Auto-post is on.
+auto: Auto-post is on. Approved Shorts post at their time (checked every 15 minutes).
+confirm: Post “Carmen” to TikTok now (Everyone)? | state: Sent. TikTok is processing it; this can take a few minutes. | locked: true
+posted: Posted on TikTok. Open it | link: https://www.tiktok.com/@danyeloz/video/7300000000000000001
+tt_phone scrollWidth 390
+failed: Didn’t post: TikTok hasn’t approved this app yet, so it only posts to a private account. | try again: true
+errors []

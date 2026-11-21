@@ -1,0 +1,8 @@
+summary Goodbye Album · Album · 2024-06-01 · UPC 222222222222 · lyrics for 1 of 2 songs
+lyric cells [ 'Write', '✓ Edit · score' ]
+editor Today | nav Goodbye Album: song 1 of 2 | tab Lyrics
+cells after Today publish [ '✓ Edit', '✓ Edit · score' ]
+after next My Girl | Goodbye Album: song 2 of 2 | next btn? 0
+lyric cells after publish [ '✓ Edit', '✓ Edit · score' ]
+nav gone 0
+errors []

@@ -1,0 +1,24 @@
+## 11. Agent team
+
+The private repo carries a seven-role agent team. Its full charter lives in the `team-protocol` skill, not here, so ordinary sessions do not pay for it.
+
+| Role | Job |
+|---|---|
+| Supervisor | Runs in the main session (`team-supervisor` skill): writes the charter, picks the risk tier, hands out tasks, runs the gates, reports back to Daniel |
+| Researcher | Finds the facts and options a decision needs, with sources |
+| Planner | Splits the work into tasks with a definition of done, tests and a way back |
+| Executor | Builds exactly one task inside its allowed files, with proof (commands and results) |
+| QA | Checks the work independently and gives a verdict; does not fix it |
+| Security | Threat model and risk list; can stop a release on a serious risk |
+| Monitor | Watches time, budget and drift against the plan |
+
+- **Start a run only when asked:** `/team-run <task> [tier]`. Tier T0 to T3 sets how much process it gets (T0 a read-only answer, T3 irreversible or production data, which needs Daniel's approval).
+- **Use it for** multi-step or public-facing work, changes across several files or both repos, anything touching the Song Database schema (new tabs or columns), public pages and rights wording, money or secrets.
+- **Don't use it for** one-line fixes, one-file tweaks or questions; a normal session is faster.
+- **Run records** live in `runs/<run-id>/` (charter, board, plan, research, exec, qa, security and monitor notes, final report). Anything under `runs/` follows `team-protocol`: load that skill before reading or writing there.
+- Workers (`.claude/agents/team-*`) preload `team-protocol`; the Supervisor loads it through `team-supervisor`.
+- **Keep the checks green.** After changing anything in `.claude/`, `team/` or `scripts/`, run both:
+  - `node scripts/validate.mjs`
+  - `node --test scripts/tests/`
+- Text files are LF (`.gitattributes`); skill and agent frontmatter fails validation with CRLF.
+- Skill scripts are Node `.mjs` with no dependencies, so they run the same on Windows and Unix.

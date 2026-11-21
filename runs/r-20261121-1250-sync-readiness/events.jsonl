@@ -1,0 +1,24 @@
+{"ts":"2026-11-21T04:50:46.408Z","from":"supervisor","task":"RUN","event":"run_created","summary":"tier T2"}
+{"ts":"2026-11-21T05:05:13.834Z","from":"supervisor","task":"RUN","event":"board_import","summary":"8 task(s) from plan.json"}
+{"ts":"2026-11-21T05:05:44.180Z","from":"supervisor","task":"T-004","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T05:10:08.251Z","from":"supervisor","task":"T-004","event":"task_status","summary":"doing -> done: G2 scope flags = team-pack install by supervisor before the run (uncommitted), not T-004. T-004 changed only apps-script/Sync.gs, tests/unit/test_sync.js; test_sync re-run PASSED by supervisor. Accepted blank rights_holder rejection."}
+{"ts":"2026-11-21T05:10:08.332Z","from":"supervisor","task":"T-006","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T05:11:28.679Z","from":"supervisor","task":"T-004","event":"task_status","summary":"done -> doing: reopened for security conditions SR-05/06/07/09 + D-10"}
+{"ts":"2026-11-21T05:11:28.755Z","from":"supervisor","task":"T-005","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T05:14:35.268Z","from":"supervisor","task":"T-004","event":"task_status","summary":"doing -> done: reopen accepted: SR-05/06/07/09 + D-10; supervisor re-ran test_sync and test_tracks PASSED"}
+{"ts":"2026-11-21T05:16:57.617Z","from":"supervisor","task":"T-005","event":"task_status","summary":"doing -> done: supervisor re-ran test_synccore PASSED; no HTML sinks; email drift queued"}
+{"ts":"2026-11-21T05:16:57.699Z","from":"supervisor","task":"T-007","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T05:16:57.783Z","from":"supervisor","task":"T-008","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T05:16:57.865Z","from":"supervisor","task":"T-009","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T05:17:41.900Z","from":"supervisor","task":"T-006","event":"task_status","summary":"doing -> done: supervisor re-ran build+sy.js: errors [], scrollWidth ok; contact_url host allowlist already enforced in Sync.gs by T-004 reopen"}
+{"ts":"2026-11-21T05:19:08.433Z","from":"supervisor","task":"T-009","event":"task_status","summary":"doing -> done: supervisor checked email grep and em dashes; entity name already confirmed by Daniel (A-4)"}
+{"ts":"2026-11-21T05:19:16.855Z","from":"supervisor","task":"T-009","event":"task_status","summary":"done -> doing: reopened: third-person pronoun for Daniel in intro line"}
+{"ts":"2026-11-21T05:19:41.297Z","from":"supervisor","task":"T-009","event":"task_status","summary":"doing -> done: rework verified by supervisor: 0 pronoun hits"}
+{"ts":"2026-11-21T05:21:10.788Z","from":"supervisor","task":"T-008","event":"task_status","summary":"doing -> doing: reopened: pronoun in bio"}
+{"ts":"2026-11-21T05:21:19.280Z","from":"supervisor","task":"T-007","event":"task_status","summary":"doing -> done: supervisor re-ran catalogue.js PASSED; QA to pin clock for 2027-03-01 fixture"}
+{"ts":"2026-11-21T05:22:00.047Z","from":"supervisor","task":"T-008","event":"task_status","summary":"doing -> done: supervisor re-ran one_sheet.js PASSED (A4=1, Letter=1)"}
+{"ts":"2026-11-21T05:22:00.129Z","from":"supervisor","task":"T-010","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T05:25:44.111Z","from":"supervisor","task":"T-010","event":"task_status","summary":"doing -> done: supervisor: cmp identical, validate PASS"}
+{"ts":"2026-11-21T05:25:44.193Z","from":"supervisor","task":"T-011","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T05:37:16.653Z","from":"supervisor","task":"T-011","event":"task_status","summary":"doing -> done: QA G3 PASS_WITH_CONDITIONS: D-1 S4 fix in progress; Sites draft step is Daniel's"}
+{"ts":"2026-11-21T00:00:00Z","from":"supervisor","task":"RUN","event":"gate","summary":"G4 PASS: Daniel confirmed Viewer sharing and approved commit and push of both repos"}

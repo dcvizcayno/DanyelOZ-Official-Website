@@ -1,0 +1,10 @@
+singles visible sections: [ 'viewSingles' ]
+albums visible sections: [ 'viewAlbums' ]
+eps visible sections: [ 'viewAlbums' ]
+tracks visible sections: [ 'viewTracks' ]
+singles visible sections: [ 'viewSingles' ]
+errors [
+  'console: Failed to load resource: net::ERR_FAILED',
+  'console: Failed to load resource: net::ERR_FAILED',
+  'console: Failed to load resource: net::ERR_FAILED'
+]

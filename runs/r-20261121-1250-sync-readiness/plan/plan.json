@@ -1,0 +1,221 @@
+{
+  "run": "r-20261121-1250-sync-readiness",
+  "goal": "Make the Danyel OZ catalogue sync-ready: public per-song sync fields and a shared licensing settings tab edited in the admin app, a catalogue widget, a printable one-sheet, paste-ready contact copy, and handbook updates, all tested locally with nothing pushed or published.",
+  "strategy": "Two foundations first, in parallel: the server data layer (Sync.gs, columns and sync_settings tab per D-1/D-5) and a shared widget core (danyeloz-embeds/sync-core.js: CSV parse, header guards, lists, link allowlist, rights line, one-sheet selection) with shared mocked CSV fixtures. The core is where the riskiest rules live (Sheet1 trap, D-6 mailto exception, PRO-blank wording), so it is tested before any page is built. Wave 2 builds the admin UI on Sync.gs and the two widgets plus contact copy on the core. Wave 3 updates handbooks once names are final. Wave 4 is independent QA with its own planted data.",
+  "criteria": [
+    {"id": "C-1", "text": "Each song in tracks can carry the public sync fields (D-1 names, explicit and language reused); missing columns added by header name; existing data untouched.", "verify": "test_sync.js: columns appended after abc with data unchanged, getSyncAdmin writes nothing, test_tracks.js still passes; QA reruns with its own tracks fixture holding a hand-added sync_bpm column."},
+    {"id": "C-2", "text": "Tracks screen views and edits sync fields per song with validation, saves via lock_/safeText_, shows readiness count; unit and Playwright tests at 1400 and 390 px pass.", "verify": "test_sync.js validation cases (BPM 39/221/120.5, bad key/mood, 4 moods, 11th featured, formula text); tests/ui/sy.js at 1400 and 390 with no page errors and no sideways scroll; QA rerun plus tk/tk2/sg."},
+    {"id": "C-3", "text": "sync.html lists released songs with the fields, filters, search, Request a license link, text-only DOM, allowed links, fallback, no sideways scroll at 390.", "verify": "tests/widgets/catalogue.js with fixtures (HTML title, javascript: link, unreleased song, Sheet1-shaped tracks and settings, fetch failure) at 1400 and 390; QA adds its own planted rows."},
+    {"id": "C-4", "text": "sync-one-sheet.html shows rights line, contact, turnaround and 8-10 featured songs; prints to one A4 and one Letter page; falls back to newest complete songs.", "verify": "tests/widgets/one_sheet.js: page.pdf A4 and Letter each have exactly 1 page with 10 long-title rows; 3-featured fixture shows 8 rows filled by newest complete; QA repeats with its own data."},
+    {"id": "C-5", "text": "Catalogue, one-sheet and contact copy state 100% master and publishing, one-stop, and PRO registration from one settings source; no PRO name until set.", "verify": "test_synccore.js rights line with pro_name blank and set; widget tests assert identical rights text on both pages from the sync_settings fixture; QA compares contact copy to OZSync output."},
+    {"id": "C-6", "text": "Paste-ready Sync & Licensing contact copy plus embed code: rights, what to send, 3-business-day reply, steps request/quote/agreement/delivery, links to catalogue and one-sheet.", "verify": "QA checks docs/sync-contact-copy.md for each required element, only daniel.vizkaino@gmail.com as address, no same-day promise, no em dashes or banned words. Sites draft paste is a step for Daniel."},
+    {"id": "C-7", "text": "Team pack installed in private repo, validator and tests green, CLAUDE.md and HANDOFF.md say when to use /team-run.", "verify": "QA runs node scripts/validate.mjs and node --test scripts/tests/ (both green) and diffs the Agent team section of CLAUDE.md against HANDOFF.md (identical, includes a when-to-use list)."}
+  ],
+  "tasks": [
+    {
+      "id": "T-004",
+      "owner": "executor",
+      "title": "Write apps-script/Sync.gs data layer with its Node unit test",
+      "status": "todo",
+      "depends_on": [],
+      "definition_of_done": [
+        "Sync.gs defines SY_TRACK_COLUMNS (D-1 names), SY_SETTINGS_TAB = sync_settings, SY_SETTING_COLUMNS (D-5), SY_MOODS (20), SY_GENRES (12), SY_VOCALS (4), SY_KEYS (24), SY_MAX_FEATURED = 10, SY_DEFAULTS; no name collides with other .gs files.",
+        "getSyncAdmin() returns per-ISRC sync fields, readiness {complete, total, missing[{isrc,title,fields}]} per D-4, settings (defaults when tab missing), lists, and studio-note bpm/key hints; it performs zero sheet writes.",
+        "saveTrackSync(isrc, d) under lock_(): adds missing sync columns by header via trPublicTab_, writes via trPutRow_ (text through safeText_, flags as text TRUE or empty), never touches other columns.",
+        "saveTrackSync rejects: BPM not a whole number 40-220 (blank allowed), key/genre/vocal not in list, a mood not in list or more than 3, writers/producers over 200 chars, an 11th featured song across the tab.",
+        "saveSyncSettings(d) under lock_() writes one row of sync_settings (creates tab on first save); contact_email must match an email pattern; contact_url blank or https; all values via safeText_; sets updated.",
+        "tests/unit/test_sync.js loads Code, Shorts, Singles, Tracks, Sync; covers append-after-abc with existing cells unchanged, each rejection above, featured cap, settings round trip, formula-prefix escaping, PASSED line."
+      ],
+      "write_scope": ["apps-script/Sync.gs", "tests/unit/test_sync.js"],
+      "verify": [
+        "env -u GITHUB_TOKEN -u GH_TOKEN node tests/unit/test_sync.js apps-script  -> PASSED",
+        "env -u GITHUB_TOKEN -u GH_TOKEN node tests/unit/test_tracks.js apps-script  -> PASSED (test file unchanged)",
+        "duplicate check: list every top-level function name in apps-script/*.gs, sort, uniq -d  -> empty"
+      ],
+      "risk": "medium",
+      "estimate_minutes": 90,
+      "rollback": "Delete apps-script/Sync.gs and tests/unit/test_sync.js (both new files); no other file changes. Executor or supervisor triggers.",
+      "artifact": "runs/r-20261121-1250-sync-readiness/exec/T-004.md",
+      "notes": "Lists verbatim from T-002 R-1/R-2 and D-3; the 24 key names are spelled out in plan.md. Do not edit Tracks.gs or TRACK_COLUMNS. No clasp push."
+    },
+    {
+      "id": "T-005",
+      "owner": "executor",
+      "title": "Write shared widget core danyeloz-embeds/sync-core.js with fixtures and unit test",
+      "status": "todo",
+      "depends_on": [],
+      "definition_of_done": [
+        "OZSync (window) has parseCsv (albums.html:156-171), fetchTab with header guard (tracks needs isrc+sync_bpm, settings needs rights_holder, Sheet1 needs song_upc), released (SGT), flag parse, lists equal to Sync.gs.",
+        "OZSync.safeLink allows https only on open.spotify.com, music.apple.com, *.bandcamp.com, youtube.com, www.youtube.com, music.youtube.com, www.danyeloz.info, dcvizcayno.github.io; cover rule as albums.html:182-184; else empty.",
+        "OZSync.contactHref returns the https contact_url if set, else mailto only when contact_email matches the email pattern (D-6), with encoded subject; anything else returns empty.",
+        "OZSync.rightsText builds the plan.md wording from settings; blank pro_name gives the generic PRO sentence; a rights_line override never replaces the PRO sentence; missing settings use D-5 defaults.",
+        "OZSync.pickOneSheet returns released featured songs (max 10), topped up to 8 with the newest complete (D-4) released songs by first_release.",
+        "tests/widgets/fixtures/ holds tracks, sync_settings, Sheet1 CSVs incl. HTML title, javascript: link, unreleased song, 11 featured, Sheet1-shaped copies; tests/widgets/mock-sheet.js routes gviz by sheet= and sync-core.js to the local file.",
+        "tests/widgets/test_synccore.js (Node vm, no browser) covers every function above and prints PASSED."
+      ],
+      "write_scope": ["E:/Projects/danyeloz-embeds/sync-core.js", "tests/widgets/fixtures/", "tests/widgets/mock-sheet.js", "tests/widgets/test_synccore.js"],
+      "verify": [
+        "env -u GITHUB_TOKEN -u GH_TOKEN node tests/widgets/test_synccore.js  -> PASSED",
+        "receipt records one read-only curl of the live gviz URL with sheet=no_such_tab and whether row 1 equals the Sheet1 headers (no writes)"
+      ],
+      "risk": "medium",
+      "estimate_minutes": 90,
+      "rollback": "Delete sync-core.js and tests/widgets/ (all new, uncommitted). Executor or supervisor triggers.",
+      "artifact": "runs/r-20261121-1250-sync-readiness/exec/T-005.md",
+      "notes": "Production script tag: https://dcvizcayno.github.io/danyeloz-embeds/sync-core.js (lyrics.js pattern). No commit or push in danyeloz-embeds. Text-only DOM helpers; never innerHTML with sheet data."
+    },
+    {
+      "id": "T-006",
+      "owner": "executor",
+      "title": "Add Sync tab, readiness card and licensing settings card to the Tracks screen",
+      "status": "todo",
+      "depends_on": ["T-004"],
+      "definition_of_done": [
+        "TracksApp.html tab list gains a sync entry labelled Sync; syncPane() lazy-loads getSyncAdmin once into TK.sync; inputs: BPM, key, up to 3 mood checkboxes, genre, genre 2, vocal, writers, producers, 6 flags, Copy from studio notes, Save.",
+        "Client pre-checks BPM, mood count and featured cap with the server rules and shows the message in .sx-status; server errors also show there; DOM built with h() and textContent only.",
+        "TracksViews.html adds a public-marked Sync readiness card (N of M complete, missing fields per song, click opens that song) and a public-marked Licensing settings card (D-5 fields, PRO blank hint, Save).",
+        "tests/ui/mock.js H gains getSyncAdmin (fixture with an HTML-in-title song), saveTrackSync and saveSyncSettings recording window.__sySave and window.__sySettings.",
+        "tests/ui/sy.js at 1400 and 390: opens Tracks, edits and saves one song, rejects BPM 221 and a 4th mood, saves settings, reads readiness text; zero page errors; scrollWidth <= clientWidth; screenshots in tests/ui/out/."
+      ],
+      "write_scope": ["apps-script/TracksApp.html", "apps-script/TracksViews.html", "tests/ui/mock.js", "tests/ui/sy.js"],
+      "verify": [
+        "node tests/ui/build.js && node tests/ui/sy.js  -> no errors, both viewports reported",
+        "node tests/ui/tk.js && node tests/ui/tk2.js && node tests/ui/sg.js  -> same output as before the change, no page errors"
+      ],
+      "risk": "medium",
+      "estimate_minutes": 120,
+      "rollback": "git restore apps-script/TracksApp.html apps-script/TracksViews.html tests/ui/mock.js; delete tests/ui/sy.js. Supervisor triggers on G2 fail.",
+      "artifact": "runs/r-20261121-1250-sync-readiness/exec/T-006.md",
+      "notes": "No window-level sync* globals (SinglesApp.html uses syncThemeSelects); keep code inside the Tracks IIFE; CSS classes .sy-*. Form.html unchanged. Capture tk/tk2/sg output before editing for comparison."
+    },
+    {
+      "id": "T-007",
+      "owner": "executor",
+      "title": "Build danyeloz-embeds/sync.html catalogue widget with Playwright test",
+      "status": "todo",
+      "depends_on": ["T-005"],
+      "definition_of_done": [
+        "sync.html loads sync-core.js, fetches tracks, sync_settings and Sheet1 (first_upc joined to song_upc for cover and listen link) and lists only released songs: title, cover, moods, genre, BPM, key, vocal, explicit, badges, Listen.",
+        "Filters: mood, genre, tempo (Any, Slow under 90, Medium 90-120, Fast over 120), key, vocal, availability; search over title, moods, genre, writers; a visible count; an empty-result message.",
+        "Rights block from OZSync.rightsText; global and per-song Request a license links from OZSync.contactHref; TV Mix and A Cappella only as other-versions-on-request text.",
+        "Fallback message when tracks fetch fails or returns Sheet1-shaped CSV; D-5 defaults when settings missing; theme per albums.html (fonts, #e3122a and #b0101f).",
+        "tests/widgets/catalogue.js at 1400 and 390: no page errors, no element injected from HTML title, no javascript: href, unreleased hidden, each filter narrows the list, fallback shown, scrollWidth <= clientWidth."
+      ],
+      "write_scope": ["E:/Projects/danyeloz-embeds/sync.html", "tests/widgets/catalogue.js"],
+      "verify": [
+        "env -u GITHUB_TOKEN -u GH_TOKEN node tests/widgets/catalogue.js  -> PASSED, both viewports",
+        "grep -n innerHTML E:/Projects/danyeloz-embeds/sync.html  -> no use with sheet data"
+      ],
+      "risk": "low",
+      "estimate_minutes": 120,
+      "rollback": "Delete sync.html and tests/widgets/catalogue.js (new, unpushed).",
+      "artifact": "runs/r-20261121-1250-sync-readiness/exec/T-007.md",
+      "notes": "Uses T-005 fixtures and mock-sheet.js read-only. No commit or push."
+    },
+    {
+      "id": "T-008",
+      "owner": "executor",
+      "title": "Build danyeloz-embeds/sync-one-sheet.html with print CSS and Playwright test",
+      "status": "todo",
+      "depends_on": ["T-005"],
+      "definition_of_done": [
+        "Order per T-002 R-4: name and descriptor, rights line, contact and turnaround, 2-3 sentence bio, table of OZSync.pickOneSheet rows (title, duration, mood, genre, BPM, key, vocal, explicit, badges, listen), footer on-request versions.",
+        "@media print with @page margins: page.pdf format A4 and format Letter each produce exactly 1 page with 10 long-title rows.",
+        "With 3 featured songs the table shows 8 rows topped up by newest complete songs; unreleased featured songs never appear.",
+        "Screen view at 390 px has no sideways scroll; fallback text when tracks fail; rights text identical to sync.html for the same settings fixture."
+      ],
+      "write_scope": ["E:/Projects/danyeloz-embeds/sync-one-sheet.html", "tests/widgets/one_sheet.js"],
+      "verify": [
+        "env -u GITHUB_TOKEN -u GH_TOKEN node tests/widgets/one_sheet.js  -> PASSED; prints A4=1 Letter=1 page counts"
+      ],
+      "risk": "medium",
+      "estimate_minutes": 90,
+      "rollback": "Delete sync-one-sheet.html and tests/widgets/one_sheet.js (new, unpushed).",
+      "artifact": "runs/r-20261121-1250-sync-readiness/exec/T-008.md",
+      "notes": "Count PDF pages by matching /Type /Page entries (not /Pages) in the buffer. Bio: short, honest, no streaming numbers, voice rules; marked in the receipt as a draft for Daniel."
+    },
+    {
+      "id": "T-009",
+      "owner": "executor",
+      "title": "Write paste-ready Sync and Licensing contact copy in docs/sync-contact-copy.md",
+      "status": "todo",
+      "depends_on": ["T-005"],
+      "definition_of_done": [
+        "File has a Sync & Licensing section ready to paste: rights statement equal to OZSync.rightsText(defaults) with the generic PRO sentence, plus a note on what changes once the PRO is set.",
+        "Includes what to send (song, project, media, territory, term), reply within 3 business days, steps 1 Request 2 Quote 3 Agreement 4 Delivery of files, and no same-day delivery promise (D-7).",
+        "Includes links to the catalogue and one-sheet and the Sites embed code (Insert > Embed > By URL, github.io URLs), plus a note that Daniel pastes it as a draft and publishes only himself.",
+        "Only email address present is daniel.vizkaino@gmail.com; no em dashes; none of narrator/delve/tapestry/foster."
+      ],
+      "write_scope": ["docs/sync-contact-copy.md"],
+      "verify": [
+        "extract every email-shaped string from docs/sync-contact-copy.md, sort -u  -> only daniel.vizkaino@gmail.com",
+        "grep for narrator, delve, tapestry, foster, same day, same-day and U+2014 in docs/sync-contact-copy.md  -> empty"
+      ],
+      "risk": "low",
+      "estimate_minutes": 30,
+      "rollback": "Delete docs/sync-contact-copy.md.",
+      "artifact": "runs/r-20261121-1250-sync-readiness/exec/T-009.md",
+      "notes": "T-002 R-5 option A for rights, option B edited per D-7 for process. Catalogue and one-sheet links point at the github.io pages until Daniel names the Sites pages (open question)."
+    },
+    {
+      "id": "T-010",
+      "owner": "executor",
+      "title": "Update CLAUDE.md, HANDOFF.md, tests/README.md and docs/SETUP.md for sync and /team-run",
+      "status": "todo",
+      "depends_on": ["T-004", "T-006", "T-007", "T-008", "T-009"],
+      "definition_of_done": [
+        "CLAUDE.md and danyeloz-embeds/HANDOFF.md each describe sync columns, sync_settings, Sync.gs callables, the three new embed files, D-4 readiness, the D-6 mailto exception in the widget rules, and D-8 no IPI.",
+        "Both files carry an identical Agent team section with a When to use /team-run list (multi-file or cross-repo changes, public rights wording, schema changes; not one-file fixes).",
+        "tests/README.md lists test_sync.js, tests/ui/sy.js and the three tests/widgets commands with what they cover.",
+        "docs/SETUP.md has first-use steps: save Licensing settings once (creates sync_settings), first Sync save adds columns, embed URLs, publish only after an OK from Daniel.",
+        "No em dashes or banned words added; node scripts/validate.mjs and node --test scripts/tests/ green."
+      ],
+      "write_scope": ["CLAUDE.md", "E:/Projects/danyeloz-embeds/HANDOFF.md", "tests/README.md", "docs/SETUP.md"],
+      "verify": [
+        "node scripts/validate.mjs && node --test scripts/tests/  -> green",
+        "diff of the Agent team section extracted from CLAUDE.md and HANDOFF.md  -> empty",
+        "git diff --stat on the four files shows changes only in the named sections"
+      ],
+      "risk": "low",
+      "estimate_minutes": 60,
+      "rollback": "Restore CLAUDE.md from the pre-edit scratchpad copy; git restore HANDOFF.md, tests/README.md, docs/SETUP.md.",
+      "artifact": "runs/r-20261121-1250-sync-readiness/exec/T-010.md",
+      "notes": "CLAUDE.md already carries uncommitted team-pack edits; copy it to the scratchpad before editing so rollback keeps them."
+    },
+    {
+      "id": "T-011",
+      "owner": "qa",
+      "title": "Verify C-1 to C-7 independently with fresh planted data and a full test rerun",
+      "status": "todo",
+      "depends_on": ["T-004", "T-005", "T-006", "T-007", "T-008", "T-009", "T-010"],
+      "definition_of_done": [
+        "Every criterion C-1..C-7 has an executed command and outcome in the QA report, PASS or FAIL per criterion, and reproducible defects.",
+        "All unit tests in tests/README.md, tests/ui build+sg+tk+tk2+sy, and the three tests/widgets scripts rerun green.",
+        "Fixtures written by QA (not the executor) cover data: and javascript: links, an img onerror title, pro_name set vs blank, missing tabs returning Sheet1 CSV, 0 and 11 featured, a hand-added sync_bpm column.",
+        "Lists in Sync.gs and sync-core.js compared programmatically; no address other than daniel.vizkaino@gmail.com in new files; no push, publish or live sheet write happened."
+      ],
+      "write_scope": ["runs/r-20261121-1250-sync-readiness/qa/"],
+      "verify": [
+        "QA report lists command, exit code and key output per criterion",
+        "git status and git log in both repos show nothing pushed (no new commits on origin)"
+      ],
+      "risk": "low",
+      "estimate_minutes": 75,
+      "artifact": "runs/r-20261121-1250-sync-readiness/qa/T-011.md",
+      "notes": "QA fixtures live under runs/r-20261121-1250-sync-readiness/qa/fixtures/; QA does not edit product files."
+    }
+  ],
+  "assumptions": [
+    "Unknown gviz sheet= returns Sheet1 (inferred in T-001 F13); header guards cover both outcomes, and T-005 records one read-only live check.",
+    "When sync_settings is missing or garbled, widgets show D-5 defaults (confirmed facts) and the generic PRO sentence rather than hiding the rights block.",
+    "getSyncAdmin is read-only; columns and the sync_settings tab are created only on the first save by Daniel in the app, meeting the no-sheet-writes constraint.",
+    "Language is the existing tracks column (D-1); no new language column is added."
+  ],
+  "open_questions": [
+    "Security G1 design review of the link allowlist and D-6 mailto rule should land before T-005 starts; security code review of T-004..T-008 before G4 (supervisor dispatches; not a plan task).",
+    "Which Google Sites pages will host the catalogue and one-sheet? Until named, the contact copy links to the github.io pages.",
+    "The one-sheet bio (2-3 sentences) is drafted in T-008 and needs approval from Daniel.",
+    "Commit the team pack and these changes locally (as Danyel OZ) after G3, or leave them uncommitted for Daniel? Nothing is pushed either way."
+  ],
+  "rollback": "All product changes are local and unpushed. New files are deleted; edited files (TracksApp.html, TracksViews.html, tests/ui/mock.js, tests/README.md, docs/SETUP.md, HANDOFF.md) are restored with git restore; CLAUDE.md is restored from the pre-edit scratchpad copy taken in T-010. No sheet, Pages or Sites state changes in this run, so nothing remote needs rolling back."
+}

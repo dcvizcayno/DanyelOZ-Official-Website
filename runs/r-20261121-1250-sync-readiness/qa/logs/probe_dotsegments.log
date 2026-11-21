@@ -1,0 +1,3 @@
+"https://docs.google.com/forms/../document/d/x" app: null widget: ""
+"https://docs.google.com/forms/%2e%2e/document/d/x" app: null widget: ""
+"https://forms.gle/abc" app: "https://forms.gle/abc" widget: "https://forms.gle/abc"

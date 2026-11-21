@@ -1,0 +1,4 @@
+multi-agent-claude 1.1.0 — Claude Code
+  roles: 7 · skills: 12 · contracts: 3
+
+PASS — roles, 12 skills, agent preloads, contracts, envelope accept/reject, charter cross-references

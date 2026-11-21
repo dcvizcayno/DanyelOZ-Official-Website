@@ -1,6 +1,6 @@
 # Danyel OZ: project handbook
 
-_Last updated: November 16, 2026 (session handoff, agents and skills index, tests saved in the repo). One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
+_Last updated: November 21, 2026 (sync licensing: Sync tab, sync_settings, catalogue and one-sheet widgets; agent team). One document for everything about danyeloz.info, the Song Database, the widgets and the X agent._
 
 **Copies of this file** (keep them identical; update all three together):
 1. `CLAUDE.md` in private repo **dcvizcayno/DanyelOZ-Official-Website** (Claude Code reads it automatically)
@@ -60,8 +60,9 @@ Shared as **Anyone with the link: Viewer** so the widgets can read it. That mean
 | `themes` (read by name) | Singles Page | Explore by Theme |
 | `albums` (read by name) | Albums Page, EPs Page | Albums and EPs pages |
 | `album_collections` (read by name) | Albums Page, EPs Page | Albums and EPs pages |
-| `tracks` (read by name) | Tracks | Lyrics button (`lyrics.js`) in Listen Now, Featured Singles, the release shelves and the Albums and EPs pages; scores not shown yet |
+| `tracks` (read by name) | Tracks | Lyrics button (`lyrics.js`) in Listen Now, Featured Singles, the release shelves and the Albums and EPs pages; the sync catalogue and one-sheet (`sync_*` columns, Tracks > Sync tab); scores not shown yet |
 | `release_tracks` (read by name) | Tracks (Release tracklist) | Lyrics button: which songs are on a release |
+| `sync_settings` (read by name) | Tracks (Licensing settings) | Rights line, contact and process text on the sync catalogue and one-sheet |
 
 **Song columns (Sheet1):** `song_id` (Apple collection ID), `song_title`, `release_date` (yyyy-mm-dd), `release_type` (Single, EP, Album),
 `song_genre` ("Acoustic" puts a song on the Live page), `song_description` (first paragraph = intro line; blank line between paragraphs),
@@ -73,7 +74,10 @@ Shared as **Anyone with the link: Viewer** so the widgets can read it. That mean
 `explore`: order, visible, title, script, sub, text, link, image, focus.
 `featured_singles`: position 1 to 10, song_id, song_title (only songs with a Bandcamp code). `seasonal` (optional, not created yet): season (christmas or valentine), position, song_title, song_id; replaces the automatic list on the Holiday Music page. `themes`: slot 1 to 5, theme, tagline, visible.
 `albums`: song_id, song_title, kind (unsorted, main, installment, ep, single), part_of, show, collection, position, accent, hook, tracks, bonus, store_url, featured. It never changes a song's `release_type`. `album_collections`: slot, name, tagline, alias (another stage name), visible, page (`ep` for the EPs page, blank for Albums); up to 8 per page. A row's `kind` decides its page: `main` Albums, `ep` EPs (whatever its release_type), `installment` inside its album's sleeve (EP-type installments show on neither page), `single` nowhere. Featured is kept per page.
-`tracks` (one row per recording, by ISRC): isrc, track_title, artist, duration (m:ss text), explicit, first_release, first_upc, releases, language, lyrics, abc (music score in ABC notation; added by the Tracks screen). `release_tracks` (one row per song on a release): upc, release_title, disc, track_number, isrc, track_title (as on that release), duration, bonus. A release has one UPC; a single holds one ISRC, an EP or album many, and one ISRC can sit on several releases (waterfall singles). Join Sheet1 `song_upc` to `release_tracks.upc`, then `isrc` to `tracks`. **Lyrics and scores go public only once a song is released** (the Tracks screen enforces it). Drafts, chords, key, BPM, notes and ISRC fix plans live in the private **"Danyel OZ Song Vault (private)"** sheet (`track_fixes`: isrc, issue, status, plan, new_isrc, new_upc, new_title, notes, updated; `track_notes`: isrc, bpm, key, time_signature, chords, draft_lyrics, draft_abc, notes, updated), never in the Song Database. `first_release`, `first_upc` and `releases` in `tracks` are recalculated from `release_tracks` whenever a tracklist is saved.
+`tracks` (one row per recording, by ISRC): isrc, track_title, artist, duration (m:ss text), explicit, first_release, first_upc, releases, language, lyrics, abc (music score in ABC notation; added by the Tracks screen). `release_tracks` (one row per song on a release): upc, release_title, disc, track_number, isrc, track_title (as on that release), duration, bonus. A release has one UPC; a single holds one ISRC, an EP or album many, and one ISRC can sit on several releases (waterfall singles). Join Sheet1 `song_upc` to `release_tracks.upc`, then `isrc` to `tracks`. **Lyrics and scores go public only once a song is released** (the Tracks screen enforces it). Drafts, chords, studio-note key and BPM, notes and ISRC fix plans live in the private **"Danyel OZ Song Vault (private)"** sheet (`track_fixes`: isrc, issue, status, plan, new_isrc, new_upc, new_title, notes, updated; `track_notes`: isrc, bpm, key, time_signature, chords, draft_lyrics, draft_abc, notes, updated), never in the Song Database. The one exception is on purpose: the public `sync_bpm` and `sync_key` in `tracks` (below) are separate copies Daniel chooses to publish for licensing; the studio-note BPM and key stay private. `first_release`, `first_upc` and `releases` in `tracks` are recalculated from `release_tracks` whenever a tracklist is saved.
+**Sync columns in `tracks` (Nov 21, 2026, added by `Sync.gs` on the first Sync save, matched by header name):** `sync_bpm` (whole number 40 to 220), `sync_key` (one of the 24 major and minor keys), `sync_moods` (1 to 3 of 20 moods), `sync_genre` and optional `sync_genre_2` (from 12 genres), `sync_vocal` (Solo vocal, Duet, Instrumental only, Mixed), `sync_writers`, `sync_producers`, and the flags `sync_instrumental`, `sync_clean`, `sync_stems`, `sync_cut60`, `sync_cut30`, `sync_featured` (stored as `TRUE` or blank; up to 10 featured). `explicit` and `language` are reused. A song counts as **sync-complete** when it has BPM, key, at least one mood, genre, vocal and writers. `TRACK_COLUMNS` and `release_tracks` are not touched.
+**`sync_settings` (one row, created when Licensing settings is saved the first time):** rights_holder, rights_line, one_stop, pro_name, contact_email, contact_url, turnaround, process_note, updated. Defaults until then: rights holder "Danyel OZ, LLC", one-stop yes, contact daniel.vizkaino@gmail.com, reply within "3 business days", PRO name blank (the rights sentence then stays generic). `contact_url` must be https on www.danyeloz.info, docs.google.com (forms), forms.gle or www.cognitoforms.com.
+**What never goes in the sync fields or `sync_settings`** (they are public the moment they are saved, and caches keep copies): stem or file links, Drive links, IPI or CAE numbers, fees, splits, phone numbers, licensing requests, private notes. The app refuses links, email addresses, long digit runs and the words IPI and CAE in the public text fields, and says why. Stems are "on request" only.
 `music_highlights`: month, slot, actLabel, title, subtitle, catalogTag, accentHex, bandcamp_embed, coverImageUrl, and four platform links. Its "Row" and "Actions" columns are unused and left alone.
 
 **Coverage (Nov 11, 2026, after the store backfill):** 273 releases. `song_id` 267, `song_upc` 267 (all stored as text), `appl_music_link` 266, `song_ISRC` 215 (single-track releases; EPs and albums left blank), `song_description` 44, `bandcamp_embed` 56, `song_arts` 273 (all; covers backfilled Nov 11).
@@ -87,7 +91,7 @@ Some releases are under a different stage name (for example the EP "Money"); the
 
 ## 4. Data entry app (private)
 
-Apps Script bound to the Song Database. Files: `Code.gs`, `Shorts.gs`, `XPosts.gs`, `Singles.gs`, `Albums.gs`, `ShortsMaker.gs`, `Tracks.gs`, `TikTok.gs` (scripts) and `Form`, `ShortsViews`, `ShortsApp`, `SinglesViews`, `SinglesApp`, `AlbumsViews`, `AlbumsApp`, `ShortsMakerViews`, `ShortsMakerApp`, `TracksViews`, `TracksApp` (HTML). `Form` pulls in the other ten HTML files, so all nineteen must be in the project.
+Apps Script bound to the Song Database. Files: `Code.gs`, `Shorts.gs`, `XPosts.gs`, `Singles.gs`, `Albums.gs`, `ShortsMaker.gs`, `Tracks.gs`, `TikTok.gs`, `Sync.gs` (scripts) and `Form`, `ShortsViews`, `ShortsApp`, `SinglesViews`, `SinglesApp`, `AlbumsViews`, `AlbumsApp`, `ShortsMakerViews`, `ShortsMakerApp`, `TracksViews`, `TracksApp` (HTML). `Form` pulls in the other ten HTML files, so all twenty must be in the project.
 **Status:** the Shorts, Shorts Maker, X Posts, Analytics, Singles Page, Albums Page, EPs Page and Tracks screens are on branch `admin-shorts-x`; merge it to `main` once they are live in Apps Script.
 Deployed as a web app, **Execute as: Me**, **Who has access: Only myself**. After any code change: **Deploy > Manage deployments > pencil > New version > Deploy** (the link stays the same).
 
@@ -103,7 +107,7 @@ Deployed as a web app, **Execute as: Me**, **Who has access: Only myself**. Afte
 | Singles Page | **Featured singles**: 10 slots, Bandcamp songs only, drag or arrows to reorder, fill empty slots with the newest singles. **Themes**: up to 5 (name, short line, show or hide); a rename or removal carries over to every song. **Theme your songs**: give many songs Theme 1 and 2 at once |
 | Albums Page | **Now spinning** (pick the hero album or leave it automatic), **Coming next** (automatic), **Checks** (missing story or Bandcamp, unsorted). **Album library**: every row marked Album; say what it really is (main, installment of which album, became an EP, really a single) and switch it on or off for the page. **Collections**: up to 8, name, short line, other stage name; drag albums to order or move them. **Album editor**: color, hook, tracks, bonus, store link. First use seeds the 10 albums already on the page |
 | EPs Page | The same screen as Albums Page for releases marked EP (plus albums sorted as "became an EP"): **A real EP** (can show), **Part of an album** (waterfall release; pick the album; listed in that album's sleeve), **Really a single**. Its own collections, now spinning and coming next |
-| Tracks | **Checks** (ISRCs used for different songs or very different lengths, released without a tracklist, bad codes, a single's ISRC that differs, songs without lyrics). **Fix list** (private): per ISRC a status (To check, Keep as is, Republish planned, Sent to DistroKid, Republished), a plan (new ISRC, new UPC, both, title only), the new codes and notes. **Songs**: search and filters, basics (title, artist, language, explicit; public), the releases a song is on, and tabs for **Lyrics** and **Music score** (ABC notation with a live preview; a private draft plus **Publish to site**, which only works once the song is out, and **Take off site**), **Studio notes** (BPM, key, time signature, chords, notes; private) and **Fix plan**. **Release tracklist** (public): edit any release's songs (disc, number, ISRC, title, length, bonus); a new ISRC with **Replaces** set to the old one starts with the old song's title, lyrics, score and notes. **Album mode**: the tracklist shows each song's lyrics status (Write, or ✓ Edit) and "lyrics for x of y songs"; **Write lyrics, song by song** opens the first song without lyrics, with Previous and Next through the release in track order |
+| Tracks | **Checks** (ISRCs used for different songs or very different lengths, released without a tracklist, bad codes, a single's ISRC that differs, songs without lyrics). **Fix list** (private): per ISRC a status (To check, Keep as is, Republish planned, Sent to DistroKid, Republished), a plan (new ISRC, new UPC, both, title only), the new codes and notes. **Songs**: search and filters, basics (title, artist, language, explicit; public), the releases a song is on, and tabs for **Lyrics** and **Music score** (ABC notation with a live preview; a private draft plus **Publish to site**, which only works once the song is out, and **Take off site**), **Studio notes** (BPM, key, time signature, chords, notes; private) and **Fix plan**. **Release tracklist** (public): edit any release's songs (disc, number, ISRC, title, length, bonus); a new ISRC with **Replaces** set to the old one starts with the old song's title, lyrics, score and notes. **Album mode**: the tracklist shows each song's lyrics status (Write, or ✓ Edit) and "lyrics for x of y songs"; **Write lyrics, song by song** opens the first song without lyrics, with Previous and Next through the release in track order. **Sync** (Nov 21, 2026, `Sync.gs`: `getSyncAdmin` reads only, `saveTrackSync` and `saveSyncSettings` save): a **Sync** tab per song (BPM, key, moods, genres, vocal, writers, producers, Instrumental, Clean, Stems, 60 s, 30 s, Featured; **Copy from studio notes** copies only BPM and key, then you check and save), a **Sync readiness** card ("x of y songs complete" and what each song still needs) and a **Licensing settings** card (rights holder, rights line, one-stop, PRO name, contact email and form link, reply time, process note, with a preview of the rights sentence). Everything saved there is public |
 | Analytics | YouTube numbers for Shorts uploaded from the app, X numbers from the agent's log, hashtag ranking, Export CSV and summary (to Drive folder "Danyel OZ Reports") |
 
 **Shorts schedule lives in a separate private sheet**, "Danyel OZ Shorts (private)", which the app creates on first use (its ID is kept in Script Properties as `SHORTS_SHEET_ID`). Nothing about Shorts goes in the public Song Database.
@@ -141,6 +145,7 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 | Live | `acoustic-takes.html` (songs whose genre contains "Acoustic"), plus the Songkick widget |
 | Store | `available-now.html` (Bandcamp releases), `coming-soon.html` (merch waitlist, Production Vault) |
 | About | `know-me.html`, `support.html` (Patreon, Buy Me a Coffee, Ko-fi, PayPal) |
+| Sync licensing (pages not created yet) | `sync.html`: the licensing catalogue for music supervisors (rights line, Request a license, search and filters by mood, genre, tempo, key, vocal and Instrumental, Clean, Stems, 60 s, 30 s; one card per released song; How licensing works). `sync-one-sheet.html`: the one-sheet (rights, contact, short bio, featured songs topped up to 8 with complete ones); prints to exactly one A4 or Letter page. Both use `sync-core.js` |
 | Every page | `footer.html`: LISTEN EVERYWHERE pills (Spotify, Apple Music, YouTube Music, Bandcamp) and +6 more (Amazon Music, Deezer, YouTube, Pandora, Audiomack, Boomplay) |
 
 **How the Home widgets choose what to show**
@@ -149,15 +154,16 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 - **Featured Videos** and **Music Highlights** show the current month's picks and switch at midnight on the 1st. An empty month keeps the last month that had picks.
 - **Read more** in the song panels shows the first paragraph, then the rest on click.
 - **Lyrics** (Nov 13, 2026): `lyrics.js` adds a Lyrics button to Listen Now (`song-info.html`, `SHOW.lyrics`), Featured Singles, the release shelves and the Albums and EPs pages (`albums.html`; the album player stays visible while reading), only when the release has a song whose lyrics are published and whose `first_release` is today or earlier. It swaps the panel for the lyrics (Back or Escape returns); `[Chorus]`-style lines become small red labels; an EP or album lists its songs with lyrics in track order ("1. Title"), with Previous and Next buttons and "Lyrics for x of y songs so far". Text only, never HTML.
+- **Sync licensing** (Nov 21, 2026): `sync-core.js` is shared by `sync.html` and `sync-one-sheet.html`, the way `lyrics.js` is shared (`window.OZSync`: reads `tracks`, `sync_settings` and Sheet1, joins covers and links by UPC, builds the rights and process wording, checks links, picks the one-sheet songs). Only released songs show (`first_release` today or earlier). If `sync_settings` is missing, the defaults show; if `tracks` has no sync columns yet, a friendly "not available right now" message shows. Neither page reads anything from the address bar that could change contact, rights, links or text. No IPI or CAE numbers anywhere.
 
 **Rules every widget follows**
 - Read the sheet by **header name**, never column position (gviz CSV with `&gid=`).
-- Build the page with text and DOM elements, never by pasting sheet text in as HTML. Accept only `https://` links and check each platform's domain. Colors only as `#RRGGBB`. From Bandcamp code use only the `https://bandcamp.com/EmbeddedPlayer/...` address, never the pasted HTML.
+- Build the page with text and DOM elements, never by pasting sheet text in as HTML. Accept only `https://` links and check each platform's domain. One exception, for the sync pages only: a `mailto:` link to the `contact_email` in `sync_settings` (checked against a strict email pattern, no extra fields), and the `contact_url` only when it is https on www.danyeloz.info, docs.google.com (forms), forms.gle or www.cognitoforms.com. Colors only as `#RRGGBB`. From Bandcamp code use only the `https://bandcamp.com/EmbeddedPlayer/...` address, never the pasted HTML.
 - Always have a fallback: backup data, a cover, or a friendly message. Never an empty box.
 - **Share menus** (Featured Singles, Explore by Theme, Albums) add "Want more? Check my Official Site" and the home link after the song link on X, WhatsApp, Threads, Telegram and More apps. Facebook only takes a link, so it shares the song link alone. `SITE_LINE` in each widget's Settings.
 - Fit the box: Google Sites shrinks embeds on phones, so players and layouts size to the box (swipe rows, fit-to-box players).
 
-**Tests:** logic was tested with Node mocks of SpreadsheetApp, layouts with Playwright using mocked sheet and Apple data, at desktop and phone sizes, plus planted bad data. Test the same way after changes.
+**Tests:** logic was tested with Node mocks of SpreadsheetApp, layouts with Playwright using mocked sheet and Apple data, at desktop and phone sizes, plus planted bad data. Test the same way after changes. The sync pages have their own tests in the private repo (`tests/widgets/`, see `tests/README.md`).
 
 ---
 
@@ -203,6 +209,7 @@ All widgets live in danyeloz-embeds. Each has a **Settings** block at the top of
 6. **Song Database gaps.** 12 of the 50 X-eligible songs have no description, so their posts read generic: fill those first. Then add Bandcamp codes for the rest, and add releases under other stage names.
 7. **Shorts.** Shorts Maker built Nov 12, 2026 (first real run still to come; Whisper timing on sung vocals is the part to watch). TikTok posting built Nov 16, 2026 (`TikTok.gs`); public posts wait for TikTok's audit, which Daniel applies for (docs/SETUP.md 6b). Instagram still by hand. Earlier idea: **Shorts inventory.** Build a "Shorts" tab (song_title, TikTok link, YouTube link, where the original file lives). Backfill gaps by hand from original files, not watermarked TikTok downloads. Then automate with the same Post or Revise approval. YouTube and TikTok only post publicly after an app audit, so apply early. Open question: where do the original files live (Mac, Google Drive, or only on the platforms)?
 8. **Optional:** add `ANTHROPIC_API_KEY` as a GitHub secret for posts in Daniel's own voice.
+9. **Sync licensing (built Nov 21, 2026, not live yet).** For Daniel: paste `Sync.gs` and the new `TracksApp` and `TracksViews` into Apps Script and deploy (`docs/SETUP.md` 9); open Tracks > Licensing settings, set the PRO name (or leave it blank for the generic sentence) and Save; approve the one-sheet bio; fill the Sync tab for each song (the readiness card shows what is missing); create the Sites pages and paste `docs/sync-contact-copy.md`; confirm the Song Database is shared as **Viewer**, not Editor. Nothing is published until Daniel says OK.
 
 **Smaller items from the site QA (Nov 3)**
 - Header banner photo on Home is about 1.3 MB (43% of the page); compress to about 200 KB.
@@ -245,9 +252,36 @@ Private repo only (they describe how the project runs; nothing secret in them).
 | `.claude/agents/app-reviewer.md` | Safety review of an app or Shorts Maker change before handover |
 | `docs/SETUP.md` | Every one-time setup: Apps Script, Script Properties, GitHub token, YouTube permission, X secrets, Shorts Maker, Sites embeds |
 | `docs/TROUBLESHOOTING.md` | Errors seen so far and their fixes |
+| `docs/sync-contact-copy.md` | Paste-ready Sync & Licensing text for the Contact page, and the Sites steps |
 | `docs/SESSION-HANDOFF.md` | Where the work stands and what's open; read it first in a new session |
 | `docs/AGENTS-AND-SKILLS.md` | Index of the agents and skills, and how to move them |
 | `tests/` | Mocked tests for the app and tools; `tests/README.md` has the commands |
 
 Daniel's local copy of this repo: `~/DanyelOZ_Official WebSite` on his Mac.
 
+---
+
+## 11. Agent team
+
+The private repo carries a seven-role agent team. Its full charter lives in the `team-protocol` skill, not here, so ordinary sessions do not pay for it.
+
+| Role | Job |
+|---|---|
+| Supervisor | Runs in the main session (`team-supervisor` skill): writes the charter, picks the risk tier, hands out tasks, runs the gates, reports back to Daniel |
+| Researcher | Finds the facts and options a decision needs, with sources |
+| Planner | Splits the work into tasks with a definition of done, tests and a way back |
+| Executor | Builds exactly one task inside its allowed files, with proof (commands and results) |
+| QA | Checks the work independently and gives a verdict; does not fix it |
+| Security | Threat model and risk list; can stop a release on a serious risk |
+| Monitor | Watches time, budget and drift against the plan |
+
+- **Start a run only when asked:** `/team-run <task> [tier]`. Tier T0 to T3 sets how much process it gets (T0 a read-only answer, T3 irreversible or production data, which needs Daniel's approval).
+- **Use it for** multi-step or public-facing work, changes across several files or both repos, anything touching the Song Database schema (new tabs or columns), public pages and rights wording, money or secrets.
+- **Don't use it for** one-line fixes, one-file tweaks or questions; a normal session is faster.
+- **Run records** live in `runs/<run-id>/` (charter, board, plan, research, exec, qa, security and monitor notes, final report). Anything under `runs/` follows `team-protocol`: load that skill before reading or writing there.
+- Workers (`.claude/agents/team-*`) preload `team-protocol`; the Supervisor loads it through `team-supervisor`.
+- **Keep the checks green.** After changing anything in `.claude/`, `team/` or `scripts/`, run both:
+  - `node scripts/validate.mjs`
+  - `node --test scripts/tests/`
+- Text files are LF (`.gitattributes`); skill and agent frontmatter fails validation with CRLF.
+- Skill scripts are Node `.mjs` with no dependencies, so they run the same on Windows and Unix.

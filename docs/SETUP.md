@@ -5,8 +5,8 @@ Everything you set up once and then forget about. Keys and tokens go only where 
 ## 1. The admin app (Apps Script)
 
 1. Open the Song Database, then **Extensions > Apps Script**.
-2. Make sure all eighteen files are there, with these exact names:
-   - Scripts: `Code`, `Shorts`, `XPosts`, `Singles`, `Albums`, `ShortsMaker`, `Tracks`
+2. Make sure all twenty files are there, with these exact names:
+   - Scripts: `Code`, `Shorts`, `XPosts`, `Singles`, `Albums`, `ShortsMaker`, `Tracks`, `TikTok`, `Sync`
    - HTML: `Form`, `ShortsViews`, `ShortsApp`, `SinglesViews`, `SinglesApp`, `AlbumsViews`, `AlbumsApp`, `ShortsMakerViews`, `ShortsMakerApp`, `TracksViews`, `TracksApp`
 3. **Services +** (left sidebar): add **YouTube Data API v3**, name **YouTube**.
 4. **Deploy > New deployment > Web app**: Execute as **Me**, Who has access **Only myself**.
@@ -81,3 +81,15 @@ Insert > Embed > **By URL**: `https://dcvizcayno.github.io/danyeloz-embeds/<widg
 ## 8. Commits
 
 Commits go out as **Danyel OZ <daniel.vizcayno@gmail.com>**. Don't rewrite or force-push history.
+
+## 9. Sync licensing
+
+Everything saved here lands in the public Song Database. Never type stem or file links, IPI or CAE numbers, fees or private notes into it (the app refuses most of them).
+
+1. In Apps Script, add the new script file **Sync** and replace **TracksApp** and **TracksViews** with the new versions.
+2. **Deploy > Manage deployments > pencil > New version > Deploy.**
+3. Open the app > **Tracks** > **Licensing settings**. Set the PRO name (leave it blank until you have joined one; the rights sentence then stays generic), check the contact email, reply time and rights line in the preview, then **Save**. The first save creates the `sync_settings` tab.
+4. Fill songs: open a song > **Sync** tab > BPM, key, moods, genre, vocal, writers (Copy from studio notes fills BPM and key for you to check) > **Save**. The first Sync save adds the `sync_` columns to `tracks`. The **Sync readiness** card shows what each song still needs. Tick **Featured** on up to 10 songs for the one-sheet.
+5. Check the pages before using them: `https://dcvizcayno.github.io/danyeloz-embeds/sync.html` (catalogue) and `https://dcvizcayno.github.io/danyeloz-embeds/sync-one-sheet.html` (print it once to check it fits one page).
+6. Google Sites: create the catalogue page and add the Sync & Licensing section on the Contact page by following `docs/sync-contact-copy.md` (text to paste, embed steps). Publish only when you are happy with it.
+7. Confirm the Song Database is shared as **Anyone with the link: Viewer**, not Editor.
