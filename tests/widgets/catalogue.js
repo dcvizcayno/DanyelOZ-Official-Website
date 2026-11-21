@@ -1,6 +1,7 @@
 // Playwright test for danyeloz-embeds/sync.html (sync licensing catalogue). Sheet mocked from tests/widgets/fixtures/.
 //   env -u GITHUB_TOKEN -u GH_TOKEN node tests/widgets/catalogue.js
 // Runs at 1400 and 390 px. Screenshots go to tests/ui/out/catalogue-<width>.png.
+// T-001: "Request a license" buttons open the in-page panel; "Get the one-sheet" shows the one-sheet in this page.
 const path = require('path');
 const assert = require('assert');
 const { chromium } = require('playwright');
@@ -49,7 +50,7 @@ async function common(page, errors, width, label) {
   }));
   eq(bad, { onAttr: 0, tags: 0, scripts: 2 }, label + ': no element injected from sheet text');
   const links = await page.$$eval('#sy a', as => as.map(a => ({ href: a.getAttribute('href'), target: a.getAttribute('target'), rel: a.getAttribute('rel') })));
-  ok(links.length > 0, label + ': has links');
+  eq(await page.$$eval('#sy .sy-hero button.sy-btn.solid, #sy .sy-how button.sy-btn.solid', b => b.map(x => x.textContent)), ['Request a license', 'Request a license'], label + ': request buttons in hero and how');
   for (const l of links) {
     ok(!/^\s*javascript:/i.test(l.href), label + ': no javascript: href ' + l.href);
     if (l.href.startsWith('mailto:')) ok(l.target === null && /^mailto:daniel\.vizkaino@gmail\.com\?subject=[^&?]*$/.test(l.href), label + ': mailto shape ' + l.href);
@@ -60,9 +61,56 @@ async function common(page, errors, width, label) {
   for (const i of imgs) ok(IMG_HOSTS.test(i.src) && i.rp === 'no-referrer', label + ': safe cover ' + JSON.stringify(i));
   const text = await page.textContent('#sy');
   ok(text.indexOf('Other versions (TV mix, a cappella) on request.') >= 0, label + ': other versions text');
-  ok(await page.$('#sy a[href="https://dcvizcayno.github.io/danyeloz-embeds/sync-one-sheet.html"]'), label + ': one-sheet link');
+  eq(await page.$$eval('#sy .sy-hero .sy-open-sheet, #sy .sy-how .sy-open-sheet', b => b.map(x => x.tagName + ':' + x.textContent)),
+    ['BUTTON:Get the one-sheet', 'BUTTON:Get the one-sheet'], label + ': one-sheet buttons (no link, no new tab)');
+  eq(await page.$$eval('#sy a[href*="danyeloz-embeds/sync"]', a => a.length), 0, label + ': no link between the two pages on the catalogue view');
   ok(!/\u2014/.test(text), label + ': no em dash');
   return text;
+}
+
+const songReq = (page, title) => page.locator('#sy .sy-card', { has: page.locator('.sy-ct', { hasText: new RegExp('^' + title + '$') }) }).locator('.sy-req');
+
+// Clicks a request button and returns what the panel shows. Checks dialog semantics, focus and layout.
+async function openPanel(page, label, button) {
+  const before = page.url();
+  await button.click();
+  await page.waitForSelector('.ozr[role="dialog"]');
+  const p = await page.$eval('.ozr', d => {
+    const a = q => d.querySelector(q);
+    return { modal: d.getAttribute('aria-modal'), label: (document.getElementById(d.getAttribute('aria-labelledby')) || {}).textContent,
+      mail: a('.ozr-mail').textContent, text: d.textContent, focus: d.contains(document.activeElement),
+      mailto: a('.ozr-mailto') && a('.ozr-mailto').getAttribute('href'), mailtoTarget: a('.ozr-mailto') && a('.ozr-mailto').getAttribute('target'),
+      form: a('.ozr-form') && [a('.ozr-form').getAttribute('href'), a('.ozr-form').target, a('.ozr-form').rel, a('.ozr-form').textContent],
+      markup: d.querySelectorAll('script, img, iframe, [onclick], [onerror]').length };
+  });
+  eq([p.modal, p.label, p.mail, p.focus, p.markup], ['true', 'Request a license', 'daniel.vizkaino@gmail.com', true, 0], label + ': panel dialog, label, email, focus');
+  ok(['song', 'project', 'media', 'territory', 'term', 'timeline'].every(w => p.text.toLowerCase().indexOf(w) >= 0) && /You get a quote within [^.]+\./.test(p.text), label + ': checklist and turnaround');
+  eq(page.url(), before, label + ': no navigation');
+  const box = await page.$eval('.ozr', d => { const r = d.getBoundingClientRect(); return [r.left, r.right, window.innerWidth]; });
+  ok(box[0] >= 0 && box[1] <= box[2], label + ': panel fits the width ' + JSON.stringify(box));
+  return p;
+}
+
+// One-sheet view inside the catalogue, then back. Nothing opens a window here.
+async function sheetView(page, width) {
+  const before = page.url();
+  await page.click('#sy .sy-hero .sy-open-sheet');
+  ok(await page.isVisible('#sy .sy-sheet #os .os-table') && !(await page.isVisible('#sy .sy-main')), width + ': one-sheet view shown in place of the catalogue');
+  eq(await page.$$eval('#sy .sy-sheet #os .os-table tbody tr', r => r.length), 10, width + ': one-sheet rows');
+  ok(await page.evaluate(() => document.activeElement === document.querySelector('#sy .sy-back')), width + ': focus moves to Back');
+  const pr = await page.$$eval('#sy .sy-sheet a', as => as.filter(a => /danyeloz-embeds\/sync/.test(a.href)).map(a => [a.getAttribute('href'), a.target, a.rel, a.textContent]));
+  eq(pr, [['https://dcvizcayno.github.io/danyeloz-embeds/sync-one-sheet.html', '', '', 'Print or save as PDF']], width + ': top-level: print link is the only link and stays in the tab (D-1)');
+  ok(/Licensing catalogue: https:\/\/dcvizcayno\.github\.io\/danyeloz-embeds\/sync\.html/.test(await page.textContent('#sy .sy-sheet .os-contact')), width + ': catalogue address as text in the view');
+  const w = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+  ok(w[0] <= w[1], width + ': one-sheet view has no sideways scroll ' + w);
+  await page.screenshot({ path: path.join(OUT, 'catalogue-sheet-' + width + '.png'), fullPage: true });
+  await page.click('#sy .sy-sheet .os-req');
+  ok(await page.isVisible('.ozr[role="dialog"]'), width + ': request panel from the one-sheet view');
+  await page.keyboard.press('Escape');
+  await page.click('#sy .sy-back');
+  ok(await page.isVisible('#sy .sy-main') && !(await page.isVisible('#sy .sy-sheet')), width + ': Back to the catalogue');
+  ok(await page.evaluate(() => document.activeElement === document.querySelector('#sy .sy-hero .sy-open-sheet')), width + ': focus returns to Get the one-sheet');
+  eq(page.url(), before, width + ': no navigation for the view');
 }
 
 async function run(browser, width) {
@@ -78,8 +126,20 @@ async function run(browser, width) {
   eq(rights[0], rights[1], width + ': rights text from OZSync.rightsText');
   ok(text.indexOf(await page.evaluate(() => OZSync.processText(OZSync.settings(null)))) >= 0, width + ': process text and turnaround');
   ok(text.indexOf('15 songs') >= 0, width + ': visible count');
-  const reqs = await page.$$eval('#sy .sy-card .sy-req', as => as.map(a => a.getAttribute('href')));
-  ok(reqs.length === 15 && reqs.indexOf('mailto:daniel.vizkaino@gmail.com?subject=' + encodeURIComponent('License request: Song 03')) >= 0, width + ': per-song request links');
+  const reqs = await page.$$eval('#sy .sy-card .sy-req', bs => bs.map(b => b.tagName + ':' + b.getAttribute('type') + ':' + b.textContent));
+  ok(reqs.length === 15 && reqs.every(r => r === 'BUTTON:button:Request a license'), width + ': per-song request buttons');
+  const panel = await openPanel(page, width + ' Song 03', songReq(page, 'Song 03'));
+  ok(/Song: Song 03/.test(panel.text), width + ': song title shown in panel');
+  ok(/quote within 3 business days\./.test(panel.text), width + ': default 3 business days in panel');
+  eq(panel.mailto, 'mailto:daniel.vizkaino@gmail.com?subject=' + encodeURIComponent('License request: Song 03'), width + ': song title prefilled in subject');
+  eq(panel.form, null, width + ': no form button without contact_url');
+  await page.click('.ozr .ozr-close');
+  ok(!(await page.$('.ozr')) && await songReq(page, 'Song 03').evaluate(b => b === document.activeElement), width + ': Close returns focus to the song button');
+  const general = await openPanel(page, width + ' hero', page.locator('#sy .sy-hero button.sy-btn.solid'));
+  eq(general.mailto, 'mailto:daniel.vizkaino@gmail.com?subject=' + encodeURIComponent('License request: Danyel OZ catalogue'), width + ': general request subject');
+  await page.keyboard.press('Escape');
+  ok(!(await page.$('.ozr')), width + ': Escape closes the panel');
+  await sheetView(page, width);
   ok(!(await page.$('#sy a[href*="evil"]')) && !(await page.$('#sy img[src*="evil"]')), width + ': no evil host link or cover');
   ok(await page.$('#sy a[href="https://open.spotify.com/track/s02"]'), width + ': safe listen link kept');
   await page.screenshot({ path: path.join(OUT, 'catalogue-' + width + '.png'), fullPage: true });
@@ -131,8 +191,10 @@ async function run(browser, width) {
   ({ page, errors } = await open(browser, width, { sync_settings: 'sync_settings_pro.csv' }));
   await page.waitForSelector('#sy .sy-card');
   await common(page, errors, width, width + ' pro');
-  const hrefs = await page.$$eval('#sy .sy-req', as => as.map(a => a.getAttribute('href')));
-  ok(hrefs.every(h => /^https:\/\/forms\.gle\//.test(h)), width + ': contact_url used');
+  const pro = await openPanel(page, width + ' pro', songReq(page, 'Song 03'));
+  ok(/^https:\/\/forms\.gle\//.test(pro.form[0]) && pro.form[1] === '_blank' && pro.form[2] === 'noopener noreferrer' && pro.form[3] === 'Fill out the request form', width + ': contact_url gives the form button');
+  ok(/^mailto:daniel\.vizkaino@gmail\.com\?subject=/.test(pro.mailto) && pro.mailtoTarget === '_blank', width + ': email app link kept as second option');
+  await page.keyboard.press('Escape');
   ok((await page.textContent('#sy .sy-rights')).indexOf('BMI') >= 0, width + ': PRO named');
   await page.close();
   console.log(width + ' px: ok');

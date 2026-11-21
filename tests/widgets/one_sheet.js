@@ -3,6 +3,7 @@
 // Checks: page.pdf A4 and Letter are exactly 1 page with 10 long-title rows; 3 featured songs are topped up to 8;
 // planted HTML is shown as text; rights text matches OZSync.rightsText for the same settings; URL parameters change
 // nothing; fallback text when tracks fail; 390 px has no sideways scroll; no page errors. No network: mock-sheet.js.
+// T-001: top-level catalogue link stays in the same tab; "Request a license" opens the in-page panel (hidden in print).
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
@@ -63,11 +64,21 @@ const titles = page => page.$$eval('#os .os-table tbody td.t', tds => tds.map(td
       ok(!t.some(x => /Unreleased/.test(x)), 'unreleased featured song absent');
       const pron = (await page.$eval('#os', e => e.textContent)).match(/\b(he|his|him|she|her|hers)\b/gi);
       eq(pron, null, 'no gendered pronouns in page text');
-      const ext = await page.$$eval('#os a[href^="http"]', as => as.map(a => [a.target, a.rel]));
-      ok(ext.length >= 1 && ext.every(x => x[0] === '_blank' && x[1] === 'noopener noreferrer'), 'external links: _blank + noopener noreferrer');
+      const ext = await page.$$eval('#os .os-table a[href^="http"]', as => as.map(a => [a.target, a.rel]));
+      ok(ext.length >= 1 && ext.every(x => x[0] === '_blank' && x[1] === 'noopener noreferrer'), 'listen links: _blank + noopener noreferrer');
+      const cat = await page.$$eval('#os a.os-cat', as => as.map(a => [a.getAttribute('href'), a.getAttribute('target'), a.getAttribute('rel')]));
+      eq(cat, [['https://dcvizcayno.github.io/danyeloz-embeds/sync.html', null, null]], 'top-level: catalogue link opens in the same tab (C-2)');
+      eq(await page.$$eval('#os a[href*="danyeloz-embeds/sync"][target]', as => as.length), 0, 'no new-tab link between the two pages');
       const hrefs = await page.$$eval('#os a[href]', as => as.map(a => a.getAttribute('href')));
       ok(hrefs.every(h => /^(https:|mailto:)/.test(h)), 'only https/mailto hrefs: ' + hrefs.join(' '));
       ok(!log.some(u => !/^https:\/\/(docs\.google\.com\/spreadsheets\/|dcvizcayno\.github\.io\/danyeloz-embeds\/sync-core\.js|fonts\.googleapis\.com\/)/.test(u)), 'no unexpected requests');
+      // print: request button and any open panel are hidden, so the PDF stays one page
+      await page.click('#os .os-req');
+      ok(await page.isVisible('.ozr[role="dialog"]'), 'request panel open before printing');
+      await page.emulateMedia({ media: 'print' });
+      eq(await page.evaluate(() => ['.ozr', '.ozr-back', '#os .os-req'].map(q => getComputedStyle(document.querySelector(q)).display)), ['none', 'none', 'none'], 'print: panel and request button hidden');
+      ok(/daniel.vizkaino@gmail.com/.test(await page.$eval('#os .os-contact', e => e.innerText)), 'print: email stays as text');
+      await page.emulateMedia({ media: null });
       const a4 = await page.pdf({ format: 'A4', printBackground: true });
       const letter = await page.pdf({ format: 'Letter', printBackground: true });
       const nA4 = pdfPages(a4), nLetter = pdfPages(letter);
@@ -103,9 +114,26 @@ const titles = page => page.$$eval('#os .os-table tbody td.t', tds => tds.map(td
       eq(got, want, 'rights text = OZSync.rightsText (' + file + ')');
       if (file === 'sync_settings.csv') {
         eq(got, await page.evaluate(() => OZSync.rightsText()), 'default fixture gives the D-5 default wording');
-        const mail = await page.$eval('#os .os-contact a', a => a.getAttribute('href'));
-        eq(mail, 'mailto:daniel.vizkaino@gmail.com?subject=' + encodeURIComponent('License request: Sync catalogue'), 'contact mailto');
+        eq(await page.$$eval('#os .os-contact a[href^="mailto:"]', a => a.length), 0, 'no raw mailto in the contact line (C-1)');
+        eq(await page.$eval('#os .os-mail', e => e.textContent), 'daniel.vizkaino@gmail.com', 'email shown as text');
         ok(/Reply within 3 business days\./.test(await page.$eval('#os .os-contact', e => e.textContent)), '3 business days reply line');
+        await page.click('#os .os-req');
+        const panel = await page.$eval('.ozr', d => ({ role: d.getAttribute('role'), modal: d.getAttribute('aria-modal'),
+          label: document.getElementById(d.getAttribute('aria-labelledby')).textContent, mail: d.querySelector('.ozr-mail').textContent,
+          mailto: d.querySelector('.ozr-mailto').getAttribute('href'), form: !!d.querySelector('.ozr-form'), text: d.textContent,
+          focus: d.contains(document.activeElement) }));
+        eq([panel.role, panel.modal, panel.label, panel.mail], ['dialog', 'true', 'Request a license', 'daniel.vizkaino@gmail.com'], 'panel: dialog, labelled, email');
+        eq(panel.mailto, 'mailto:daniel.vizkaino@gmail.com?subject=' + encodeURIComponent('License request: Danyel OZ catalogue'), 'panel: mailto');
+        ok(!panel.form && panel.focus && /3 business days/.test(panel.text) && /territory/.test(panel.text), 'panel: no form without contact_url, focus inside, turnaround, checklist');
+        await page.keyboard.press('Escape');
+        ok(!(await page.$('.ozr')) && await page.evaluate(() => document.activeElement === document.querySelector('#os .os-req')), 'Escape closes, focus returns');
+      }
+      if (file === 'sync_settings_pro.csv') {
+        await page.click('#os .os-req');
+        const f = await page.$eval('.ozr .ozr-form', a => [a.getAttribute('href'), a.target, a.rel, a.textContent]);
+        eq(f, ['https://forms.gle/' + f[0].split('forms.gle/')[1], '_blank', 'noopener noreferrer', 'Fill out the request form'], 'pro: form button from contact_url');
+        await page.click('.ozr .ozr-close');
+        ok(!(await page.$('.ozr')), 'Close button closes');
       }
       if (file === 'sync_settings_pro.csv') ok(/BMI/.test(got), 'PRO named when set');
       eq(await page.$$eval('#os .os-rights *, #os .os-contact script, #os .os-contact img', e => e.length), 0, 'no markup from settings (' + file + ')');

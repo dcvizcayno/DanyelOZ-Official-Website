@@ -23,7 +23,19 @@ function load(tabs, log) {
   vm.runInContext(SRC, ctx, { filename: 'sync-core.js' });
   return { Z: ctx.OZSync, made };
 }
-const tab = file => load().Z.parseCsv(fs.readFileSync(path.join(mock.FIXTURES, file), 'utf8'));
+// isTop: window.top === window at top level; a throwing getter (cross-origin parent) counts as framed.
+function isTopCheck() {
+  const t = { URL, console };
+  t.window = t; t.top = t;
+  vm.createContext(t); vm.runInContext(SRC, t);
+  const top = t.OZSync.isTop();
+  const c = { URL, console };
+  c.window = c;
+  Object.defineProperty(c, 'top', { get() { throw new Error('cross-origin'); } });
+  vm.createContext(c); vm.runInContext(SRC, c);
+  return top === true && c.OZSync.isTop() === false;
+}
+const tab = file =>load().Z.parseCsv(fs.readFileSync(path.join(mock.FIXTURES, file), 'utf8'));
 
 (async () => {
   const { Z, made } = load();
@@ -110,6 +122,15 @@ const tab = file => load().Z.parseCsv(fs.readFileSync(path.join(mock.FIXTURES, f
    'https://www.danyeloz.info/contact/../../x', 'https://forms.gle/./abc', 'https://forms.gle/abc/..', 'https://docs.google.com/forms\\..\\spreadsheets/d/x']   // N-2
     .forEach(u => ok(Z.contactHref({ contact_url: u, contact_email: 'daniel.vizkaino@gmail.com' }, 'T').indexOf('mailto:') === 0, 'contact_url rejected, mailto fallback ' + u));
   ok(Z.contactHref(null, 'T') === '', 'no settings, no link');
+  // mailtoHref: the panel's "Open in your email app" link ignores contact_url, same encoded-subject-only shape (T-001).
+  same(Z.mailtoHref({ contact_url: 'https://forms.gle/abc', contact_email: 'daniel.vizkaino@gmail.com' }, 'A&B?cc=x'),
+    'mailto:daniel.vizkaino@gmail.com?subject=' + encodeURIComponent('License request: A&B?cc=x'), 'mailtoHref ignores contact_url');
+  ok(Z.mailtoHref({ contact_email: 'a@b.co?bcc=x@evil.io' }, 'T') === '' && Z.mailtoHref(null, 'T') === '', 'mailtoHref: bad or no email gives no link');
+  ['requestPanel', 'openRequest', 'renderOneSheet', 'isTop'].forEach(n => ok(typeof Z[n] === 'function', 'exports ' + n));
+  same(Z.INCLUDE.join('|'), 'The song|Your project (title and a short description)|The media (film, TV, ad, game, online video)|The territory|The term|Your timeline', 'request checklist (C-1)');
+  ok(Z.CATALOGUE_URL === Z.safeLink(Z.CATALOGUE_URL) && Z.ONE_SHEET_URL === Z.safeLink(Z.ONE_SHEET_URL), 'page URLs pass safeLink');
+  ok(!/—/.test(SRC) && !/\b(he|his|him|she|her|hers)\b/i.test(SRC.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '').replace(/[a-z]+(he|her)[a-z]*/gi, '')), 'no em dash or gendered pronoun in sync-core.js');
+  ok(isTopCheck(), 'isTop is true at top level and false when window.top throws');
 
   // ---- settings, rights and process wording (C-5, SR-08) ----
   const D = Z.settings(null);
