@@ -46,9 +46,12 @@ async function common(page, errors, width, label) {
   const bad = await page.evaluate(() => ({
     onAttr: Array.from(document.querySelectorAll('#sy *')).filter(e => Array.from(e.attributes).some(a => /^on/i.test(a.name))).length,
     tags: document.querySelectorAll('#sy script, #sy svg, #sy b, #sy iframe').length,
-    scripts: document.querySelectorAll('script').length
+    scripts: document.querySelectorAll('script').length,
+    srcs: Array.from(document.querySelectorAll('script')).map(s => s.getAttribute('src'))
   }));
-  eq(bad, { onAttr: 0, tags: 0, scripts: 2 }, label + ': no element injected from sheet text');
+  // Exactly forms-core.js and sync-core.js from the embeds origin, then the one inline page script (no src).
+  eq(bad, { onAttr: 0, tags: 0, scripts: 3, srcs: ['https://dcvizcayno.github.io/danyeloz-embeds/forms-core.js',
+    'https://dcvizcayno.github.io/danyeloz-embeds/sync-core.js', null] }, label + ': no element injected from sheet text, only the allowed scripts');
   const links = await page.$$eval('#sy a', as => as.map(a => ({ href: a.getAttribute('href'), target: a.getAttribute('target'), rel: a.getAttribute('rel') })));
   eq(await page.$$eval('#sy .sy-hero button.sy-btn.solid, #sy .sy-how button.sy-btn.solid', b => b.map(x => x.textContent)), ['Request a license', 'Request a license'], label + ': request buttons in hero and how');
   for (const l of links) {

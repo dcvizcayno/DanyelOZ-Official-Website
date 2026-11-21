@@ -1,0 +1,129 @@
+{
+  "run": "r-20261121-1848-own-forms",
+  "revision": 17,
+  "updated": "2026-11-21T13:31:24.405Z",
+  "tasks": [
+    {
+      "id": "T-002",
+      "owner": "security",
+      "title": "Review the forms design for abuse, data exposure and mail injection",
+      "status": "done",
+      "deps": [],
+      "write_scope": [
+        "runs/r-20261121-1848-own-forms/security/T-002.md"
+      ],
+      "artifact": "runs/r-20261121-1848-own-forms/security/T-002.md"
+    },
+    {
+      "id": "T-003",
+      "owner": "executor",
+      "title": "Add FormsSetup.gs with setupDanyelOzForms and fsOnFormSubmit plus unit test",
+      "status": "done",
+      "deps": [
+        "T-002"
+      ],
+      "write_scope": [
+        "E:/Projects/Danyel OZ Official Website/apps-script/FormsSetup.gs",
+        "E:/Projects/Danyel OZ Official Website/tests/unit/test_formssetup.js"
+      ],
+      "artifact": "runs/r-20261121-1848-own-forms/exec/T-003.md"
+    },
+    {
+      "id": "T-004",
+      "owner": "executor",
+      "title": "Add forms-core.js (window.OZForms) with Node test and shared Playwright harness",
+      "status": "done",
+      "deps": [
+        "T-002"
+      ],
+      "write_scope": [
+        "E:/Projects/danyeloz-embeds/forms-core.js",
+        "E:/Projects/Danyel OZ Official Website/tests/widgets/test_formscore.js",
+        "E:/Projects/Danyel OZ Official Website/tests/widgets/mock-sheet.js",
+        "E:/Projects/Danyel OZ Official Website/tests/widgets/sandbox.js",
+        "E:/Projects/Danyel OZ Official Website/tests/widgets/fixtures/forms.json"
+      ],
+      "artifact": "runs/r-20261121-1848-own-forms/exec/T-004.md"
+    },
+    {
+      "id": "T-005",
+      "owner": "executor",
+      "title": "Update privacy policy, handbook, SETUP and tests README for the own forms",
+      "status": "done",
+      "deps": [
+        "T-002"
+      ],
+      "write_scope": [
+        "E:/Projects/Danyel OZ Official Website/docs/legal/privacy-policy.md",
+        "E:/Projects/Danyel OZ Official Website/CLAUDE.md",
+        "E:/Projects/danyeloz-embeds/HANDOFF.md",
+        "E:/Projects/Danyel OZ Official Website/docs/SETUP.md",
+        "E:/Projects/Danyel OZ Official Website/tests/README.md"
+      ],
+      "artifact": "runs/r-20261121-1848-own-forms/exec/T-005.md"
+    },
+    {
+      "id": "T-006",
+      "owner": "executor",
+      "title": "Build contact.html on OZForms with Playwright test incl. Sites sandbox",
+      "status": "done",
+      "deps": [
+        "T-004"
+      ],
+      "write_scope": [
+        "E:/Projects/danyeloz-embeds/contact.html",
+        "E:/Projects/Danyel OZ Official Website/tests/widgets/contact.js"
+      ],
+      "artifact": "runs/r-20261121-1848-own-forms/exec/T-006.md"
+    },
+    {
+      "id": "T-007",
+      "owner": "executor",
+      "title": "Embed the sync license request form in OZSync.requestPanel with Playwright test",
+      "status": "done",
+      "deps": [
+        "T-004"
+      ],
+      "write_scope": [
+        "E:/Projects/danyeloz-embeds/sync-core.js",
+        "E:/Projects/danyeloz-embeds/sync.html",
+        "E:/Projects/Danyel OZ Official Website/tests/widgets/sync_form.js",
+        "E:/Projects/Danyel OZ Official Website/tests/widgets/test_synccore.js"
+      ],
+      "artifact": "runs/r-20261121-1848-own-forms/exec/T-007.md"
+    },
+    {
+      "id": "T-008",
+      "owner": "security",
+      "title": "Review the forms implementation against the T-002 threat list",
+      "status": "done",
+      "deps": [
+        "T-003",
+        "T-004",
+        "T-006",
+        "T-007"
+      ],
+      "write_scope": [
+        "runs/r-20261121-1848-own-forms/security/T-008.md"
+      ],
+      "artifact": "runs/r-20261121-1848-own-forms/security/T-008.md"
+    },
+    {
+      "id": "T-009",
+      "owner": "qa",
+      "title": "Verify C-1 to C-7 independently and record evidence",
+      "status": "done",
+      "deps": [
+        "T-003",
+        "T-004",
+        "T-005",
+        "T-006",
+        "T-007"
+      ],
+      "write_scope": [
+        "runs/r-20261121-1848-own-forms/qa/T-009.md"
+      ],
+      "artifact": "runs/r-20261121-1848-own-forms/qa/T-009.md"
+    }
+  ]
+}

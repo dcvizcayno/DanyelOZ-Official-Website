@@ -18,6 +18,7 @@ Nothing here touches the real Song Database, Drive, YouTube, Spotify or GitHub: 
 | `node tests/unit/test_tracks.js apps-script` | Tracks screen: tracklists, lyrics and scores (public only once out), private Song Vault, ISRC fixes |
 | `node tests/unit/test_tiktok.js apps-script` | TikTok posting: connect, TikTok's posting rules, post, status, 19-digit IDs, token refresh, Auto-post |
 | `node tests/unit/test_sync.js apps-script` | Sync licensing (`Sync.gs`): every save rule (BPM, key, moods, genres, vocal, featured cap of 10, unknown ISRC), links, emails, long digit runs and IPI/CAE refused in public text, contact form host check, formula-safe writes, `getSyncAdmin` writes nothing, Copy from studio notes takes only BPM and key |
+| `node tests/unit/test_formssetup.js apps-script` | Own forms (`FormsSetup.gs`, mocks of FormApp, SpreadsheetApp, ScriptApp, MailApp, PropertiesService): both forms and their fields, safe re-run (reuses forms, inbox and trigger by stored id; puts back changed settings), inbox never the Song Database, the inbox trigger and its notification mail (Reply-To only for a valid email, subject without line breaks, no inbox link, no reply values in logs), calls without a real event send nothing, the `FORMS_JSON` block matches the `forms.json` schema |
 | `node tests/unit/test_spotify_backfill.js` | `tools/SpotifyBackfill.gs`: blank cells only, artist check, 429 pause, resume |
 
 Each prints a "PASSED" line at the end; any failure stops with the line that broke.
@@ -52,3 +53,15 @@ node tests/widgets/one_sheet.js       # sync-one-sheet.html: exactly 1 printed A
 ```
 
 `test_synccore.js` needs only Node. The other two need Playwright with Chromium (see the top of this page). Screenshots land in `tests/ui/out/`.
+
+## Widgets (own forms)
+
+Same harness as the sync pages: `mock-sheet.js` also serves `forms-core.js`, `contact.html` and the forms config (fake ids in `tests/widgets/fixtures/forms.json`), and catches every POST to `docs.google.com/forms/d/e/*/formResponse` so nothing reaches Google.
+
+```
+node tests/widgets/test_formscore.js  # forms-core.js in Node (no browser): config checks (bad version, host, path, entry ids), validation and length limits, only mapped fields sent, honeypot and empty optional fields never sent, field list matches FormsSetup.gs
+node tests/widgets/contact.js         # contact.html at 1400 and 390 px, also inside the Sites sandbox frame: required checks, success message, planted markup stays text, bots (honeypot, too fast) send nothing, missing config shows the email fallback, no cookie or referrer on the POST, privacy link (Playwright)
+node tests/widgets/sync_form.js       # sync.html Request a license form: song prefilled from the clicked button, submits in place, email row still there, sandbox, planted markup, bots, fallback (Playwright)
+```
+
+`test_formscore.js` needs only Node; the other two need Playwright. After any forms change, also run `catalogue.js`, `one_sheet.js` and `sandbox.js` to confirm the sync pages still pass.

@@ -6,49 +6,20 @@
 // Checks at 1400 and 390 px: the request panel opens in the frame and shows the email; Request never navigates the
 // frame; the one-sheet view toggles in the frame and back; clicking every link between the two pages opens at most
 // one popup and the popup has no new-tab link back (no chain); no sideways scroll; no page errors.
-const fs = require('fs');
-const path = require('path');
 const assert = require('assert');
 const { chromium } = require('playwright');
 const mock = require('./mock-sheet');
 
-const EMBEDS = process.env.EMBEDS_DIR || 'E:/Projects/danyeloz-embeds';
-const ORIGIN = 'https://dcvizcayno.github.io/danyeloz-embeds/';
-const SANDBOX = 'allow-scripts allow-popups allow-forms allow-same-origin';
+const ORIGIN = mock.ORIGIN;
 const OURS = /^https:\/\/dcvizcayno\.github\.io\/danyeloz-embeds\/sync(-one-sheet)?\.html/;
 const EMAIL = 'daniel.vizkaino@gmail.com';
 let checks = 0;
 function ok(cond, msg) { assert.ok(cond, msg); checks++; }
 function eq(a, b, msg) { assert.deepStrictEqual(a, b, msg); checks++; }
 
-function harness(file) {
-  return '<!DOCTYPE html><html><body style="margin:0"><iframe id="embed" sandbox="' + SANDBOX + '" src="' + ORIGIN + file +
-    '" style="border:0;width:100%;height:860px;display:block"></iframe></body></html>';
-}
-
+// The sandboxed frame comes from mock.sandboxPage (shared with contact.js and sync_form.js).
 async function open(browser, width, file) {
-  const ctx = await browser.newContext({ viewport: { width, height: 900 } });
-  await ctx.route(/^https?:\/\//, r => {
-    const url = r.request().url();
-    if (url === 'https://harness.test/') return r.fulfill({ status: 200, contentType: 'text/html', body: harness(file) });
-    const m = /^https:\/\/dcvizcayno\.github\.io\/danyeloz-embeds\/(sync(-one-sheet)?\.html)(\?.*)?$/.exec(url);
-    if (m) return r.fulfill({ status: 200, contentType: 'text/html', body: fs.readFileSync(path.join(EMBEDS, m[1]), 'utf8') });
-    const res = mock.resolve(url, {});
-    if (res) return r.fulfill({ status: res.status, contentType: res.contentType, body: res.body, headers: { 'Access-Control-Allow-Origin': '*' } });
-    return r.abort();
-  });
-  const page = await ctx.newPage();
-  const errors = [], navs = [], popups = [];
-  const watch = p => {
-    p.on('pageerror', e => errors.push(String(e)));
-    p.on('console', m => { if (m.type() === 'error' && !/ERR_FAILED|net::|Failed to load resource/.test(m.text())) errors.push(m.text()); });
-  };
-  watch(page);
-  ctx.on('page', p => { popups.push(p); watch(p); });
-  page.on('framenavigated', f => { if (f !== page.mainFrame()) navs.push(f.url()); });
-  await page.goto('https://harness.test/');
-  const frame = await (await page.waitForSelector('#embed')).contentFrame();
-  return { ctx, page, frame, errors, navs, popups };
+  return mock.sandboxPage(browser, width, file);
 }
 
 async function panelCheck(frame, label) {

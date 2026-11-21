@@ -1,0 +1,277 @@
+{
+  "run": "r-20261121-1848-own-forms",
+  "goal": "Replace the Cognito contact form with site-styled forms and add an inline sync license request form, with Google Forms (private inbox sheet, email per reply) as the backend.",
+  "strategy": "One contract (data/forms.json, schema in plan.md section 4) joins three parallel pieces in wave 1: the Apps Script setup that prints it, the shared OZForms core that reads it (plus all shared test harness files), and the docs. Wave 2 builds the contact widget and the sync panel form in disjoint files. Wave 3: security implementation review and independent QA. All field lists, wording, limits and bot rules are fixed in plan.md sections 3 to 5, so executors decide nothing.",
+  "criteria": [
+    {
+      "id": "C-1",
+      "text": "Idempotent fs* Apps Script setup creates both forms, private inbox, submit triggers with safe plain-text email, prints formResponse URLs and entry ids; Node-mock tested.",
+      "verify": "QA: node tests/unit/test_formssetup.js apps-script PASSED; FormsSetup.gs read against plan.md section 3; all .gs load in one vm context."
+    },
+    {
+      "id": "C-2",
+      "text": "contact.html: site look, Cognito fields plus Sync & Licensing topic, required checks, success, email fallback, works in the Sites sandbox, no new tab.",
+      "verify": "QA: node tests/widgets/contact.js PASSED at 1400 and 390 incl. sandboxed frame; screenshots and captured POST reviewed."
+    },
+    {
+      "id": "C-3",
+      "text": "Catalogue request panel shows the inline Sync license request form (fields per C-3, song prefilled) submitting in place; email fallback stays.",
+      "verify": "QA: node tests/widgets/sync_form.js PASSED incl. sandbox; catalogue.js, one_sheet.js, sandbox.js still PASSED."
+    },
+    {
+      "id": "C-4",
+      "text": "One shared submit file: no-cors POST only to docs.google.com/forms/d/e/<id>/formResponse from forms.json, text-only DOM, honeypot, fill time, limits, email fallback on bad config.",
+      "verify": "QA: node tests/widgets/test_formscore.js PASSED; grep for unsafe sinks and third-party scripts; both widgets load the same forms-core.js."
+    },
+    {
+      "id": "C-5",
+      "text": "Privacy policy says forms go to Google Forms and Daniel's private sheet, used only to reply; widgets show a one-line privacy note linking to the Privacy page.",
+      "verify": "QA: privacy-policy.md diff read; contact.js and sync_form.js assert the note and link href."
+    },
+    {
+      "id": "C-6",
+      "text": "Unit tests (setup, core), Playwright for both widgets at 1400/390 incl. sandbox, planted HTML, bot cases, missing config; existing sync tests green.",
+      "verify": "QA reruns the nine commands in plan.md section 6 and records each exit code."
+    },
+    {
+      "id": "C-7",
+      "text": "CLAUDE.md, HANDOFF.md and docs/SETUP.md describe the forms and Daniel's one-time steps.",
+      "verify": "QA reads the diffs against plan.md sections 3 to 5 and follows the SETUP steps in order on paper."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T-002",
+      "owner": "security",
+      "title": "Review the forms design for abuse, data exposure and mail injection",
+      "depends_on": [],
+      "definition_of_done": [
+        "security/T-002.md lists threats for config tampering, spam, mail header injection, PII exposure, XSS via inputs, with a verdict per threat",
+        "Each required change names the plan.md section and the exact rule to change, or states none"
+      ],
+      "write_scope": [
+        "runs/r-20261121-1848-own-forms/security/T-002.md"
+      ],
+      "verify": [
+        "Supervisor reads T-002.md at G1; any Critical/High blocks wave 1 until the plan is amended"
+      ],
+      "risk": "low",
+      "estimate_minutes": 15,
+      "artifact": "runs/r-20261121-1848-own-forms/security/T-002.md"
+    },
+    {
+      "id": "T-003",
+      "owner": "executor",
+      "title": "Add FormsSetup.gs with setupDanyelOzForms and fsOnFormSubmit plus unit test",
+      "depends_on": [
+        "T-002"
+      ],
+      "definition_of_done": [
+        "apps-script/FormsSetup.gs implements plan.md section 3 and the FS_FORMS field spec of section 4 exactly (titles, types, required, choices, help texts)",
+        "First mocked run: 2 forms, 1 spreadsheet named Danyel OZ Inbox (private), 2 destinations, 2 triggers; printed JSON between FORMS_JSON_BEGIN/END validates against the section 4 rules",
+        "Second run creates no form, item, sheet or trigger; a stored form id that throws on openById is recreated; inbox equal to active spreadsheet id throws",
+        "fsOnFormSubmit mails only daniel.vizkaino@gmail.com; subject has no CR/LF and is <=150 chars; replyTo set for a valid email, omitted for \"a@b.com\nBcc: x\" and empty; unknown form sends nothing",
+        "All apps-script/*.gs load in one vm context with no duplicate top-level name; FormsSetup.gs adds only fs*/FS_* names plus setupDanyelOzForms",
+        "node tests/unit/test_formssetup.js apps-script prints PASSED and exits 0"
+      ],
+      "write_scope": [
+        "E:/Projects/Danyel OZ Official Website/apps-script/FormsSetup.gs",
+        "E:/Projects/Danyel OZ Official Website/tests/unit/test_formssetup.js"
+      ],
+      "verify": [
+        "node tests/unit/test_formssetup.js apps-script",
+        "node tests/unit/test_sync.js apps-script (unchanged, still PASSED)",
+        "QA diff of FS_FORMS against plan.md section 4 tables"
+      ],
+      "risk": "medium",
+      "estimate_minutes": 45,
+      "rollback": "Revert or delete the files in write_scope (nothing is pushed before G4); supervisor triggers on G2/G3 FAIL. Live: Daniel deletes the two triggers.",
+      "artifact": "runs/r-20261121-1848-own-forms/exec/T-003.md",
+      "notes": "Mocks: FormApp (create/openById/items/createResponse/toPrefilledUrl/getPublishedUrl/setDestination), SpreadsheetApp, ScriptApp triggers, MailApp, PropertiesService, Logger, Utilities.formatDate. Follow tests/unit/test_sync.js loader style."
+    },
+    {
+      "id": "T-004",
+      "owner": "executor",
+      "title": "Add forms-core.js (window.OZForms) with Node test and shared Playwright harness",
+      "depends_on": [
+        "T-002"
+      ],
+      "definition_of_done": [
+        "EMB/forms-core.js implements plan.md section 5 API, constants, FIELDS (section 4), bot rules, wording and styles; pure functions run in Node vm without a DOM",
+        "validConfig rejects: http, other host, /viewform, query or hash, missing field key, entry id not entry.<4-12 digits>, duplicate ids, version 2, non-object; accepts the fixture; one bad form does not void the other",
+        "validate/encode: required, email, choice-in-list, every max length; encode sends only mapped ids, never the honeypot or empty optionals; submit refuses a non-matching action without calling fetch",
+        "Source contains no innerHTML, insertAdjacentHTML, outerHTML, document.write, eval, new Function, em dash, gendered pronoun, or email other than daniel.vizkaino@gmail.com; FIELDS labels/choices match FormsSetup.gs when present",
+        "mock-sheet.js serves forms-core.js, contact.html, the config URL per forms option (default 200 {}) and logs formResponse POSTs; exports sandboxPage; sandbox.js uses these routes",
+        "node tests/widgets/test_formscore.js PASSED; catalogue.js, one_sheet.js, sandbox.js, test_synccore.js still PASSED"
+      ],
+      "write_scope": [
+        "E:/Projects/danyeloz-embeds/forms-core.js",
+        "E:/Projects/Danyel OZ Official Website/tests/widgets/test_formscore.js",
+        "E:/Projects/Danyel OZ Official Website/tests/widgets/mock-sheet.js",
+        "E:/Projects/Danyel OZ Official Website/tests/widgets/sandbox.js",
+        "E:/Projects/Danyel OZ Official Website/tests/widgets/fixtures/forms.json"
+      ],
+      "verify": [
+        "node tests/widgets/test_formscore.js",
+        "node tests/widgets/catalogue.js && node tests/widgets/one_sheet.js && node tests/widgets/sandbox.js",
+        "QA grep of forms-core.js for unsafe sinks and emails"
+      ],
+      "risk": "medium",
+      "estimate_minutes": 60,
+      "rollback": "Revert or delete the files in write_scope (nothing is pushed before G4); supervisor triggers on G2/G3 FAIL.",
+      "artifact": "runs/r-20261121-1848-own-forms/exec/T-004.md",
+      "notes": "The FormsSetup.gs cross-check is skipped with a printed notice if the file does not exist yet (parallel with T-003); QA reruns it after wave 1."
+    },
+    {
+      "id": "T-005",
+      "owner": "executor",
+      "title": "Update privacy policy, handbook, SETUP and tests README for the own forms",
+      "depends_on": [
+        "T-002"
+      ],
+      "definition_of_done": [
+        "privacy-policy.md: contact and sync forms go to Google Forms, stored in my private Google Sheet, used only to reply; Cognito stays listed for letters and waitlists; Google listed as service; date updated",
+        "CLAUDE.md section 5 and EMB/HANDOFF.md: contact.html, forms-core.js (OZForms), data/forms.json schema, sync panel form, FormsSetup.gs; Connect row says Cognito until Daniel swaps",
+        "docs/SETUP.md new section: open admin project, run setupDanyelOzForms, approve permissions, copy FORMS_JSON block to Claude, test contact.html in a draft page, then swap the Cognito embed; re-run is safe",
+        "tests/README.md lists test_formssetup.js, test_formscore.js, contact.js, sync_form.js with what each covers",
+        "Voice rules: no em dashes, no gendered pronouns for Daniel, only daniel.vizkaino@gmail.com"
+      ],
+      "write_scope": [
+        "E:/Projects/Danyel OZ Official Website/docs/legal/privacy-policy.md",
+        "E:/Projects/Danyel OZ Official Website/CLAUDE.md",
+        "E:/Projects/danyeloz-embeds/HANDOFF.md",
+        "E:/Projects/Danyel OZ Official Website/docs/SETUP.md",
+        "E:/Projects/Danyel OZ Official Website/tests/README.md"
+      ],
+      "verify": [
+        "QA reads diffs against plan.md sections 3 to 5 and the final code names",
+        "grep for em dash and he/him/his/she/her in the changed sections"
+      ],
+      "risk": "low",
+      "estimate_minutes": 30,
+      "rollback": "Revert or delete the files in write_scope (nothing is pushed before G4); supervisor triggers on G2/G3 FAIL.",
+      "artifact": "runs/r-20261121-1848-own-forms/exec/T-005.md"
+    },
+    {
+      "id": "T-006",
+      "owner": "executor",
+      "title": "Build contact.html on OZForms with Playwright test incl. Sites sandbox",
+      "depends_on": [
+        "T-004"
+      ],
+      "definition_of_done": [
+        "EMB/contact.html loads only forms-core.js, renders the 6 contact fields of plan.md section 4 with labels, heading, intro, privacy note and link; no sideways scroll and no page errors at 1400 and 390",
+        "Valid submit with fixture config: exactly one POST to the fixture action with each entry id and value; success text shown; frame does not navigate; no popup",
+        "Empty submit shows the 6 field errors and sends nothing; planted <img src=x onerror=...> in every text field is sent and shown as text, no dialog or script runs",
+        "Honeypot filled: no POST, success text; submit under 3 s: no POST, fill-time status; POST aborted: failure text with the email, values kept",
+        "Config 404, 200 {} and http action: fallback with the email as text and Copy email, zero POSTs",
+        "Same valid submit inside sandboxPage at 1400 and 390 passes; node tests/widgets/contact.js PASSED, screenshots contact-<w>.png in tests/ui/out/"
+      ],
+      "write_scope": [
+        "E:/Projects/danyeloz-embeds/contact.html",
+        "E:/Projects/Danyel OZ Official Website/tests/widgets/contact.js"
+      ],
+      "verify": [
+        "node tests/widgets/contact.js",
+        "QA views screenshots and repeats one planted-HTML case by hand"
+      ],
+      "risk": "low",
+      "estimate_minutes": 45,
+      "rollback": "Revert or delete the files in write_scope (nothing is pushed before G4); supervisor triggers on G2/G3 FAIL.",
+      "artifact": "runs/r-20261121-1848-own-forms/exec/T-006.md"
+    },
+    {
+      "id": "T-007",
+      "owner": "executor",
+      "title": "Embed the sync license request form in OZSync.requestPanel with Playwright test",
+      "depends_on": [
+        "T-004"
+      ],
+      "definition_of_done": [
+        "sync.html loads forms-core.js before sync-core.js; requestPanel follows plan.md section 5 (form container, checklist hidden then restored via onUnavailable, Prefer email row kept)",
+        "Per-song Request: songs field prefilled with that title; valid submit sends one POST with all 11 sync entry ids (budget/notes omitted when empty); success shows the turnaround; panel stays open in place",
+        "Tab trap includes inputs/select/textarea and skips the honeypot; backdrop click does not close while a field has text; Escape and Close still close and return focus",
+        "Bot, planted HTML, missing/invalid config cases as in T-006 but for the panel; invalid config gives today's panel exactly (checklist, email, Copy, mailto)",
+        "Inside sandboxPage at 1400 and 390: submit works, no navigation, no popup; node tests/widgets/sync_form.js PASSED",
+        "catalogue.js, one_sheet.js, sandbox.js and test_synccore.js still PASSED (test_synccore.js edited only for new exports if needed)"
+      ],
+      "write_scope": [
+        "E:/Projects/danyeloz-embeds/sync-core.js",
+        "E:/Projects/danyeloz-embeds/sync.html",
+        "E:/Projects/Danyel OZ Official Website/tests/widgets/sync_form.js",
+        "E:/Projects/Danyel OZ Official Website/tests/widgets/test_synccore.js"
+      ],
+      "verify": [
+        "node tests/widgets/sync_form.js",
+        "node tests/widgets/catalogue.js && node tests/widgets/one_sheet.js && node tests/widgets/sandbox.js && node tests/widgets/test_synccore.js"
+      ],
+      "risk": "medium",
+      "estimate_minutes": 60,
+      "rollback": "Revert or delete the files in write_scope (nothing is pushed before G4); supervisor triggers on G2/G3 FAIL. After push: revert sync.html to drop the forms-core script tag.",
+      "artifact": "runs/r-20261121-1848-own-forms/exec/T-007.md"
+    },
+    {
+      "id": "T-008",
+      "owner": "security",
+      "title": "Review the forms implementation against the T-002 threat list",
+      "depends_on": [
+        "T-003",
+        "T-004",
+        "T-006",
+        "T-007"
+      ],
+      "definition_of_done": [
+        "security/T-008.md gives a verdict per T-002 threat with file:line evidence",
+        "No open Critical or High, or each is filed as a defect with a reproduction"
+      ],
+      "write_scope": [
+        "runs/r-20261121-1848-own-forms/security/T-008.md"
+      ],
+      "verify": [
+        "Supervisor reads T-008.md at G4"
+      ],
+      "risk": "low",
+      "estimate_minutes": 15,
+      "artifact": "runs/r-20261121-1848-own-forms/security/T-008.md"
+    },
+    {
+      "id": "T-009",
+      "owner": "qa",
+      "title": "Verify C-1 to C-7 independently and record evidence",
+      "depends_on": [
+        "T-003",
+        "T-004",
+        "T-005",
+        "T-006",
+        "T-007"
+      ],
+      "definition_of_done": [
+        "qa/T-009.md has one row per criterion C-1..C-7 with the command or read performed, outcome and evidence path",
+        "All nine commands of plan.md section 6 rerun by QA with exit codes recorded",
+        "Own probes run: unsafe-sink and email greps, em dash and pronoun grep, all .gs in one vm context, FIELDS vs FS_FORMS cross-check",
+        "Verdict PASS, PASS_WITH_CONDITIONS or FAIL with S1-S4 defects and reproductions"
+      ],
+      "write_scope": [
+        "runs/r-20261121-1848-own-forms/qa/T-009.md"
+      ],
+      "verify": [
+        "Supervisor checks at G3 that every criterion row has executed evidence"
+      ],
+      "risk": "low",
+      "estimate_minutes": 25,
+      "artifact": "runs/r-20261121-1848-own-forms/qa/T-009.md"
+    }
+  ],
+  "assumptions": [
+    "A-1 Privacy page URL is https://www.danyeloz.info/privacy (one constant PRIVACY_URL).",
+    "A-2 Google accepts a urlencoded no-cors POST of entry params to /formResponse and the forms accept anonymous responses.",
+    "A-3 Google Sites keeps the charter sandbox flags and sets no CSP blocking fetch to docs.google.com.",
+    "A-4 The admin Apps Script project is bound to the Song Database (getActiveSpreadsheet), used by the inbox guard."
+  ],
+  "open_questions": [
+    "Budget: charter allows 3 executor tasks x 30 min; plan has 5 executor tasks, about 240 min. Accept, or defer T-005 docs to a follow-up?",
+    "Privacy page slug on danyeloz.info: is it /privacy? (A-1)",
+    "Topic order: Sync & Licensing placed after Beat Licensing & Instrumentals; fine for Daniel?"
+  ],
+  "rollback": "Nothing is pushed before G4: revert or delete files in task write scopes. After push: delete data/forms.json (widgets fall back to email text), revert sync.html script tag, Daniel keeps or restores the Cognito embed and deletes the two form triggers. Supervisor or Daniel triggers."
+}

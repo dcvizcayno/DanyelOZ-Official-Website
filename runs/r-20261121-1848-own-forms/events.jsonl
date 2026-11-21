@@ -1,0 +1,18 @@
+{"ts":"2026-11-21T10:48:38.068Z","from":"supervisor","task":"RUN","event":"run_created","summary":"tier T2"}
+{"ts":"2026-11-21T10:55:07.455Z","from":"supervisor","task":"RUN","event":"board_import","summary":"8 task(s) from plan.json"}
+{"ts":"2026-11-21T10:55:20.926Z","from":"supervisor","task":"T-002","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T12:06:02.324Z","from":"supervisor","task":"T-002","event":"task_status","summary":"doing -> done: G1 security PASS_WITH_CONDITIONS; D-4..D-7 recorded"}
+{"ts":"2026-11-21T12:06:02.415Z","from":"supervisor","task":"T-003","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T12:06:02.510Z","from":"supervisor","task":"T-004","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T12:06:02.609Z","from":"supervisor","task":"T-005","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T12:09:26.297Z","from":"supervisor","task":"T-005","event":"task_status","summary":"doing -> done: supervisor: cmp identical; QA to cross-check names vs code"}
+{"ts":"2026-11-21T12:13:16.082Z","from":"supervisor","task":"T-003","event":"task_status","summary":"doing -> done: supervisor re-ran test PASSED; trigger reads inbox via e.range parent, bound id only for the guard"}
+{"ts":"2026-11-21T12:13:25.662Z","from":"supervisor","task":"T-004","event":"task_status","summary":"doing -> done: supervisor re-ran test PASSED; no sinks, no console"}
+{"ts":"2026-11-21T12:13:25.756Z","from":"supervisor","task":"T-006","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T12:13:25.853Z","from":"supervisor","task":"T-007","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T12:18:24.356Z","from":"supervisor","task":"T-006","event":"task_status","summary":"doing -> done: supervisor re-ran contact.js PASSED; 'Thank you' wording accepted"}
+{"ts":"2026-11-21T12:22:41.375Z","from":"supervisor","task":"T-007","event":"task_status","summary":"doing -> done: supervisor re-ran catalogue + sync_form PASSED"}
+{"ts":"2026-11-21T12:22:41.469Z","from":"supervisor","task":"T-008","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T12:22:41.574Z","from":"supervisor","task":"T-009","event":"task_status","summary":"todo -> doing"}
+{"ts":"2026-11-21T13:31:24.310Z","from":"supervisor","task":"T-008","event":"task_status","summary":"doing -> done: G3/G4 accepted after FI-1, FI-2, D-1 fixes; supervisor sweep green"}
+{"ts":"2026-11-21T13:31:24.406Z","from":"supervisor","task":"T-009","event":"task_status","summary":"doing -> done: G3/G4 accepted after FI-1, FI-2, D-1 fixes; supervisor sweep green"}

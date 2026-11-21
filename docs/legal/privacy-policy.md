@@ -1,6 +1,6 @@
 # Privacy Policy
 
-_Last updated: November 16, 2026_
+_Last updated: November 21, 2026_
 
 This policy covers **danyeloz.info** (the official website of the artist Danyel OZ) and **Danyel OZ Studio**, the private tool I use to schedule and post my own music videos to my own social media accounts, including TikTok. "I", "me" and "my" mean Danyel OZ.
 
@@ -8,13 +8,16 @@ The short version: the website doesn't collect anything about you unless you wri
 
 ## Who I am
 
-I'm Danyel OZ, an independent singer-songwriter based in Manila, Philippines. You can reach me through the contact form on the Connect page of danyeloz.info.
+I'm Danyel OZ, an independent singer-songwriter based in Manila, Philippines. You can reach me through the contact form on the Connect page of danyeloz.info, or by email at daniel.vizkaino@gmail.com.
 
 ## The website (danyeloz.info)
 
 **What I collect.** Nothing, unless you choose to send it:
 
-- **Contact form and letters.** If you write to me through the forms on the Connect page, I get what you type there (for example your name, your email address and your message). I use it only to read and answer you. I don't sell it, rent it or add you to a mailing list you didn't ask for.
+- **Contact form.** The contact form on the Connect page asks for your first and last name, your email address, what you're writing about, a subject and your message.
+- **Sync license requests.** The "Sync license request" form on my licensing page asks for your name, your email address, your company or production, the song or songs, your project, the media type, territory, term and timeline, and (if you want to add them) a budget range and notes.
+- **Where those two forms go.** What you send through the contact form or the sync license request form is stored by Google: in Google Forms and in a private Google Sheet in my own Google account that only I can open. I also get a copy by email in my Gmail. I use it only to reply to you and to handle your request (for a license request, that includes preparing a quote). I don't sell it, rent it, share it or add you to a mailing list you didn't ask for.
+- **Letters, and the old contact form.** If you write to me through the letter form, or through the old contact form while the old contact form is still live, Cognito Forms receives what you type. I use it only to read and answer you, the same way.
 - **Waitlists.** If you join a waitlist (for example for merch), I use your email only to tell you about that one thing.
 
 **What the site doesn't do.** The music widgets on the site don't use cookies, local storage, ads or tracking of their own. They read my public song list and show players and links.
@@ -23,7 +26,8 @@ I'm Danyel OZ, an independent singer-songwriter based in Manila, Philippines. Yo
 
 - **Google Sites** hosts the site. **Google Fonts** supplies the fonts.
 - **GitHub Pages** hosts the music widgets.
-- **Cognito Forms** runs the contact form, letters and waitlists.
+- **Google Forms, Google Sheets and Gmail** receive and store what you send through the contact form and the sync license request form, under Google's privacy policy.
+- **Cognito Forms** runs the letters and waitlists, and the old contact form while the old contact form is still live.
 - **Music and video players** from Bandcamp, YouTube (in its privacy-enhanced "no-cookie" mode), Apple Music and Spotify. A player may set its own cookies once you press play.
 - **Links out** to stores, social media, Patreon and PayPal. Once you leave my site, the other site's policy applies.
 
@@ -47,11 +51,11 @@ The same applies to the other accounts the tool posts to or reads (my YouTube ch
 
 ## How long I keep things
 
-I keep messages from the contact form as long as I need them to answer you, then delete them when I clear out my inbox. Danyel OZ Studio keeps its records until I delete them. TikTok's sign-in expires on its own if it isn't used for 180 days.
+I keep what you send through the contact form and the sync license request form for up to 1 year, then delete it from all three places it is stored: the responses in Google Forms, my private Google Sheet, and the email copies. If you ask, I delete it sooner: write to me at daniel.vizkaino@gmail.com. Messages sent through Cognito Forms (letters, and the old contact form while it is still live) I keep as long as I need them to answer you, then delete them when I clear out my inbox. Danyel OZ Studio keeps its records until I delete them. TikTok's sign-in expires on its own if it isn't used for 180 days.
 
 ## Your choices
 
-You can ask me to see, correct or delete anything you sent me through the website. Just write to me through the contact form on the Connect page. Under the Philippines' Data Privacy Act of 2012 you also have the right to object and to complain to the National Privacy Commission.
+You can ask me to see, correct or delete anything you sent me through the website. Just write to me through the contact form on the Connect page, or by email at daniel.vizkaino@gmail.com. Under the Philippines' Data Privacy Act of 2012 you also have the right to object and to complain to the National Privacy Commission.
 
 ## Children
 
@@ -63,4 +67,4 @@ If I change this policy, I'll update the date at the top of this page.
 
 ## Contact
 
-Use the contact form on the Connect page of danyeloz.info.
+Use the contact form on the Connect page of danyeloz.info, or email me at daniel.vizkaino@gmail.com.
