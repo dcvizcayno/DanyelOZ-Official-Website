@@ -11,5 +11,5 @@ Not verified live: getOwner() on the real Song Database (null on a Shared Drive 
 closed), real trigger events, Calendar, Gmail delivery and quotas.
 Residual risk to be accepted by Daniel before Auto-reply ON (security impl-review.md): while ON, a stranger can
 make Daniel's Gmail send one fixed, link-free note to each of up to 30 addresses a day; switching OFF stops it
-within 10 minutes. Daniel's acceptance: PENDING.
+within 10 minutes. Daniel's acceptance: ACCEPTED in chat on Nov 21, 2026 ("Approve and accept"), together with approval of all 10 templates as written. Daniel may now switch Auto-reply ON after setup.
 Follow-ups: NF-03 look-alike names (Low), NF-04 digest lock (Low), SETUP section 1 file count (S4).
