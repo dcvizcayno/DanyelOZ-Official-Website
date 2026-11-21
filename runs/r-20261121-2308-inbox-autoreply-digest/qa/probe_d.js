@@ -6,10 +6,10 @@ const nothing=(lbl,f)=>{const p=JSON.stringify(S.props),t=S.trig.length,sd=S.sen
 setup([{}]);S.owner='someone.else@gmail.com';S.active='someone.else@gmail.com';S.effective='someone.else@gmail.com';
 ok(thr(()=>R('getInboxData()'))===null,'owner not daniel.vizkaino allowed');
 S.active='Someone.Else@Gmail.com ';ok(thr(()=>R('getInboxData()'))===null,'owner match ignores case/space');
-S.owner='daniel.vizkaino@gmail.com';S.active='daniel.vizkaino@gmail.com';ok(thr(()=>R('setDigest(false)'))===null,'daniel as owner allowed');
+S.owner='daniel.vizkaino@gmail.com';S.active='daniel.vizkaino@gmail.com';S.effective='daniel.vizkaino@gmail.com';ok(thr(()=>R('setDigest(false)'))===null,'daniel as owner allowed');
 const deny=[['helper mode',()=>{S.owner='me.owner@gmail.com';S.active='helper@gmail.com';S.effective='helper@gmail.com'}],
  ['helper, effective=owner',()=>{S.owner='me.owner@gmail.com';S.active='helper@gmail.com';S.effective='me.owner@gmail.com'}],
- ['blank active',()=>{S.owner='me.owner@gmail.com';S.active='';S.effective='me.owner@gmail.com'}],
+ ['blank effective',()=>{S.owner='me.owner@gmail.com';S.active='';S.effective=''}],
  ['owner unknown (null)',()=>{S.owner='';S.active='me.owner@gmail.com'}],
  ['getOwner throws',()=>{S.ownerFn=()=>{throw new Error('no')};S.active='me.owner@gmail.com'}],
  ['daniel address but not owner',()=>{S.ownerFn=null;S.owner='me.owner@gmail.com';S.active='daniel.vizkaino@gmail.com';S.effective='daniel.vizkaino@gmail.com'}]];

@@ -36,7 +36,7 @@ setup([{ts:ago(400*DY)}],[],{FS_INBOX_SHEET_ID:'SONGDB1'});ok(/Song Database/.te
 // owner check
 setup([{}]);const pub=['getInboxData()',"setInboxStatus('contact',2,'k','Done')",'previewOldRows()',"deleteOldRows('x',1)",'setAutoReply(true)','setDigest(true)',"sendAutoReplyTest('contact',1)",'installInboxTriggers()','removeInboxTriggers()'];
 S.active='me.owner@gmail.com';S.effective='me.owner@gmail.com';ok(thr(()=>R('getInboxData()'))===null,'owner (not daniel addr) allowed');
-for(const [a,e,lbl] of [['stranger@gmail.com','me.owner@gmail.com','stranger'],['','me.owner@gmail.com','blank active'],['','','both blank'],['helper@gmail.com','helper@gmail.com','helper mode (active==effective==helper)']]){
+for(const [a,e,lbl] of [['stranger@gmail.com','me.owner@gmail.com','stranger'],['me.owner@gmail.com','stranger@gmail.com','effective not owner'],['','','both blank'],['helper@gmail.com','helper@gmail.com','helper mode (active==effective==helper)']]){
  S.active=a;S.effective=e;const before=JSON.stringify(S.props),tn=S.trig.length;
  for(const c of pub)ok(/Not allowed/.test(thr(()=>R(c))||''),lbl+' refused '+c);
  ok(JSON.stringify(S.props)===before&&S.trig.length===tn&&S.sent.length===0,lbl+' wrote nothing');}

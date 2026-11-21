@@ -132,26 +132,31 @@ eq(['ana@example.com', 'bouncy@x.io'].map(sk), [false, false]);
 const PUBLIC = [...SRC.matchAll(/^function ([A-Za-z]+)\(/gm)].map(m => m[1]);
 eq(PUBLIC.sort(), ['deleteOldRows', 'getInboxData', 'ibAutoReplyTick', 'ibDailyDigest', 'installInboxTriggers', 'previewOldRows',
   'removeInboxTriggers', 'sendAutoReplyTest', 'setAutoReply', 'setDigest', 'setInboxStatus'], 'public functions');
-for (const [who, eff] of [['x@gmail.com', 'owner.account@gmail.com'], ['', 'owner.account@gmail.com'], ['helper@gmail.com', 'helper@gmail.com']]) {
-  const { c } = reset([{}]); effective = eff;   // stranger, blank, helper mode (Execute as user accessing)
+const O = 'owner.account@gmail.com', NO_OWNER = /Not allowed: the Song Database owner could not be read \(is it on a Shared Drive\?\)$/,
+  NOT_ME = /Not allowed: the admin app must be deployed as Execute as: Me$/, OTHER = /Not allowed: you are signed in as a different Google account than the Song Database owner$/;
+for (const [who, eff, own, re, label] of [
+  ['x@gmail.com', O, O, OTHER, 'different signed-in account'],
+  ['daniel.vizkaino@gmail.com', O, O, OTHER, 'FS_NOTIFY is not the owner here'],
+  ['helper@gmail.com', 'helper@gmail.com', O, NOT_ME, 'helper mode (Execute as user accessing)'],
+  ['', 'helper@gmail.com', O, NOT_ME, 'blank active, effective not the owner'],
+  ['', '', O, NOT_ME, 'blank effective'],
+  [O, O, '', NO_OWNER, 'blank owner'], ['', O, null, NO_OWNER, 'no owner (Shared Drive)'], [O, O, 'THROW', NO_OWNER, 'owner read fails']]) {
+  const { c } = reset([{}]);
   props.IB_AUTO_REPLY = 'off';
   triggers.push({ getHandlerFunction: () => 'ibAutoReplyTick' });
-  user = who;
+  user = who; effective = eff; owner = own === 'THROW' ? O : own; ownerFails = own === 'THROW';
   const before = JSON.stringify([props, c.data, triggers.length]);
   const args = { setInboxStatus: ['contact', 2, 'k', 'Done'], deleteOldRows: [new FDate().toISOString(), 1], setAutoReply: [true], setDigest: [true],
     sendAutoReplyTest: ['contact', 1] };
-  PUBLIC.filter(n => !/^ib/.test(n)).forEach(n => assert.throws(() => ctx[n](...(args[n] || [])), /Not allowed/, n + ' as ' + JSON.stringify(who)));
-  eq(JSON.stringify([props, c.data, triggers.length]), before, 'nothing written by a stranger');
-  eq(mails.length, 0, 'no mail by a stranger');
+  PUBLIC.filter(n => !/^ib/.test(n)).forEach(n => assert.throws(() => ctx[n](...(args[n] || [])), re, n + ': ' + label));
+  eq(JSON.stringify([props, c.data, triggers.length]), before, 'nothing written: ' + label);
+  eq(mails.length, 0, 'no mail: ' + label);
+  assert.ok(!/@/.test(logs.join(' ')), 'no address logged: ' + label);
 }
-for (const [o, u] of [['', ''], ['', 'x@x.io'], [null, 'x@x.io'], [undefined, 'owner.account@gmail.com']]) {   // blank or unknown owner: refused
-  reset([{}]); user = u; owner = o === undefined ? 'owner.account@gmail.com' : o; ownerFails = o === undefined;
-  assert.throws(() => ctx.getInboxData(), /Not allowed/, 'owner ' + JSON.stringify(o) + ' user ' + JSON.stringify(u));
-}
-owner = 'owner.account@gmail.com';
-reset([]); user = 'OWNER.Account@gmail.com'; eq(Object.keys(ctx.getInboxData()).length, 6, 'owner (not FS_NOTIFY, any case) allowed');
+owner = O; ownerFails = false;
+reset([]); user = ''; effective = O; eq(Object.keys(ctx.getInboxData()).length, 6, 'owner with blank active user (real web app case) allowed');
+reset([]); user = 'OWNER.Account@gmail.com'; effective = ' Owner.Account@Gmail.com'; eq(Object.keys(ctx.getInboxData()).length, 6, 'owner with matching active user (any case) allowed');
 eq(ctx.installInboxTriggers(), { autoReply: 1, digest: 1 }, 'owner may install');
-reset([{}]); user = 'daniel.vizkaino@gmail.com'; assert.throws(() => ctx.setAutoReply(true), /Not allowed/, 'FS_NOTIFY is not the owner here');
 /* NF-02: handlers act only on an event of their own installed trigger */
 for (const ev of [undefined, {}, { triggerUid: '' }, { triggerUid: 'guess' }]) {
   reset([{}]); props.IB_DIGEST = 'on'; mkTrigger('ibAutoReplyTick', {}); mkTrigger('ibDailyDigest', {});

@@ -434,16 +434,18 @@ function ibDigestText_(open, rel, now) {
 
 /* ---------- Helpers ---------- */
 
-/* Default deny (IR-08, NF-01): the signed-in user must be the owner of the Song Database this script is bound to.
-   Holds in "Execute as me / Only myself" and in the helper mode (a helper is not the owner). No address is hardcoded. */
+/* Default deny (IR-08, NF-01, D-12): the script must run as the owner of the bound Song Database (deployment
+   "Execute as: Me"), and the signed-in user is either blank (what the web app reports under "Only myself") or that
+   same owner. A helper (Execute as user accessing) is not the owner and is refused. No address is hardcoded, and the
+   messages name the failed part without any address. */
 function ibOwner_() {
-  let active = '', owner = '';
-  try { active = String(Session.getActiveUser().getEmail() || '').trim().toLowerCase(); } catch (err) { active = ''; }
-  try {
-    const o = SpreadsheetApp.getActiveSpreadsheet().getOwner();
-    owner = o ? String(o.getEmail() || '').trim().toLowerCase() : '';
-  } catch (err) { owner = ''; }
-  if (!active || !owner || active !== owner) throw new Error('Not allowed');
+  const mail = function (get) { try { const u = get(); return u ? String(u.getEmail() || '').trim().toLowerCase() : ''; } catch (err) { return ''; } };
+  const owner = mail(function () { return SpreadsheetApp.getActiveSpreadsheet().getOwner(); });
+  const effective = mail(function () { return Session.getEffectiveUser(); });
+  const active = mail(function () { return Session.getActiveUser(); });
+  if (!owner) throw new Error('Not allowed: the Song Database owner could not be read (is it on a Shared Drive?)');
+  if (!effective || effective !== owner) throw new Error('Not allowed: the admin app must be deployed as Execute as: Me');
+  if (active !== '' && active !== owner) throw new Error('Not allowed: you are signed in as a different Google account than the Song Database owner');
 }
 
 /* NF-02: a handler runs only for an event from one of this project's own triggers for that handler. A call from the
