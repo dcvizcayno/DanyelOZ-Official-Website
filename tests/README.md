@@ -19,6 +19,7 @@ Nothing here touches the real Song Database, Drive, YouTube, Spotify or GitHub: 
 | `node tests/unit/test_tiktok.js apps-script` | TikTok posting: connect, TikTok's posting rules, post, status, 19-digit IDs, token refresh, Auto-post |
 | `node tests/unit/test_sync.js apps-script` | Sync licensing (`Sync.gs`): every save rule (BPM, key, moods, genres, vocal, featured cap of 10, unknown ISRC), links, emails, long digit runs and IPI/CAE refused in public text, contact form host check, formula-safe writes, `getSyncAdmin` writes nothing, Copy from studio notes takes only BPM and key |
 | `node tests/unit/test_formssetup.js apps-script` | Own forms (`FormsSetup.gs`, mocks of FormApp, SpreadsheetApp, ScriptApp, MailApp, PropertiesService): both forms and their fields, safe re-run (reuses forms, inbox and trigger by stored id; puts back changed settings), inbox never the Song Database, the inbox trigger and its notification mail (Reply-To only for a valid email, subject without line breaks, no inbox link, no reply values in logs), calls without a real event send nothing, the `FORMS_JSON` block matches the `forms.json` schema |
+| `node tests/unit/test_inbox.js apps-script` | Inbox, auto-reply and 9 am to-do (`Inbox.gs`, loaded with `Code.gs` and `FormsSetup.gs`; mocks of SpreadsheetApp, MailApp, CalendarApp, ScriptApp, PropertiesService, LockService, Utilities, Session, FormApp): owner-only server functions, address key and 30-day rule, skip list, burst pause, caps (5 per run, 30 a day, 5 tests a day), quota floor 46, 20 min to 72 h window and only after the switch went on, first name filter, no message text in the mail, claim-then-send under the lock, 1-year delete with token, private calendar event without guests, one event a day, no event when nothing is open, triggers touch only their two handlers, no name clashes across all `.gs` files |
 | `node tests/unit/test_spotify_backfill.js` | `tools/SpotifyBackfill.gs`: blank cells only, artist check, 429 pause, resume |
 
 Each prints a "PASSED" line at the end; any failure stops with the line that broke.
@@ -34,6 +35,7 @@ node tests/ui/ep.js           # EPs Page
 node tests/ui/xp.js           # X Posts: pick a song from Song rotation to draft
 node tests/ui/tt.js           # Shorts > TikTok tab: connect, posting choices, approve, post, status
 node tests/ui/sy.js           # Tracks > Sync tab, Sync readiness and Licensing settings cards at desktop and phone size; planted markup stays text
+node tests/ui/ib.js           # Inbox screen at desktop and phone size: list, filters, search, status, Reply only for a valid email, switches with confirm, test send, triggers, 1-year delete; planted markup stays text
 ```
 
 Screenshots land in `tests/ui/out/` (ignored by git). Add a mock for any new server function in `tests/ui/mock.js` (the `H` object).

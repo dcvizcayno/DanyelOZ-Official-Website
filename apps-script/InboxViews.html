@@ -1,0 +1,100 @@
+<!-- Danyel OZ admin: Inbox screen (layout). Included by Form.html. Text-only DOM: InboxApp.html never parses HTML. -->
+<style>
+  .ib-tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+  @media (max-width: 760px) { .ib-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .ib-tile { background: var(--soft); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+  .ib-tile b { display: block; font-size: 22px; color: var(--purple); font-variant-numeric: tabular-nums; }
+  .ib-tile span { font-size: 12px; color: #6a5a92; }
+  .ib-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px; align-items: start; margin-top: 18px; }
+  @media (max-width: 900px) { .ib-grid { grid-template-columns: minmax(0, 1fr); } }
+  .ib-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+  .ib-filters select, .ib-search { padding: 7px 8px; font-size: 13px; min-width: 0; width: 100%; box-sizing: border-box; }
+  .ib-search { margin-bottom: 10px; }
+  .ib-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; max-height: 640px; overflow-y: auto; padding-right: 4px; }
+  .ib-item { border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; cursor: pointer; background: #fff; min-width: 0; }
+  .ib-item:hover { border-color: #b9a8e6; }
+  .ib-item.active { border-color: var(--purple); background: var(--soft); }
+  .ib-item .t { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .ib-item .t strong { min-width: 0; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ib-item .m, .ib-item .s { font-size: 12px; color: #6b6480; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ib-item .s { color: var(--ink); }
+  .ib-pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #ece6fb; color: var(--purple); }
+  .ib-pill.Replied { background: #e0f2fe; color: #075985; }
+  .ib-pill.Done { background: #dff3e7; color: var(--ok); }
+  .ib-detail h3 { margin: 0 0 4px; font-size: 18px; overflow-wrap: anywhere; }
+  .ib-fields { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 6px 12px; margin: 14px 0; font-size: 14px; }
+  @media (max-width: 480px) { .ib-fields { grid-template-columns: minmax(0, 1fr); gap: 2px; } .ib-fields dd { margin-bottom: 8px; } }
+  .ib-fields dt { color: #6a5a92; font-size: 12.5px; font-weight: 600; }
+  .ib-fields dd { margin: 0; min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .ib-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .ib-actions button, .ib-actions a { padding: 7px 14px; font-size: 13px; }
+  .ib-reply { display: inline-block; text-decoration: none; border-radius: 999px; font-weight: 600; background: var(--purple); color: #fff; }
+  .ib-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 20px; }
+  @media (max-width: 900px) { .ib-cards { grid-template-columns: minmax(0, 1fr); } }
+  .ib-cards .card { min-width: 0; }
+  .ib-wide { grid-column: 1 / -1; }
+  .ib-switch { display: inline-flex; gap: 8px; align-items: center; font-weight: 600; cursor: pointer; margin: 0 0 8px; }
+  .ib-switch input { width: auto; margin: 0; }
+  .ib-tpls { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 12px; }
+  @media (max-width: 480px) { .ib-tpls { grid-template-columns: minmax(0, 1fr); } }
+  .ib-tpl { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+  .ib-tpl h4 { margin: 0 0 4px; font-size: 13px; color: #6a5a92; }
+  .ib-tpl .sub { font-weight: 600; font-size: 13.5px; overflow-wrap: anywhere; }
+  .ib-tpl pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.5 'Open Sans', Arial, sans-serif; margin: 6px 0 8px; }
+  .ib-note { font-size: 12.5px; color: #6b6480; line-height: 1.5; }
+  .ib-status { font-size: 14px; font-weight: 600; min-height: 1em; }
+  .ib-status.ok { color: var(--ok); } .ib-status.err { color: var(--err); }
+</style>
+<section id="viewInbox" hidden>
+  <div class="card">
+    <h2>Inbox <span class="mode">form replies, private</span></h2>
+    <div id="ibTiles" class="ib-tiles"></div>
+    <div id="ibStatus" class="ib-status" role="status"></div>
+  </div>
+  <div class="ib-grid">
+    <div class="card">
+      <h2>Messages</h2>
+      <div class="ib-filters">
+        <select id="ibType" aria-label="Type"><option value="">All types</option><option value="contact">Contact</option><option value="sync">Sync</option></select>
+        <select id="ibTopic" aria-label="Topic"><option value="">All topics</option></select>
+        <select id="ibStat" aria-label="Status"><option value="">All statuses</option><option>New</option><option>Replied</option><option>Done</option></select>
+      </div>
+      <input id="ibSearch" class="ib-search" type="search" placeholder="Search names, emails, words" aria-label="Search messages">
+      <div id="ibList" class="ib-list"><div class="list-empty">Loading…</div></div>
+    </div>
+    <div class="card ib-detail" id="ibDetail"><div class="list-empty">Pick a message to read it.</div></div>
+  </div>
+  <div class="ib-cards">
+    <div class="card ib-wide" id="ibArCard">
+      <h2>Auto-reply</h2>
+      <label class="ib-switch"><input type="checkbox" id="ibArSwitch"> <span>Send a short note about 20 minutes after each message</span></label>
+      <div id="ibArInfo" class="ib-note"></div>
+      <div id="ibArStatus" class="ib-status" role="status"></div>
+      <div id="ibTpls"></div>
+    </div>
+    <div class="card" id="ibDgCard">
+      <h2>9 am to-do</h2>
+      <label class="ib-switch"><input type="checkbox" id="ibDgSwitch"> <span>Put a to-do on my calendar at 9 am</span></label>
+      <div class="ib-note">Every morning at 9 am Manila time, one private 15-minute event lists the open messages and the releases coming in the next 7 days. Nothing to do, no event.</div>
+      <div id="ibDgStatus" class="ib-status" role="status"></div>
+    </div>
+    <div class="card" id="ibTrCard">
+      <h2>Triggers</h2>
+      <div id="ibTrState" class="ib-note"></div>
+      <div class="ib-actions" style="margin-top:10px">
+        <button type="button" class="primary" id="ibTrInstall">Install</button>
+        <button type="button" class="ghost" id="ibTrRemove">Remove</button>
+      </div>
+      <div id="ibTrStatus" class="ib-status" role="status"></div>
+    </div>
+    <div class="card ib-wide" id="ibOldCard">
+      <h2>Older than 1 year</h2>
+      <div class="ib-note">Deletes messages older than 1 year from the inbox sheet only. The Google Forms responses and the Gmail copies stay; remove those by hand with the steps in SETUP.</div>
+      <div class="ib-actions" style="margin-top:10px">
+        <button type="button" class="ghost" id="ibOldCheck">Count old messages</button>
+        <button type="button" class="primary" id="ibOldDelete" hidden>Delete</button>
+      </div>
+      <div id="ibOldStatus" class="ib-status" role="status"></div>
+    </div>
+  </div>
+</section>

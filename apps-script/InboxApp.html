@@ -1,0 +1,250 @@
+<!-- Danyel OZ admin: Inbox screen (behavior). Included at the end of Form.html. Every message field is text from strangers:
+     build the DOM with createElement + textContent only. -->
+<script>
+(function () {
+  'use strict';
+  var IB = { loaded: false, data: null, active: '' };
+  /* Same strict check as forms-core.js and FormsSetup.gs FS_EMAIL_RE: no ? & % , ; : so a mailto can't grow extra fields. */
+  var IB_EMAIL_RE = /^[A-Za-z0-9._+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/;
+  var IB_STATUSES = ['New', 'Replied', 'Done'];
+
+  function el(id) { return document.getElementById(id); }
+  /* Builds an element from text only (never HTML). */
+  function h(tag, props, kids) {
+    var e = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (k) {
+      var v = props[k];
+      if (v == null || v === false) return;
+      if (k === 'text') e.textContent = v;
+      else if (k === 'cls') e.className = v;
+      else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v);
+      else e.setAttribute(k, v === true ? '' : v);
+    });
+    (kids || []).forEach(function (c) { if (c != null && c !== false) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); return node; }
+  function call(fn, args, ok, fail) {
+    var r = google.script.run.withSuccessHandler(ok).withFailureHandler(fail || function (e) { say('ibStatus', e.message, 'err'); });
+    r[fn].apply(r, args || []);
+  }
+  function say(id, text, kind) { var s = el(id); if (s) { s.textContent = text || ''; s.className = 'ib-status ' + (kind || ''); } }
+  /* The server already strips bidi and zero-width characters (fsClean_); strip again so none reaches the screen. */
+  function str(v) { return v == null ? '' : String(v).replace(/[​-‏‪-‮⁦-⁩﻿]/g, ''); }
+  function oneLine(v) { return str(v).replace(/\s+/g, ' ').trim(); }
+  function key(m) { return m.type + ':' + m.row + ':' + m.rowKey; }
+  function stamp(m) { var t = Date.parse(m.date); return isNaN(t) ? 0 : t; }
+  function when(m) {
+    var t = stamp(m);
+    if (!t) return str(m.date);
+    return new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(t));
+  }
+  function who(m) { return oneLine(m.name) || oneLine(m.firstName) || '(no name)'; }
+  function about(m) { return oneLine(m.subject) || (m.type === 'sync' ? oneLine(m.songs || m.project) : '') || '(no subject)'; }
+  function goodEmail(m) {
+    var a = str(m.email);
+    return !!m.emailOk && a.length <= 254 && IB_EMAIL_RE.test(a);
+  }
+  function mailto(m) {
+    var subj = oneLine(m.subject) || (m.type === 'sync' ? 'your sync request' : 'your message');
+    return 'mailto:' + m.email + '?subject=' + encodeURIComponent('Re: ' + subj.slice(0, 150));
+  }
+  function pill(s) { var v = IB_STATUSES.indexOf(s) >= 0 ? s : 'New'; return h('span', { cls: 'ib-pill ' + v, text: v }); }
+
+  var prev = window.onAdminView;
+  window.onAdminView = function (v) {
+    if (prev) prev(v);
+    if (v === 'inbox' && !IB.loaded) load();
+  };
+
+  function load() {
+    IB.loaded = true;
+    call('getInboxData', [], show, function (e) {
+      IB.loaded = false;
+      clear(el('ibList')).appendChild(h('div', { cls: 'list-empty', text: 'Couldn’t load the inbox: ' + e.message }));
+    });
+  }
+
+  /* ---------- Summary ---------- */
+  function renderTiles() {
+    var items = IB.data.items, s = IB.data.settings || {}, n = {};
+    IB_STATUSES.forEach(function (k) { n[k] = 0; });
+    items.forEach(function (m) { var k = IB_STATUSES.indexOf(m.status) >= 0 ? m.status : 'New'; n[k]++; });
+    var tiles = [[n.New, 'New'], [n.Replied, 'Replied'], [n.Done, 'Done'],
+      [str(s.sentToday || 0) + ' / ' + str(s.capPerDay || 0), s.paused ? 'Auto-replies today (paused)' : 'Auto-replies today'],
+      [s.digest ? 'On' : 'Off', '9 am to-do']];
+    var box = clear(el('ibTiles'));
+    tiles.forEach(function (t) { box.appendChild(h('div', { cls: 'ib-tile' }, [h('b', { text: str(t[0]) }), h('span', { text: t[1] })])); });
+  }
+
+  /* ---------- List ---------- */
+  function fillTopics() {
+    var sel = el('ibTopic'), keep = sel.value, seen = {};
+    IB.data.items.forEach(function (m) { var t = oneLine(m.topic); if (t) seen[t] = true; });
+    clear(sel).appendChild(h('option', { value: '', text: 'All topics' }));
+    Object.keys(seen).sort().forEach(function (t) { sel.appendChild(h('option', { value: t, text: t })); });
+    sel.value = seen[keep] ? keep : '';
+  }
+  function shown() {
+    var type = el('ibType').value, topic = el('ibTopic').value, st = el('ibStat').value;
+    var q = el('ibSearch').value.toLowerCase().trim();
+    return IB.data.items.filter(function (m) {
+      if (type && m.type !== type) return false;
+      if (topic && oneLine(m.topic) !== topic) return false;
+      if (st && (m.status || 'New') !== st) return false;
+      if (!q) return true;
+      return ['name', 'firstName', 'email', 'topic', 'subject', 'message', 'notes', 'company', 'songs', 'project']
+        .some(function (f) { return str(m[f]).toLowerCase().indexOf(q) >= 0; });
+    });
+  }
+  function renderList() {
+    var list = clear(el('ibList')), items = shown();
+    if (!IB.data.items.length) { list.appendChild(h('div', { cls: 'list-empty', text: 'No messages yet.' })); return; }
+    if (!items.length) { list.appendChild(h('div', { cls: 'list-empty', text: 'Nothing matches these filters.' })); return; }
+    items.forEach(function (m) {
+      var k = key(m);
+      function pick() { IB.active = k; renderList(); renderDetail(); if (window.innerWidth < 900) el('ibDetail').scrollIntoView({ block: 'start' }); }
+      list.appendChild(h('div', { cls: 'ib-item' + (k === IB.active ? ' active' : ''), role: 'button', tabindex: '0', 'data-key': k,
+        onclick: pick, onkeydown: function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } } }, [
+        h('div', { cls: 't' }, [h('strong', { text: who(m) }), pill(m.status)]),
+        h('div', { cls: 's', text: about(m) }),
+        h('div', { cls: 'm', text: [m.type === 'sync' ? 'Sync' : 'Contact', oneLine(m.topic), when(m)].filter(Boolean).join(' · ') })
+      ]));
+    });
+  }
+
+  /* ---------- Detail ---------- */
+  function current() { return IB.data && IB.data.items.filter(function (m) { return key(m) === IB.active; })[0]; }
+  function renderDetail() {
+    var box = clear(el('ibDetail')), m = current();
+    box.appendChild(h('h2', { text: 'Message' }));
+    if (!m) { box.appendChild(h('div', { cls: 'list-empty', text: 'Pick a message to read it.' })); return; }
+    box.appendChild(h('h3', { text: who(m) }));
+    box.appendChild(h('div', {}, [pill(m.status), ' ', h('span', { cls: 'ib-note', text: (m.type === 'sync' ? 'Sync request' : 'Contact') + ' · ' + when(m) })]));
+    var ok = goodEmail(m);
+    var rows = [['Email', ok ? str(m.email) : (str(m.email) ? str(m.email) + '  (No valid email)' : 'No valid email')],
+      ['Topic', m.topic], ['Subject', m.subject], ['Message', m.message], ['Company', m.company], ['Songs', m.songs],
+      ['Project', m.project], ['Media', m.media], ['Territory', m.territory], ['Term', m.term], ['Timeline', m.timeline],
+      ['Budget', m.budget], ['Notes', m.notes],
+      ['Auto-reply', m.autoReplyAt ? str(m.autoReplyAt) + (m.autoReplyTemplate ? ' (template ' + str(m.autoReplyTemplate) + ')' : '') : '']];
+    var dl = h('dl', { cls: 'ib-fields' });
+    rows.forEach(function (r) { if (str(r[1]).trim()) { dl.appendChild(h('dt', { text: r[0] })); dl.appendChild(h('dd', { text: str(r[1]) })); } });
+    box.appendChild(dl);
+    var acts = h('div', { cls: 'ib-actions' });
+    if (ok) acts.appendChild(h('a', { cls: 'ib-reply', id: 'ibReply', href: mailto(m), target: '_blank', rel: 'noopener noreferrer', text: 'Reply' }));
+    else acts.appendChild(h('span', { cls: 'ib-note', text: 'No valid email, so no Reply button.' }));
+    IB_STATUSES.forEach(function (s) {
+      acts.appendChild(h('button', { type: 'button', cls: 'ghost ib-st', 'data-status': s, text: 'Mark ' + s, disabled: (m.status || 'New') === s,
+        onclick: function () { setStatus(m, s); } }));
+    });
+    box.appendChild(acts);
+    box.appendChild(h('div', { id: 'ibDetailStatus', cls: 'ib-status', role: 'status' }));
+  }
+  function setStatus(m, s) {
+    say('ibDetailStatus', 'Saving…');
+    call('setInboxStatus', [m.type, m.row, m.rowKey, s], function () {
+      m.status = s;
+      renderTiles(); renderList(); renderDetail();
+      say('ibDetailStatus', 'Marked ' + s + '.', 'ok');
+    }, function (e) { say('ibDetailStatus', e.message, 'err'); });
+  }
+  ['ibType', 'ibTopic', 'ibStat'].forEach(function (id) { el(id).addEventListener('change', function () { if (IB.data) renderList(); }); });
+  el('ibSearch').addEventListener('input', function () { if (IB.data) renderList(); });
+
+  /* ---------- Auto-reply ---------- */
+  function renderAutoReply() {
+    var s = IB.data.settings || {}, t = IB.data.templates || {};
+    el('ibArSwitch').checked = !!s.autoReply;
+    el('ibArInfo').textContent = (s.autoReply ? 'On. ' : 'Off. ') + 'One of the 5 notes below, picked at random, goes out 20 minutes to 3 days after a message. ' +
+      'Same address at most once in 30 days, at most ' + str(s.capPerDay || 30) + ' a day, plain text, no links.' +
+      (s.paused ? ' Paused for today: too many messages came in at once.' : '');
+    var box = clear(el('ibTpls'));
+    [['contact', 'Contact'], ['sync', 'Sync']].forEach(function (g) {
+      var wrap = h('div', { cls: 'ib-tpls' });
+      (t[g[0]] || []).forEach(function (tp, i) {
+        var n = i + 1;
+        wrap.appendChild(h('div', { cls: 'ib-tpl' }, [
+          h('h4', { text: g[1] + ' note ' + n }),
+          h('div', { cls: 'sub', text: str(tp.subject) }),
+          h('pre', { text: str(tp.body) }),
+          h('button', { type: 'button', cls: 'ghost ib-test', 'data-type': g[0], 'data-n': String(n), text: 'Send me a test',
+            onclick: function () {
+              say('ibArStatus', 'Sending a test…');
+              call('sendAutoReplyTest', [g[0], n], function () { say('ibArStatus', 'Test sent to your Gmail: ' + g[1].toLowerCase() + ' note ' + n + '.', 'ok'); },
+                function (e) { say('ibArStatus', e.message, 'err'); });
+            } })
+        ]));
+      });
+      box.appendChild(wrap);
+    });
+  }
+  el('ibArSwitch').addEventListener('change', function () {
+    var on = this.checked, box = this;
+    if (on && !confirm('Turn on auto-reply?\n\nWhile it is on, anyone can type any address into the form, so up to 30 people a day ' +
+        'could get a one-time, link-free note from your Gmail, even if they never wrote. Turn it off any time; it stops within 10 minutes.')) { box.checked = false; return; }
+    if (!on && !confirm('Turn off auto-reply? No more notes go out.')) { box.checked = true; return; }
+    box.disabled = true; say('ibArStatus', 'Saving…');
+    call('setAutoReply', [on], function () { box.disabled = false; say('ibArStatus', on ? 'Auto-reply is on.' : 'Auto-reply is off.', 'ok'); reload(); },
+      function (e) { box.disabled = false; box.checked = !on; say('ibArStatus', e.message, 'err'); });
+  });
+
+  /* ---------- 9 am to-do ---------- */
+  function renderDigest() { el('ibDgSwitch').checked = !!(IB.data.settings || {}).digest; }
+  el('ibDgSwitch').addEventListener('change', function () {
+    var on = this.checked, box = this;
+    if (!confirm(on ? 'Turn on the 9 am to-do? One private event goes on your Google Calendar each morning when something is open.'
+        : 'Turn off the 9 am to-do? No more calendar events.')) { box.checked = !on; return; }
+    box.disabled = true; say('ibDgStatus', 'Saving…');
+    call('setDigest', [on], function () { box.disabled = false; say('ibDgStatus', on ? 'The 9 am to-do is on.' : 'The 9 am to-do is off.', 'ok'); reload(); },
+      function (e) { box.disabled = false; box.checked = !on; say('ibDgStatus', e.message, 'err'); });
+  });
+
+  /* ---------- Triggers ---------- */
+  function trig(v) { return typeof v === 'number' ? (v === 1 ? 'installed' : v ? v + ' installed (Install fixes this)' : 'not installed') : (v ? 'installed' : 'not installed'); }
+  function renderTriggers() {
+    var t = IB.data.triggers || {};
+    el('ibTrState').textContent = 'Auto-reply check every 10 minutes: ' + trig(t.autoReply) + '. 9 am to-do: ' + trig(t.digest) +
+      '. The switches decide whether anything is sent; the triggers only wake the script up.';
+  }
+  function trigBtn(fn, msg) {
+    return function () {
+      say('ibTrStatus', 'Working…');
+      call(fn, [], function () { say('ibTrStatus', msg, 'ok'); reload(); }, function (e) { say('ibTrStatus', e.message, 'err'); });
+    };
+  }
+  el('ibTrInstall').addEventListener('click', trigBtn('installInboxTriggers', 'Triggers installed.'));
+  el('ibTrRemove').addEventListener('click', trigBtn('removeInboxTriggers', 'Triggers removed.'));
+
+  /* ---------- Older than 1 year ---------- */
+  var old = null;
+  el('ibOldCheck').addEventListener('click', function () {
+    el('ibOldDelete').hidden = true; old = null; say('ibOldStatus', 'Counting…');
+    call('previewOldRows', [], function (r) {
+      var n = Number(r && r.count) || 0;
+      if (!n) { say('ibOldStatus', 'Nothing older than 1 year.', 'ok'); return; }
+      old = { count: n, token: r.token };
+      say('ibOldStatus', n + (n === 1 ? ' message is' : ' messages are') + ' older than 1 year.');
+      el('ibOldDelete').textContent = 'Delete ' + n;
+      el('ibOldDelete').hidden = false;
+    }, function (e) { say('ibOldStatus', e.message, 'err'); });
+  });
+  el('ibOldDelete').addEventListener('click', function () {
+    if (!old) return;
+    var o = old;
+    if (!confirm('Delete ' + o.count + (o.count === 1 ? ' message' : ' messages') + ' older than 1 year from the inbox sheet? This can’t be undone. ' +
+        'The Google Forms responses and Gmail copies stay until you remove them by hand.')) return;
+    el('ibOldDelete').hidden = true; old = null; say('ibOldStatus', 'Deleting…');
+    call('deleteOldRows', [o.token, o.count], function (r) {
+      var n = r && r.deleted != null ? r.deleted : o.count;
+      say('ibOldStatus', 'Deleted ' + n + '. Now do the manual steps in SETUP for Google Forms and Gmail.', 'ok'); reload();
+    }, function (e) { say('ibOldStatus', e.message, 'err'); });
+  });
+
+  function show(d) {
+    IB.data = d || {};
+    IB.data.items = (IB.data.items || []).slice().sort(function (a, b) { return stamp(b) - stamp(a); });
+    fillTopics(); renderTiles(); renderList(); renderDetail(); renderAutoReply(); renderDigest(); renderTriggers();
+  }
+  function reload() { call('getInboxData', [], show); }
+})();
+</script>

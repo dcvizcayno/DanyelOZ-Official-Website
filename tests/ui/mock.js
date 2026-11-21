@@ -21,6 +21,19 @@ function mk(id,title,file,date,status,extra){return Object.assign({short_id:id,s
  yt_tags:'#Shorts #DanyelOZ #Onsra #AltPop #RnB #LoveSong',tt_caption:'POV: you love someone and you already know how it ends',tt_tags:'#DanyelOZ #Onsra #LoveSong #NewMusic',ig_caption:'A word for a feeling.\n\nFull song: link in bio (danyeloz.info)',ig_tags:'#DanyelOZ #Onsra #IndieMusic',yt_video_id:'',created_at:'2026-11-09T12:00',updated_at:''},extra||{});}
 var shorts=[mk('S1','Carmen','carmen_hook.mp4','2026-11-10','Scheduled'),mk('S2','Onsra (Kareena)','onsra_hook_v2.mp4','2026-11-12','Draft',{song_id:'6799528628'}),mk('S3','Ursula','ursula_porch_light.mp4','2026-11-16','Ready to post',{ig:true}),mk('S4','Aubrey','aubrey_notes.mp4','2026-11-04','Uploaded (private)',{yt_video_id:'YT1'})];
 window.__calls=[];
+// Inbox.gs: planted markup in name, subject, message and notes must stay text; hostile emails must get no Reply button.
+window.__ib=(function(){var X='<img src=x onerror="window.__ibx=1"><scr'+'ipt>window.__ibx=2<\/script>"><svg onload="window.__ibx=3">‮';
+ function c(row,date,first,last,email,ok,topic,subject,message,status){return {type:'contact',row:row,rowKey:date+'|'+row,date:date,firstName:first,name:(first+' '+last).trim(),email:email,emailOk:ok,topic:topic,subject:subject,songs:'',company:'',project:'',media:'',territory:'',term:'',timeline:'',budget:'',message:message,notes:'',status:status,autoReplyAt:'',autoReplyTemplate:''};}
+ function s(row,date,name,email,ok,company,songs,notes,status){return {type:'sync',row:row,rowKey:date+'|'+row,date:date,firstName:name.split(' ')[0],name:name,email:email,emailOk:ok,topic:'',subject:'',songs:songs,company:company,project:'Ad spot',media:'Online video',territory:'Worldwide',term:'1 year',timeline:'Next month',budget:'1,000 to 5,000 USD',message:'',notes:notes,status:status,autoReplyAt:status==='New'?'':'2026-11-19T10:30:00Z',autoReplyTemplate:status==='New'?'':'#2'};}
+ var tpl=function(k){var o=[];for(var i=1;i<=5;i++)o.push({subject:k==='sync'?'Your sync request':'Got your message',body:'Hi Ana,\n\n'+(k==='sync'?'Thanks for the sync request. A quote comes within 3 business days. ('+i+')':'Thanks for writing. I read every message myself. ('+i+')')+'\n\nDanyel OZ\n\nYou get this one-time note because this address was entered on the form at danyeloz.info. If that was not you, you can ignore it; no more messages will follow.'});return o;};
+ return {autoReply:false,digest:false,sentToday:2,trig:{autoReply:0,digest:0},
+  items:[c(2,'2026-11-18T03:00:00Z','Ana','Cruz','ana@example.com',true,'Booking','Show in Manila x&bcc=e@v.io','Can you play on Dec 12?\nTwo sets.','New'),
+   c(3,'2026-11-21T01:00:00Z',X,X,'a@b.co?cc=x@evil.io',false,'Fan Contact','Hi '+X,'Love it '+X,'New'),
+   c(4,'2026-10-01T01:00:00Z','Old','Fan','x@b.co%0Abcc:y',true,'Press','Interview','Old note','Done'),
+   c(5,'2026-11-20T05:00:00Z','Joy','','javascript:alert(1)',true,'Press','Podcast','Hello','New'),
+   s(2,'2026-11-19T08:00:00Z','Mia Lopez','mia@blue.film',true,'Blue Films','Carmen','Need stems','Replied'),
+   s(3,'2026-11-20T09:00:00Z','Q '+X,'"a"@b.co',true,'Co '+X,'Songs '+X,'Notes '+X,'New')],
+  templates:{contact:tpl('contact'),sync:tpl('sync')}};})();
 window.__tk=(function(){var T={today:'2026-11-13',
  songs:[{title:'Today',date:'2024-01-05',type:'Single',upc:'111111111111',isrc:'QZRP42414262'},{title:'Goodbye Album',date:'2024-06-01',type:'Album',upc:'222222222222',isrc:''},{title:'My Girl',date:'2024-03-01',type:'Single',upc:'333333333333',isrc:'QZK6L2424380'},{title:'No List Yet',date:'2025-01-01',type:'Single',upc:'444444444444',isrc:'QZAAA2500001'},{title:'Kareena',date:'2026-12-14',type:'EP',upc:'555555555555',isrc:''}],
  tracks:[{isrc:'QZRP42414262',track_title:'Today',artist:'Danyel OZ',duration:'3:02',explicit:false,first_release:'2024-01-05',first_upc:'111111111111',releases:2,language:'',has_lyrics:false,has_abc:false},{isrc:'QZK6L2424380',track_title:'My Girl',artist:'Danyel OZ',duration:'3:10',explicit:false,first_release:'2024-03-01',first_upc:'333333333333',releases:2,language:'English',has_lyrics:true,has_abc:true},{isrc:'QZXX52600001',track_title:'Dahlia',artist:'Danyel OZ',duration:'3:20',explicit:false,first_release:'2026-12-07',first_upc:'555555555555',releases:1,language:'',has_lyrics:false,has_abc:false}],
@@ -52,6 +65,15 @@ var H={
    hints:{QZRP42414262:{bpm:'88',key:'A minor'}}};},
  saveTrackSync:function(i,d){window.__sySave=[i,d];return {ok:true};},
  saveSyncSettings:function(d){if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.contact_email))throw new Error("The contact email doesn't look right.");window.__sySettings=d;return {ok:true,updated:'2026-11-21 13:05'};},
+ getInboxData:function(){var I=window.__ib;return JSON.parse(JSON.stringify({items:I.items,counts:{},oldCount:3,settings:{autoReply:I.autoReply,digest:I.digest,capPerDay:30,sentToday:I.sentToday,paused:false},templates:I.templates,triggers:I.trig}));},
+ setInboxStatus:function(t,r,k,s){if(['New','Replied','Done'].indexOf(s)<0)throw new Error('Bad status');window.__ibStatus=[t,r,k,s];window.__ib.items.forEach(function(m){if(m.type===t&&m.row===r)m.status=s;});return {ok:true};},
+ previewOldRows:function(){return {count:3,token:'TOK1'};},
+ deleteOldRows:function(t,n){window.__ibDel=[t,n];return {deleted:n};},
+ setAutoReply:function(on){window.__ib.autoReply=on;window.__ibAr=on;return {autoReply:on};},
+ setDigest:function(on){window.__ib.digest=on;window.__ibDg=on;return {digest:on};},
+ sendAutoReplyTest:function(t,n){window.__ibTest=[t,n];return {sent:true};},
+ installInboxTriggers:function(){window.__ib.trig={autoReply:1,digest:1};return window.__ib.trig;},
+ removeInboxTriggers:function(){window.__ib.trig={autoReply:0,digest:0};return window.__ib.trig;},
  getMakerData:function(){return window.__mk.data();},
  planSeries:function(d){window.__plan=d;return window.__mk.view('Planning');},
  getSeries:function(id){window.__gets=(window.__gets||0)+1;return window.__mk.view(window.__mk.next||'Planned');},

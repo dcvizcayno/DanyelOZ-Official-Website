@@ -114,3 +114,33 @@ These replace the Cognito contact form and add the "Sync license request" form t
     - **Google Forms:** open each form ("Danyel OZ contact" and "Sync license request") > **Responses**, and delete each response older than 1 year (or, once the older ones are copied out, use **Delete all responses**).
     - **Inbox sheet:** delete the rows older than 1 year.
     - **Gmail:** delete the notification emails older than 1 year (search `older_than:1y subject:("Website message" OR "Sync license request")`).
+
+## 11. Inbox screen, auto-reply and the 9 am to-do
+
+The **Inbox** screen in the admin app lists every contact message and sync license request from "Danyel OZ Inbox (private)" (never the Song Database), newest first, with filters, search, a Reply button and the status New, Replied or Done. It can also send each sender one short automatic note about 20 minutes after the message, and put a to-do event on your Google Calendar every day at 9 am Manila time. Both are **off** until you switch them on. Section 10 must be done first (the forms and the inbox sheet must exist).
+
+**Accepted risk, extended (read first).** The warning in section 10 now covers more: anyone who is an Editor of the Song Database can change this script, which can now also mail people who filled in the form and write to your calendar. Don't give anyone Editor access unless you accept this. The Inbox screen and all its buttons only work for the Google account that owns the Song Database (you); anyone else who opens the app gets "Not allowed", also in the helper-sharing mode. This does not protect against Editors of the Song Database (they can change the script), so the rule above still holds.
+
+1. Open the Song Database > **Extensions > Apps Script**. Add a script file **Inbox** and paste in `apps-script/Inbox.gs`. Add two HTML files, **InboxViews** and **InboxApp**, and paste in `apps-script/InboxViews.html` and `apps-script/InboxApp.html`. Replace **Form** with the new `apps-script/Form.html`. Save.
+2. **Deploy > Manage deployments > pencil > New version > Deploy.**
+3. Open the app and press **Inbox**. Check that your test messages from section 10 show up.
+4. In the **Triggers** card, press **Install**. This adds two triggers: the auto-reply check every 10 minutes (`ibAutoReplyTick`) and the daily to-do at 9 am Manila (`ibDailyDigest`). Pressing it again does not add a second copy. You can also run `installInboxTriggers` from the editor's function list.
+5. Approve the permissions Google asks for. **Sending email as you** was already approved in section 10. New is **Google Calendar** (Google calls it access to see, edit, share and delete all your calendars). Google only offers full calendar access for scripts, but the script only does this: create one private 15-minute event a day on your default calendar, with no guests and no invitations, and look at that day's events so it never makes two. If Google says the app isn't verified: **Advanced > Go to (project name)**.
+6. **Send yourself a test.** In the **Auto-reply** card, press **Send me a test**. It always goes to daniel.vizkaino@gmail.com, never to anyone else (at most 5 tests a day). The subject starts with "Test: ".
+7. **Read the 10 notes.** The Auto-reply card shows the 5 notes for contact messages (subject "Thanks for your message") and the 5 for sync requests (subject "Thanks for your sync request", which promise a quote within 3 business days). One is picked at random for each message. The only personal detail is the sender's first name ("Hi Ana,"); if it isn't a plain name, the note just says "Hi,". Nothing else from the message is repeated, and there are no links. If you want any wording changed, tell Claude before you switch on.
+8. **Accept the remaining risk, then switch on.** Even with every safety rule, someone who sends fake form entries can make your Gmail send one short, link-free note to each of up to 30 addresses a day, for as long as Auto-reply is on. Turning it off stops this within 10 minutes. Tell Claude "I accept the auto-reply risk" (it goes in the run report), then tick **Send a short note about 20 minutes after each message** and confirm.
+9. **Turn on the 9 am to-do.** Tick **Put a to-do on my calendar at 9 am** and confirm. Each morning you get one private event, titled with counts only (for example "To-do: 3 messages, 1 release"), listing open messages (type, first name, topic, age in days) and Song Database releases in the next 7 days. No email addresses and no message text. On a day with nothing to do, no event is made.
+
+**What the auto-reply does, and doesn't.**
+- Only messages that arrive after you switched it on, and only when the message is between 20 minutes and 72 hours old. Messages marked Replied or Done get no note.
+- At most 30 notes a day and 5 per 10-minute check. The same address gets at most one note in 30 days (Gmail dots and +tags count as the same address). Addresses at any danyeloz domain, noreply-type addresses and your own address are skipped, and so are addresses that show up in more than 3 messages in 24 hours.
+- More than 10 new messages in one hour pauses it for the rest of the day, and you get one email about it.
+- It stops before your Gmail sending allowance gets low (it always keeps 46 emails for your own message notifications), so your notifications from section 10 keep working.
+- Plain text, from "Danyel OZ", Reply-To daniel.vizkaino@gmail.com. The sheet records when the note went out and which one (column `auto_reply_at`, next to the `status` column; both are added to the response tabs by the app).
+
+**How to switch off.**
+- Auto-reply: untick it in the Inbox screen and confirm. No more notes from the next check (within 10 minutes), even with the triggers still installed. Switching it on again later only answers messages that arrive after that moment.
+- 9 am to-do: untick it and confirm.
+- Everything: press **Remove** in the Triggers card (or run `removeInboxTriggers`). It removes only these two triggers, never the form trigger from section 10.
+
+**Older than 1 year.** The Inbox screen's **Count old messages** button, then **Delete**, removes rows older than 1 year from the inbox sheet only. The Google Forms responses and the Gmail copies still need the monthly steps in section 10.
